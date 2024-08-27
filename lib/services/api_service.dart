@@ -7,7 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
 class ApiService {
-  static String? baseUrl = dotenv.env['APi_URL'] ?? 'http://127.0.0.1:5000/api';
+  static String? baseUrl = dotenv.env['APi_URL'] ?? 'http://localhost:5000/api';
   static final logger = Logger();
 
   static Future<String?> login(String username, String password) async {
@@ -42,17 +42,17 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body)['token'];
     } else {
-      return null;
+      return jsonDecode(response.body)['msg'];
     }
   }
 
- static Future<User?> getUser(String token) async {
+ static Future<Map<String, dynamic>?> getUser(String token) async {
     final response = await http.get(
       Uri.parse('$baseUrl/users/me'),
       headers: {'x-auth-token': token},
     );
     if (response.statusCode == 200) {
-      return User.fromJson(jsonDecode(response.body));
+      return jsonDecode(response.body);
     } else {
       return null;
     }

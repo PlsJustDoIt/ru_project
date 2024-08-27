@@ -19,12 +19,42 @@ class UserProvider with ChangeNotifier {
     final token = await ApiService.login(username, password); //response is dynamic
     if (token != null) {
       _token = token;
+      await fetchUserData();
       notifyListeners();
     } else {
       _token = null;
       _user = null;
       handleLoginError();
       notifyListeners();
+    }
+  }
+
+  Future<String?> register(String username, String password) async {
+    final token = await ApiService.register(username, password);
+    if (token != null) {
+      _token = token;
+      await fetchUserData();
+      notifyListeners();
+    } else {
+      _token = null;
+      _user = null;
+      handleLoginError();
+      notifyListeners();
+    }
+  }
+
+   // Méthode pour récupérer les données utilisateur après la connexion
+  Future<void> fetchUserData() async {
+    if (_token != null) {
+      final userData = await ApiService.getUser(_token!);
+      if (userData != null) {
+        _user = User.fromJson(userData);
+      } else {
+        _user = null;
+        _token = null;
+      }
+      notifyListeners();
+      
     }
   }
 

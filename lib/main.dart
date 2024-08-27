@@ -1,31 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:ru_project/home_page.dart';
+import 'package:ru_project/login_page.dart';
+import 'package:ru_project/providers/user_provider.dart';
 
 void main() {
   dotenv.load(fileName: ".env");
-  runApp(const MyApp());
+  runApp(MultiProvider(providers: [
+      ChangeNotifierProvider(create: (_) => UserProvider()),
+    ],
+    child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   
 
-  @override
+  @override 
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Projet ru de léo'),
-          backgroundColor: const Color.fromARGB(209, 66, 206, 62),
-        ),
-        body: const UserStateWidget(),
-      ),
-      title: 'Projet ru',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.green),
-        useMaterial3: true,
-      ),
+      debugShowCheckedModeBanner: false, 
+      initialRoute: '/login',
+    routes: {
+      '/home': (context) => HomePage(),
+      '/login': (context) => LoginPage(),
+      //'/dashboard': (context) => DashboardPage(),
+      // Ajoutez ici toutes les routes que vous utilisez
+    },
+    //onUnknownRoute: (settings) => MaterialPageRoute(builder: (context) => UnknownPage()),
+
+    //  home: LoginPage(), // Définir votre page de connexion ici
     );
+    // return MaterialApp(
+    //   home: Scaffold(
+    //     appBar: AppBar(
+    //       title: const Text('Projet ru de léo'),
+    //       backgroundColor: const Color.fromARGB(209, 66, 206, 62),
+    //     ),
+    //     body: const UserStateWidget(),
+    //   ),
+    //   title: 'Projet ru',
+    //   theme: ThemeData(
+    //     colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.green),
+    //     useMaterial3: true,
+    //   ),
+    // );
   }
 }
 
