@@ -4,6 +4,7 @@ const User = require('../models/user');
 const router = express.Router();
 
 router.get('/me', auth, async (req, res) => {
+    console.log(req.body);
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         res.json(user);
