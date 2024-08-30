@@ -95,6 +95,14 @@ and try to create a new flutter project, it will ask you to install the flutter 
 
 finish the installation of flutter and dart plugins.
 
+#### local installation
+
+##### env file
+add a .env file in the flutter directory with the following content:
+
+```bash
+API_URL="http://localhost:5000/api"
+```
 
 ## Running the project
 
