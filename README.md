@@ -2,6 +2,11 @@
 
 Projet info ru.
 
+![exemple](image.png)
+
+
+![alt text](image-2.png)
+
 ## Getting Started
 
 First, clone the project:
@@ -23,8 +28,6 @@ give permissions to the scripts:
 chmod +x *.sh
 ```
 
-
-
 ### Installation of backend
 
 Run the install_backend.sh script:
@@ -36,8 +39,6 @@ Run the install_backend.sh script:
 #### MongoDB
 
 ##### Local installation
-
-
 
 <!-- ##### Create a database
 
