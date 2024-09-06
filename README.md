@@ -112,7 +112,7 @@ API_URL="http://localhost:5000/api"
 To run the backend, follow the instructions in the backend directory:
 ```bash
 cd backend
-node .
+npx tsx src/app.ts
 ```
 
 ### Frontend

@@ -1,16 +1,24 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const ruRoutes = require('./routes/ru');
-const cors = require('cors');
+import express from 'express';
+import mongoose from 'mongoose';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import ruRoutes from './routes/ru';
+import cors from 'cors';
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
+import { exit } from 'process';
 
 const app = express();
 console.log(process.env.MONGO_URI);
 
 mongoose.set("strictQuery", false);
+
+if (process.env.MONGO_URI == null) {
+  console.error('MONGO_URI is not defined');
+  exit(1);
+}
+
 
 
 mongoose.connect(process.env.MONGO_URI)

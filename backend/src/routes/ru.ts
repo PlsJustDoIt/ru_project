@@ -1,15 +1,16 @@
-const express = require('express');
-const auth = require('../middleware/auth');
-const User = require('../models/user');
-const router = express.Router();
-const NodeCache = require( "node-cache" );
-const axios = require('axios');
-const xml2js = require('xml2js');
+import auth from '../middleware/auth';
+import User from '../models/user';
+import { Router,Request,Response } from 'express';
+import NodeCache from "node-cache";
+import axios from 'axios';
+import xml2js from 'xml2js';
+
+const router = Router();
 
 const ru_lumiere_id = 'r135';
 const api_url = 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/menu.xml';
 
-const cache = new NodeCache({ stdTTL: 3600 });
+const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
 // Fonction pour récupérer les menus de l'API externe
 async function fetchMenusFromExternalAPI() {
@@ -22,10 +23,12 @@ async function fetchMenusFromExternalAPI() {
       const parser = new xml2js.Parser({ explicitArray: false });
       const result = await parser.parseStringPromise(xmlData);
 
+
+
      // console.log(result);
   
         const restaurants = result.root.resto;
-      const restoR135 = restaurants.find(resto => resto.$.id === 'r135');
+      const restoR135 = restaurants.find((resto: { $: { id: string; }; }) => resto.$.id === 'r135');
       const menusR135 = restoR135.menu;
     console.log(menusR135);
       return menusR135;
@@ -34,8 +37,9 @@ async function fetchMenusFromExternalAPI() {
       throw error;
     }
   }
+  
 
-  router.get('/menus', async (req, res) => {
+  router.get('/menus',auth, async (req:Request, res:Response) => {
     try {
       // On vérifie si les menus sont en cache
       const cachedMenus = cache.get('menus');
@@ -58,4 +62,4 @@ async function fetchMenusFromExternalAPI() {
   }
 );
 
-module.exports = router;
+export default router;
