@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/user_provider.dart';
 import 'main.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
 
 class LoginPage extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -56,7 +58,7 @@ class LoginPage extends StatelessWidget {
               }
                 },
                 child: const Text('Login'),
-              ),
+              ).animate().fade(duration: 500.ms).scale(delay:0.6.seconds),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -71,7 +73,7 @@ class LoginPage extends StatelessWidget {
                   }
                 },
                 child: const Text('Register'),
-              ),
+              ).animate().fade(duration: 500.ms).scale(delay:0.6.seconds),
             ),
           ],
         ),
