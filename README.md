@@ -55,19 +55,25 @@ create a database:
 ```bash
 mongosh
 use admin
-```
-
-```bash
 db.createUser({
-    user:"ru_project_user",
-    pwd:"ru_project_password",
+    user:"username", 
+    pwd:"password", 
     roles:[{role: "root", db:"admin"}]
     })
 ```
+
+
 use the database:
 
 ```bash
 use ru_project
+```bash
+db.createUser({
+    user:"ru_project_user",
+    pwd:"ru_project_password",
+    roles:[{role: "readWrite", db:"ru_project"}]
+    })
+```
 exit()
 ```
 

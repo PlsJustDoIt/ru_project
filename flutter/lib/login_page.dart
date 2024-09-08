@@ -14,10 +14,7 @@ class LoginPage extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-          title: const Text('Projet ru de léo'),
-          backgroundColor: const Color.fromARGB(209, 66, 206, 62),
-        ),
+      
       body: Padding(
       padding: const EdgeInsets.all(16.0),
       child: Padding(
@@ -85,6 +82,8 @@ class LoginPage extends StatelessWidget {
     );
   }
 }
+
+
 
 // class registerButton extends ElevatedButton {
 //   registerButton({super.onPressed, super.child});

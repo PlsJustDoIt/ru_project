@@ -35,11 +35,13 @@ class UserProvider with ChangeNotifier {
       _token = token;
       await fetchUserData();
       notifyListeners();
+      return "Inscription réussie";
     } else {
       _token = null;
       _user = null;
       handleLoginError();
       notifyListeners();
+      return "Erreur d'inscription";
     }
   }
 

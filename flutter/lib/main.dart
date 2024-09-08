@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/home_page.dart';
 import 'package:ru_project/login_page.dart';
+import 'package:ru_project/menu.dart';
 import 'package:ru_project/providers/user_provider.dart';
 
 void main() {
@@ -21,18 +22,9 @@ class MyApp extends StatelessWidget {
 
   @override 
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false, 
-      initialRoute: '/login',
-    routes: {
-      '/home': (context) => HomePage(),
-      '/login': (context) => LoginPage(),
-      //'/dashboard': (context) => DashboardPage(),
-      // Ajoutez ici toutes les routes que vous utilisez
-    },
-    //onUnknownRoute: (settings) => MaterialPageRoute(builder: (context) => UnknownPage()),
-
-    //  home: LoginPage(), // Définir votre page de connexion ici
+      home:TabBarWidget(),
     );
     // return MaterialApp(
     //   home: Scaffold(
@@ -112,6 +104,35 @@ class _UserStateWidgetState extends State<UserStateWidget> {
             height: 200,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class TabBarWidget extends StatelessWidget {
+  const TabBarWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Projet ru de léo'),
+          backgroundColor: const Color.fromARGB(209, 66, 206, 62),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.login), text: 'Default'),
+              Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            LoginPage(),
+            MenuWidget(),
+          ],
+        ),
       ),
     );
   }
