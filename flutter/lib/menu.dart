@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/menu.dart';
 
+//todo: statefulwidget et make a state for each day 
 class MenuWidget extends StatelessWidget {
    MenuWidget({super.key});
 

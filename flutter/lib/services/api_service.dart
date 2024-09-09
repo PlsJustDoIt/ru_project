@@ -58,7 +58,7 @@ class ApiService {
     }
   }
 
- static Future<bool> updateStatus(String token, String status) async {
+  static Future<bool> updateStatus(String token, String status) async {
     final response = await http.put(
       Uri.parse('$baseUrl/users/status'),
       headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
@@ -67,7 +67,7 @@ class ApiService {
     return response.statusCode == 200;
   }
 
- static Future<bool> addFriend(String token, String friendUsername) async {
+  static Future<bool> addFriend(String token, String friendUsername) async {
     final response = await http.post(
       Uri.parse('$baseUrl/users/add-friend'),
       headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
@@ -77,7 +77,7 @@ class ApiService {
   }
 
   
-static Future<Map<String, dynamic>?> getFriends(String token) async {
+  static Future<Map<String, dynamic>?> getFriends(String token) async {
     final response = await http.get(
       Uri.parse('$baseUrl/users/friends'),
       headers: {'x-auth-token': token},
@@ -88,6 +88,8 @@ static Future<Map<String, dynamic>?> getFriends(String token) async {
       return null;
     }
   }
+
+  //TODO : faire api menu
 }
 
 
