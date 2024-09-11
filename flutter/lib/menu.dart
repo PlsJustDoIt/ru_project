@@ -24,12 +24,11 @@ class _MenuWidgetState extends State<MenuWidget> {
   Future<void> _fetchMenus() async {
     try {
       final Map<String, dynamic>? response = await ApiService.getMenus(_token); // Call the API service
-      List<Menu> menus; 
-      if (response != null) {
-        menus = List<Menu>.from(response['menus'].map((x) => Menu.fromJson(x)));
-      } else {
-        menus = [];
+      List<Menu> menus = []; 
+      if (response == null) {
+        throw Exception('Failed to fetch menus');
       }
+      //menus = List<Menu>.from(response['menus'].map((x) => Menu.fromJson(x))); a revoir
       setState(() {
         _menus = menus;
       });

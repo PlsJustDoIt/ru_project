@@ -11,8 +11,7 @@ class ApiService {
   static String? baseUrl = dotenv.env['APi_URL'] ?? 'http://localhost:5000/api';
   static final logger = Logger();
 
-  static Future<String?> login(String username, String password) async {
-
+  static Future<dynamic> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -22,14 +21,12 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['token'];
       } else {
-          // Gérer les erreurs HTTP non 200
-          final errorResponse = jsonDecode(response.body);
-          throw Exception(errorResponse['msg'] ?? 'Erreur de connexion');
-        }
+        final errorResponse = jsonDecode(response.body);
+        throw Exception(errorResponse['msg'] ?? 'Erreur de connexion');
+      }
     } catch (e) {
-      // Gérer les exceptions de la requête HTTP
       logger.e('Erreur de connexion: $e');
-      return null;
+      return e;
     }
   }
 

@@ -6,17 +6,15 @@ class UserProvider with ChangeNotifier {
   User? _user;
   String? _token;
   List<User> _friends = [];
-  Map<String, String> _friendsStatus = {};
 
   // Getters
   User? get user => _user;
   String? get token => _token;
   List<User> get friends => _friends;
-  Map<String, String> get friendsStatus => _friendsStatus;
 
   // Méthode pour se connecter
   Future<void> login(String username, String password) async {
-    final token = await ApiService.login(username, password); //response is dynamic
+    final token = await ApiService.login(username, password); //response is dynamic //TODO géré les erreurs
     if (token != null) {
       _token = token;
       await fetchUserData();
@@ -89,7 +87,6 @@ class UserProvider with ChangeNotifier {
     final friendsData = await ApiService.getFriends(_token!);
     if (friendsData != null) {
       _friends = friendsData['friends'].map<User>((json) => User.fromJson(json)).toList();
-      _friendsStatus = Map<String, String>.from(friendsData['statuses']);
       notifyListeners();
     }
   }
@@ -99,9 +96,9 @@ class UserProvider with ChangeNotifier {
     _user = null;
     _token = null;
     _friends = [];
-    _friendsStatus = {};
     notifyListeners();
   }
+
   
   void handleLoginError() {
     // TODO : Gérer les erreurs de connexion
