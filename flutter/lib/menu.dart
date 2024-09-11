@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:ru_project/models/menu.dart';
-import 'package:ru_project/services/api_service.dart'; // Import the API service
+import 'package:ru_project/models/user.dart';
 
 class MenuWidget extends StatefulWidget {
   MenuWidget({super.key});

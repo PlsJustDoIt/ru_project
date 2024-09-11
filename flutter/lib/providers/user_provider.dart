@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
+import '../models/menu.dart';
 import '../services/api_service.dart';
 
 class UserProvider with ChangeNotifier {
@@ -89,6 +90,17 @@ class UserProvider with ChangeNotifier {
       _friends = friendsData['friends'].map<User>((json) => User.fromJson(json)).toList();
       notifyListeners();
     }
+  }
+
+  //methode pour recuperer les menus,TODO  gerer les erreurs
+  Future<List<Menu>> fetchMenus() async {
+    if (_token == null) return [];
+
+    final menusData = await ApiService.getMenus(_token!);
+    if (menusData != null) {
+      return menusData['menus'].map<Menu>((json) => Menu.fromJson(json)).toList();
+    }
+    return [];
   }
 
   // Méthode pour se déconnecter
