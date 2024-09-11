@@ -5,6 +5,8 @@ import 'package:ru_project/home_page.dart';
 import 'package:ru_project/login_page.dart';
 import 'package:ru_project/menu.dart';
 import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/widgets/welcomeWidget.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 void main() {
   dotenv.load(fileName: ".env");
@@ -22,9 +24,9 @@ class MyApp extends StatelessWidget {
 
   @override 
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false, 
-      home:TabBarWidget(),
+      home:LoginPage(),
     );
     // return MaterialApp(
     //   home: Scaffold(
@@ -65,39 +67,44 @@ class _UserStateWidgetState extends State<UserStateWidget> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'État actuel : $_currentState',
-            style: const TextStyle(
-              fontSize: 24,
-              color: Colors.green,
-            ),
-          ),
-          const SizedBox(height: 20), // Espacement
-            Column(
-            children: [
-              Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton(
-                onPressed: () => _changeState("Inactif"),
-                child: const Text('Inactif'),
-              ),
-              ),
-              Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton(
-                onPressed: () => _changeState("Sur le point de manger"),
-                child: const Text('Sur le point de manger'),
-              ),
-              ),
-              Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton(
-                onPressed: () => _changeState("A fini de manger"),
-                child: const Text('A fini de manger'),
-              ),
-              ),
-            ],
-            ),
+          // Text(
+          //   'État actuel : $_currentState',
+          //   style: const TextStyle(
+          //     fontSize: 24,
+          //     color: Colors.green,
+          //   ),
+          // ),
+          // const SizedBox(height: 20), // Espacement
+          //   Column(
+          //   children: [
+          //     Padding(
+          //     padding: const EdgeInsets.all(8.0),
+          //     child: ElevatedButton(
+          //       onPressed: () => _changeState("Inactif"),
+          //       child: const Text('Inactif'),
+          //     ),
+          //     ),
+          //     Padding(
+          //     padding: const EdgeInsets.all(8.0),
+          //     child: ElevatedButton(
+          //       onPressed: () => _changeState("Sur le point de manger"),
+          //       child: const Text('Sur le point de manger'),
+          //     ),
+          //     ),
+          //     Padding(
+          //     padding: const EdgeInsets.all(8.0),
+          //     child: ElevatedButton(
+          //       onPressed: () => _changeState("A fini de manger"),
+          //       child: const Text('A fini de manger'),
+          //     ),
+          //     ),
+          //   ],
+          //   ),
+        
+          const Text(
+          'Bienvenue !',
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        ).animate().tint(color: Colors.green).slide(duration: 500.ms,curve: Curves.easeIn).fadeIn(duration: 500.ms,begin: 0).animate(onPlay: (controller) => controller.repeat()).fadeIn(duration: 500.ms,begin: 0).shake(delay: 1.seconds).fadeOut(duration: 500.ms,delay: 2.seconds),
           Image.asset(
             "assets/images/jm.jpg",
             width: 200,
