@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/menu.dart';
 import '../models/user.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -89,7 +90,18 @@ class ApiService {
     }
   }
 
-  //TODO : faire api menu
+  //TODO : faire api pour recuperer les menus sous forme de json A TESTER
+  static Future<Map<String, dynamic>?> getMenus(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/ru/menus'),
+      headers: {'x-auth-token': token},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      return null;
+    }
+  }
 }
 
 
