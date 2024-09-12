@@ -15,8 +15,8 @@ class _MenuWidgetState extends State<MenuWidget> {
   
   @override
   void initState() {
-    super.initState();
     setMenus();
+    super.initState();
   }
 
   void setMenus() async {
