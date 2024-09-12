@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
-import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/user_provider.dart';
 
 class MenuWidget extends StatefulWidget {
   MenuWidget({super.key});
@@ -12,34 +12,23 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
-   // TODO: Replace with user token
-  final String _token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2ZGRjNjUzYmEzN2EyYmZjNTZjYzNkMiIsImlhdCI6MTcyNjA1Nzg3MiwiZXhwIjoxNzI2MDYxNDcyfQ.5mw-gdIGbm8DvfR-UfoogpQTnV7VEuUc5sEtIohmwGo';
-
+  
   @override
   void initState() {
     super.initState();
-    _fetchMenus();
+    setMenus();
   }
 
-  Future<void> _fetchMenus() async {
-    try {
-      final Map<String, dynamic>? response = await ApiService.getMenus(_token); // Call the API service
-      List<Menu> menus = []; 
-      if (response == null) {
-        throw Exception('Failed to fetch menus');
-      }
-      //menus = List<Menu>.from(response['menus'].map((x) => Menu.fromJson(x))); a revoir
-      setState(() {
-        _menus = menus;
-      });
-    } catch (e) {
-      // Handle error
-      print('Failed to fetch menus: $e');
-    }
+  void setMenus() async {
+    final userProvider = Provider.of<UserProvider>(context);
+    List<Menu> menus = await userProvider.fetchMenus();
+    _menus = menus;
   }
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+  
     return Scaffold(
       body: Center(
         child: _menus.isEmpty
