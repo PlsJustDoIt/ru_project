@@ -9,6 +9,7 @@ router.get('/me', auth, async (req:Request, res:Response) => {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         res.json(user);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Could not retrieve user');
     }
 });
@@ -24,6 +25,7 @@ router.put('/status', auth, async (req:Request, res:Response) => {
         await user.save();
         res.json(user);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Could not update status');
     }
 });
@@ -36,6 +38,7 @@ router.get('/friends', auth, async (req:Request, res:Response) => {
         }
         res.json(user.friends);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Could not retrieve friends');
     }
 });
@@ -56,6 +59,7 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
         await user.save();
         res.json(user);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server error');
     }
 });
@@ -70,6 +74,7 @@ router.delete('/remove-friend/:id', auth, async (req:Request, res:Response) => {
         await user.save();
         res.json(user);
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server error');
     }
 });
