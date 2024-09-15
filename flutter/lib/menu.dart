@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
-import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/providers/user_provider.dart'; // Import UserProvider
 
 class MenuWidget extends StatefulWidget {
-  MenuWidget({super.key});
+  const MenuWidget({super.key});
 
   @override
   _MenuWidgetState createState() => _MenuWidgetState();
@@ -12,35 +12,49 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
-  
+  bool _isLoggedIn = false;
+
   @override
   void initState() {
-    setMenus();
     super.initState();
+    _checkLoginStatus();
   }
 
-  void setMenus() async {
-    final userProvider = Provider.of<UserProvider>(context);
+  void _checkLoginStatus() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    bool isLoggedIn = await userProvider.token != null;
+    setState(() {
+      _isLoggedIn = isLoggedIn;
+      if (_isLoggedIn) {
+        setMenus(context);
+      }
+    });
+  }
+
+  void setMenus(BuildContext context) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     List<Menu> menus = await userProvider.fetchMenus();
-    _menus = menus;
+    setState(() {
+      _menus = menus;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-  
     return Scaffold(
       body: Center(
-        child: _menus.isEmpty
-            ? const Text('Chargement...')
-            : ListView.builder(
-                itemCount: _menus.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_menus[index].date), // Display the date of the menu
-                  );
-                },
-              ),
+        child: _isLoggedIn
+            ? (_menus.isEmpty
+                ? const Text('Chargement...')
+                : ListView.builder(
+                    itemCount: _menus.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(_menus[index].date),
+                      );
+                    },
+                  ))
+            : const Text('Please log in to view the menu'),
       ),
     );
   }
