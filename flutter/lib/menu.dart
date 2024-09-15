@@ -22,7 +22,7 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void _checkLoginStatus() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    bool isLoggedIn = await userProvider.token != null;
+    bool isLoggedIn = userProvider.token != null;
     setState(() {
       _isLoggedIn = isLoggedIn;
       if (_isLoggedIn) {
