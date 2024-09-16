@@ -102,14 +102,20 @@ class ApiService {
 
   //Get menu as list of Menu objects, to be used in the MenuWidget, TODO : tester
   static Future<List<Menu>?> getMenusD(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/ru/menus'),
-      headers: {'x-auth-token': token},
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return List<Menu>.from(data.map((x) => Menu.fromJson(x)));
-    } else {
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/ru/menus'),
+        headers: {'x-auth-token': token},
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Menu>.from(data.map((x) => Menu.fromJson(x)));
+      } else {
+        return null;
+      }
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
       return null;
     }
   }
