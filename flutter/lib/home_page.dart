@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/login_page.dart';
+import 'package:ru_project/widgets/tabBar.dart';
 import '../providers/user_provider.dart';
 
 class HomePage extends StatelessWidget {
@@ -15,36 +17,13 @@ class HomePage extends StatelessWidget {
             icon: Icon(Icons.logout),
             onPressed: () {
               userProvider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
               
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Text('Status: ${userProvider.user?.status ?? 'Unknown'}'),
-          ElevatedButton(
-            onPressed: () async {
-              await userProvider.updateStatus('Active');
-            },
-            child: Text('Set Status to Active'),
-          ),
-          // Liste des amis
-          Expanded(
-            child: ListView.builder(
-              itemCount: userProvider.friends.length,
-              itemBuilder: (context, index) {
-                final friend = userProvider.friends[index];
-                return ListTile(
-                  title: Text(friend.username),
-                  //subtitle: Text('Status: ${userProvider.friendsStatus[friend.id]}'),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      body: TabBarWidget(),
     );
   }
 }

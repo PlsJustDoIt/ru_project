@@ -8,7 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
 class ApiService {
-  static String? baseUrl = dotenv.env['APi_URL'] ?? 'http://localhost:5000/api';
+  static String? baseUrl = dotenv.env['API_URL'] ?? 'http://localhost:5000/api';
   static final logger = Logger();
 
   static Future<dynamic> login(String username, String password) async {
