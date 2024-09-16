@@ -9,7 +9,10 @@ export default function(req: Request, res: Response, next: NextFunction): void {
     } 
     try {
         const decoded = jwt.verify(token!, process.env.JWT_SECRET as jwt.Secret);
-        req.body.user = decoded;
+        if (typeof decoded === 'string') {
+            throw new Error('Invalid token');
+        }
+        req.user = decoded;
         next();
     } catch (err:unknown) {
         res.status(401).json({ error: err });
