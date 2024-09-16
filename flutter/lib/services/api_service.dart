@@ -11,8 +11,7 @@ class ApiService {
   static String? baseUrl = dotenv.env['APi_URL'] ?? 'http://localhost:5000/api';
   static final logger = Logger();
 
-  static Future<String?> login(String username, String password) async {
-
+  static Future<dynamic> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -22,14 +21,12 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['token'];
       } else {
-          // Gérer les erreurs HTTP non 200
-          final errorResponse = jsonDecode(response.body);
-          throw Exception(errorResponse['msg'] ?? 'Erreur de connexion');
-        }
+        final errorResponse = jsonDecode(response.body);
+        throw Exception(errorResponse['msg'] ?? 'Erreur de connexion');
+      }
     } catch (e) {
-      // Gérer les exceptions de la requête HTTP
       logger.e('Erreur de connexion: $e');
-      return null;
+      return e;
     }
   }
 
@@ -90,7 +87,7 @@ class ApiService {
     }
   }
 
-  //TODO : faire api pour recuperer les menus sous forme de json A TESTER
+  //temporary ?
   static Future<Map<String, dynamic>?> getMenus(String token) async {
     final response = await http.get(
       Uri.parse('$baseUrl/ru/menus'),
@@ -98,6 +95,20 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else {
+      return null;
+    }
+  }
+
+  //Get menu as list of Menu objects, to be used in the MenuWidget, TODO : tester
+  static Future<List<Menu>?> getMenusD(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/ru/menus'),
+      headers: {'x-auth-token': token},
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return List<Menu>.from(data.map((x) => Menu.fromJson(x)));
     } else {
       return null;
     }

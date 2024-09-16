@@ -38,7 +38,7 @@ class HomePage extends StatelessWidget {
                 final friend = userProvider.friends[index];
                 return ListTile(
                   title: Text(friend.username),
-                  subtitle: Text('Status: ${userProvider.friendsStatus[friend.id]}'),
+                  //subtitle: Text('Status: ${userProvider.friendsStatus[friend.id]}'),
                 );
               },
             ),

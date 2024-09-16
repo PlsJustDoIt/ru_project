@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
+import '../models/menu.dart';
 import '../services/api_service.dart';
+import 'dart:convert';
 
 class UserProvider with ChangeNotifier {
   User? _user;
   String? _token;
   List<User> _friends = [];
-  Map<String, String> _friendsStatus = {};
 
   // Getters
   User? get user => _user;
   String? get token => _token;
   List<User> get friends => _friends;
-  Map<String, String> get friendsStatus => _friendsStatus;
 
   // Méthode pour se connecter
   Future<void> login(String username, String password) async {
-    final token = await ApiService.login(username, password); //response is dynamic
+    final token = await ApiService.login(username, password); //response is dynamic //TODO géré les erreurs
     if (token != null) {
       _token = token;
       await fetchUserData();
@@ -89,9 +89,255 @@ class UserProvider with ChangeNotifier {
     final friendsData = await ApiService.getFriends(_token!);
     if (friendsData != null) {
       _friends = friendsData['friends'].map<User>((json) => User.fromJson(json)).toList();
-      _friendsStatus = Map<String, String>.from(friendsData['statuses']);
       notifyListeners();
     }
+  }
+
+  //methode pour recuperer les menus,TODO  gerer les erreurs
+  //example of a json response : 
+  /*
+  [
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "GRATIN DE COQUILETTES /DES DE DINDE",
+            "BATONNIERE DE LEGUMES"
+        ],
+        "Menu végétalien": [
+            "CHILI BOULGOUR"
+        ],
+        "Pizza": "menu non communiqué",
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": [
+            "CORDON BLEU",
+            "FRITES"
+        ],
+        "date": "vendredi 6 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "BLANQUETTE  D' EMINCE DE DINDE",
+            "RIZ",
+            "CAROTTES"
+        ],
+        "Menu végétalien": [
+            "GNOCCHIS AUX CHAMPIGNONS"
+        ],
+        "Pizza": "menu non communiqué",
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": [
+            "SAUCISSE FUMEE",
+            "FRITES"
+        ],
+        "date": "lundi 9 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "ESCALOPE  DE PORC SC CURRY",
+            "POISSON PANE A LA TOMATE",
+            "SC CHARCUTIERE",
+            "PUREE",
+            "HARICOTS VERTS"
+        ],
+        "Menu végétalien": [
+            "EMINCE DE POIS CHICHES"
+        ],
+        "Pizza": [
+            "GARNITURE PARMENTIERE"
+        ],
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": "menu non communiqué",
+        "date": "mardi 10 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "GARNITURE ESPAGNOLE",
+            "PATES",
+            "POELEE ORIENTALE"
+        ],
+        "Menu végétalien": [
+            "RISOTTO VERTS AUX PETITS POIS"
+        ],
+        "Pizza": "menu non communiqué",
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": [
+            "CUISSE DE POULET",
+            "FRITES"
+        ],
+        "date": "mercredi 11 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "SAUTE PORC CREOLE  SC BLEU",
+            "BLANQUETTE DE COLIN AUX PETITS LEGUMES",
+            "BOULGOUR BIO",
+            "CAROTTES"
+        ],
+        "Menu végétalien": [
+            "OMELETTE NATURE"
+        ],
+        "Pizza": [
+            "CHEVRES /LEGUMES"
+        ],
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": "menu non communiqué",
+        "date": "jeudi 12 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "JAMBON GRILLE SC MADERE",
+            "RIZ",
+            "COURGETTES"
+        ],
+        "Menu végétalien": [
+            "CURRY DE POIS CHICHES"
+        ],
+        "Pizza": "menu non communiqué",
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": [
+            "CORDON BLEU DINDE",
+            "FRITES"
+        ],
+        "date": "vendredi 13 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "COTE DE PORC SC IVOIRE",
+            "BOULGOUR BIO",
+            "HARICOTS BEURRE"
+        ],
+        "Menu végétalien": [
+            "CHILI BOULGOUR"
+        ],
+        "Pizza": "menu non communiqué",
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": [
+            "NUGGETS DE POULET",
+            "FRITES"
+        ],
+        "date": "lundi 16 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "emince de dinde aux cacahuettes",
+            "poisson blanc sc dijonnaise",
+            "pates",
+            "poelee asiatique"
+        ],
+        "Menu végétalien": [
+            "bolognaise au soja"
+        ],
+        "Pizza": [
+            "PIZZA         GARNITURE SAUCISSE FUMEE"
+        ],
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": "menu non communiqué",
+        "date": "mardi 17 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "roti de veau farci sc echalotes",
+            "RIZ BIO",
+            "CHOUX FLEURS"
+        ],
+        "Menu végétalien": [
+            "DAHL DE LENTILLES"
+        ],
+        "Pizza": "menu non communiqué",
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": [
+            "CREPE JAMBON/FROMAGE SC BECHAMEL",
+            "FRITES"
+        ],
+        "date": "mercredi 18 septembre 2024"
+    },
+    {
+        "Entrées": [
+            "VARIATIONS DE SALADES VERTES.....",
+            "COMPOSÉES  OU NATURES...",
+            "CHARCUTERIE TERRE ET MER",
+            "ASSORTIMENTS DE CRUDITÉS"
+        ],
+        "Cuisine traditionnelle": [
+            "EMINCE DE BŒUF SC GOULASH",
+            "CUBES DE POISSON SC GINGEMBRE",
+            "PDT RONDES PERSILLEES",
+            "EPINARDS"
+        ],
+        "Menu végétalien": [
+            "GNOCCHIS COURGETTES /CHEVRE"
+        ],
+        "Pizza": [
+            "PIZZA",
+            "GARNITURE JAMBON"
+        ],
+        "Cuisine italienne": "menu non communiqué",
+        "Grill": "menu non communiqué",
+        "date": "jeudi 19 septembre 2024"
+    }
+]
+  */
+  //For now, the method returns a list of Menu objects, to be used in the MenuWidget, TODO : tester
+  Future<List<Menu>> fetchMenus() async {
+    if (_token == null) return [];
+    final menusData = await ApiService.getMenusD(_token!);
+    if (menusData != null) {
+      return menusData;
+    }
+    return [];
   }
 
   // Méthode pour se déconnecter
@@ -99,9 +345,9 @@ class UserProvider with ChangeNotifier {
     _user = null;
     _token = null;
     _friends = [];
-    _friendsStatus = {};
     notifyListeners();
   }
+
   
   void handleLoginError() {
     // TODO : Gérer les erreurs de connexion

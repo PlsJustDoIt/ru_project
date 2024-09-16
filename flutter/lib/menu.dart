@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
-import 'package:ru_project/services/api_service.dart'; // Import the API service
+import 'package:ru_project/providers/user_provider.dart'; // Import UserProvider
 
 class MenuWidget extends StatefulWidget {
-  MenuWidget({super.key});
+  const MenuWidget({super.key});
 
   @override
   _MenuWidgetState createState() => _MenuWidgetState();
@@ -12,47 +12,49 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
-   // TODO: Replace with user token
-  final String _token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2ZGRjNjUzYmEzN2EyYmZjNTZjYzNkMiIsImlhdCI6MTcyNjA1Nzg3MiwiZXhwIjoxNzI2MDYxNDcyfQ.5mw-gdIGbm8DvfR-UfoogpQTnV7VEuUc5sEtIohmwGo';
+  bool _isLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchMenus();
+    _checkLoginStatus();
   }
 
-  Future<void> _fetchMenus() async {
-    try {
-      final Map<String, dynamic>? response = await ApiService.getMenus(_token); // Call the API service
-      List<Menu> menus; 
-      if (response != null) {
-        menus = List<Menu>.from(response['menus'].map((x) => Menu.fromJson(x)));
-      } else {
-        menus = [];
+  void _checkLoginStatus() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    bool isLoggedIn = userProvider.token != null;
+    setState(() {
+      _isLoggedIn = isLoggedIn;
+      if (_isLoggedIn) {
+        setMenus(context);
       }
-      setState(() {
-        _menus = menus;
-      });
-    } catch (e) {
-      // Handle error
-      print('Failed to fetch menus: $e');
-    }
+    });
+  }
+
+  void setMenus(BuildContext context) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    List<Menu> menus = await userProvider.fetchMenus();
+    setState(() {
+      _menus = menus;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: _menus.isEmpty
-            ? const Text('Chargement...')
-            : ListView.builder(
-                itemCount: _menus.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_menus[index].date), // Display the date of the menu
-                  );
-                },
-              ),
+        child: _isLoggedIn
+            ? (_menus.isEmpty
+                ? const Text('Chargement...')
+                : ListView.builder(
+                    itemCount: _menus.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(_menus[index].date),
+                      );
+                    },
+                  ))
+            : const Text('Please log in to view the menu'),
       ),
     );
   }
