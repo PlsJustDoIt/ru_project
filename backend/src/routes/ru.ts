@@ -1,11 +1,11 @@
-import auth from '../middleware/auth';
-import User from '../models/user';
+import auth from '../middleware/auth.js';
+import User from '../models/user.js';
 import { Router,Request,Response } from 'express';
 import NodeCache from "node-cache";
 import axios, { AxiosResponse } from 'axios';
 import xml2js from 'xml2js';
 import fs from 'fs';
-import { Menu,MenuXml } from '../interfaces/menu';
+import { Menu,MenuXml } from '../interfaces/menu.js';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
