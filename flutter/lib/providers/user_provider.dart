@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import '../models/user.dart';
 import '../models/menu.dart';
 import '../services/api_service.dart';
@@ -85,13 +86,22 @@ class UserProvider with ChangeNotifier {
     await prefs.setString('tokenExpiration', expirationTime);
   }
 
-  // Méthode pour se connecter
-  Future<void> login(String username, String password) async {
+  // Méthode pour se connecter , ApiService.login could return null or a token or an exception
+  Future<void> login(String username, String password) async { 
     final token = await ApiService.login(username, password); //response is dynamic //TODO géré les erreurs
     if (token != null) {
-      _token = token;
-      await fetchUserData();
-      notifyListeners();
+      //test if exception
+      if(token is String){
+        _token = token;
+        await fetchUserData();
+        notifyListeners();
+      }else{
+        _token = null;
+        _user = null;
+        Logger().e('Erreur de connexion: $token');
+        handleLoginError();
+        notifyListeners();
+      }
     } else {
       _token = null;
       _user = null;
@@ -100,13 +110,23 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  // Méthode pour s'inscrire ApiService.register could return null or a token or an exception
   Future<String?> register(String username, String password) async {
     final token = await ApiService.register(username, password);
     if (token != null) {
-      _token = token;
-      await fetchUserData();
-      notifyListeners();
-      return "Inscription réussie";
+      if(token is String){
+        _token = token;
+        await fetchUserData();
+        notifyListeners();
+        return "Inscription réussie";
+      }else{
+        _token = null;
+        _user = null;
+        Logger().e('Erreur de connexion: $token');
+        handleLoginError();
+        notifyListeners();
+        return "Erreur d'inscription";
+      }
     } else {
       _token = null;
       _user = null;
@@ -183,8 +203,8 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  
+  // TODO : Gérer les erreurs de connexion
   void handleLoginError() {
-    // TODO : Gérer les erreurs de connexion
+    
   }
 }

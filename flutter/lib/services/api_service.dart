@@ -31,71 +31,102 @@ class ApiService {
   }
 
   static Future<String?> register(String username, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'password': password}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body)['token'];
-    } else {
-      return jsonDecode(response.body)['msg'];
-    }
-  }
-
- static Future<Map<String, dynamic>?> getUser(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/users/me'),
-      headers: {'x-auth-token': token},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['token'];
+      } else {
+        return jsonDecode(response.body)['msg'];
+      }
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
       return null;
     }
   }
 
+  static Future<Map<String, dynamic>?> getUser(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/me'),
+        headers: {'x-auth-token': token},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
+      return null;
+    }
+
+  }
+
   static Future<bool> updateStatus(String token, String status) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/users/status'),
-      headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
-      body: jsonEncode({'status': status}),
-    );
-    return response.statusCode == 200;
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/status'),
+        headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
+        body: jsonEncode({'status': status}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
+      return false;
+    }
   }
 
   static Future<bool> addFriend(String token, String friendUsername) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/add-friend'),
-      headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
-      body: jsonEncode({'friendUsername': friendUsername}),
-    );
-    return response.statusCode == 200;
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/add-friend'),
+        headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
+        body: jsonEncode({'friendUsername': friendUsername}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
+      return false;
+    }
   }
 
   
   static Future<Map<String, dynamic>?> getFriends(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/users/friends'),
-      headers: {'x-auth-token': token},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/friends'),
+        headers: {'x-auth-token': token},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
       return null;
     }
   }
 
   //temporary ?
   static Future<Map<String, dynamic>?> getMenus(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/ru/menus'),
-      headers: {'x-auth-token': token},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/ru/menus'),
+        headers: {'x-auth-token': token},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      logger.e('Erreur de connexion: $e');
       return null;
     }
   }
