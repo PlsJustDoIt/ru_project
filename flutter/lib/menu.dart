@@ -50,7 +50,19 @@ class _MenuWidgetState extends State<MenuWidget> {
                     itemCount: _menus.length,
                     itemBuilder: (context, index) {
                       return ListTile(
+                        //remainder menu items : entrees, cuisineTraditionnelle, menuVegetalien, pizza, cuisineItalienne, grill
                         title: Text(_menus[index].date),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Entrées: ${_menus[index].entrees}\n'),
+                            Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle}\n'),
+                            Text('Menu Végétalien: ${_menus[index].menuVegetalien}\n'),
+                            Text('Pizza: ${_menus[index].pizza}\n'),
+                            Text('Cuisine Italienne: ${_menus[index].cuisineItalienne}\n'),
+                            Text('Grill: ${_menus[index].grill}\n'),
+                          ],
+                        ),
                       );
                     },
                   ))

@@ -41,10 +41,11 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['token'];
       } else {
-        return jsonDecode(response.body)['msg'];
+        final errorResponse = jsonDecode(response.body);
+        throw Exception(errorResponse['msg'] ?? 'Erreur d\'inscription');
       }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
+      logger.e('Erreur d\'inscription: $e');
       return null;
     }
   }
