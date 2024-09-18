@@ -42,11 +42,11 @@ const PORT = process.env.PORT || 5000;
 if (!isProduction) {
   app.listen(PORT, () => console.log(`Server http running on port ${PORT}`));
 } else {
-  let options = {
+  const options = {
     cert: fs.readFileSync('/etc/ssl/private/server.key'),
-    key: fs.readFileSync('/etc/ssl/private/server.crt')
+    key: fs.readFileSync('/etc/ssl/certs/server.crt')
   };
-let server = https.createServer(options,app);
+const server = https.createServer(options,app);
 server.listen(PORT, () => console.log(`Server https running on port ${PORT}`));
 
 }
