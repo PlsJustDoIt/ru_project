@@ -10,7 +10,6 @@ import 'package:ru_project/widgets/welcomeWidget.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 void main() {
-  dotenv.load(fileName: ".env");
   runApp(MultiProvider(providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
     ],

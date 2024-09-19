@@ -4,11 +4,12 @@ import '../models/menu.dart';
 import '../models/user.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:ru_project/Config.dart';
 
 
 
 class ApiService {
-  static String? baseUrl = dotenv.env['API_URL'] ?? 'http://localhost:5000/api';
+  static String? baseUrl = Config.apiUrl ;
   static final logger = Logger();
 
   static Future<dynamic> login(String username, String password) async {
