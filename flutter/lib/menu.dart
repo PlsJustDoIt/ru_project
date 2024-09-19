@@ -13,6 +13,9 @@ class MenuWidget extends StatefulWidget {
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
   bool _isLoggedIn = false;
+  //system de page menu
+  PageController _pageController = PageController();
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -38,7 +41,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       _menus = menus;
     });
   }
-
+  /*
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +68,76 @@ class _MenuWidgetState extends State<MenuWidget> {
                         ),
                       );
                     },
+                  ))
+            : const Text('Please log in to view the menu'),
+      ),
+    );
+  }
+  */
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: _isLoggedIn
+            ? (_menus.isEmpty
+                ? const Text('Chargement...')
+                : Column(
+                    children: [
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: _menus.length,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              title: Text(_menus[index].date),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Entrées: ${_menus[index].entrees ?? "rien"}\n'),
+                                  Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle ?? "rien"}\n'),
+                                  Text('Menu Végétalien: ${_menus[index].menuVegetalien ?? "rien"}\n'),
+                                  Text('Pizza: ${_menus[index].pizza ?? "rien"}\n'),
+                                  Text('Cuisine Italienne: ${_menus[index].cuisineItalienne ?? "rien"}\n'),
+                                  Text('Grill: ${_menus[index].grill ?? "rien"}\n'),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: () {
+                              if (_currentPage > 0) {
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_forward),
+                            onPressed: () {
+                              if (_currentPage < _menus.length - 1) {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ))
             : const Text('Please log in to view the menu'),
       ),
