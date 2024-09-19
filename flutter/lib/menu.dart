@@ -75,6 +75,7 @@ class _MenuWidgetState extends State<MenuWidget> {
   }
   */
   @override
+  //TODO tester le systeme de page sur dif ecrans ???
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
