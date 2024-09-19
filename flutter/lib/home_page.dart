@@ -10,19 +10,6 @@ class HomePage extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Welcome, ${userProvider.user?.username}'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () {
-              userProvider.logout();
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
-              
-            },
-          ),
-        ],
-      ),
       body: TabBarWidget(),
     );
   }

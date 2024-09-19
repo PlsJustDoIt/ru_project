@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/home_page.dart';
 import 'package:ru_project/login_page.dart';
 import 'package:ru_project/menu.dart';
+import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/tabBar.dart';
 import 'package:ru_project/widgets/welcomeWidget.dart';
@@ -26,6 +26,20 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false, 
+      theme: ThemeData(
+        colorScheme: const ColorScheme (
+          primary: AppColors.primaryColor,
+          secondary: Colors.blue,
+          surface: Colors.white,
+          error: Colors.red,
+          onPrimary: Colors.white,
+          onSecondary: Colors.white,
+          onSurface: Colors.black,
+          onError: Colors.white,
+          brightness: Brightness.light,
+
+        )
+      ),
       home:AuthChecker(),
     );
   }

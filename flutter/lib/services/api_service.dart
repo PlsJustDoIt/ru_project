@@ -7,7 +7,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ru_project/Config.dart';
 
 
-
 class ApiService {
   static String? baseUrl = Config.apiUrl ;
   static final logger = Logger();
