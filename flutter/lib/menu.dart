@@ -55,12 +55,12 @@ class _MenuWidgetState extends State<MenuWidget> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Entrées: ${_menus[index].entrees}\n'),
-                            Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle}\n'),
-                            Text('Menu Végétalien: ${_menus[index].menuVegetalien}\n'),
-                            Text('Pizza: ${_menus[index].pizza}\n'),
-                            Text('Cuisine Italienne: ${_menus[index].cuisineItalienne}\n'),
-                            Text('Grill: ${_menus[index].grill}\n'),
+                            Text('Entrées: ${_menus[index].entrees ?? "rien"}\n'),
+                            Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle ?? "rien"}\n'),
+                            Text('Menu Végétalien: ${_menus[index].menuVegetalien ?? "rien"}\n'),
+                            Text('Pizza: ${_menus[index].pizza ?? "rien"}\n'),
+                            Text('Cuisine Italienne: ${_menus[index].cuisineItalienne ?? "rien"}\n'),
+                            Text('Grill: ${_menus[index].grill ?? "rien"}\n'),
                           ],
                         ),
                       );
