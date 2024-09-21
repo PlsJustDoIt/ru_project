@@ -38,7 +38,6 @@ const apiDoc = {
 const formatDate = (dateString: string): string => {
   // Parsing de la date au format 'YYYY-MM-DD'
   const date = parse(dateString, 'yyyy-MM-dd', new Date());
-
   // Formatage de la date au format 'dddd d MMMM yyyy'
   return format(date, 'eeee d MMMM yyyy', { locale: fr });
 };
@@ -52,7 +51,7 @@ function decodeHtmlEntities(text:string) {
 // Fonction récursive pour décoder les valeurs dans un objet JSON
 function decodeJsonValues (obj:any):any {
 
-  let res = JSON.parse(JSON.stringify(obj)); // On crée une copie de l'objet pour éviter de modifier l'original
+  const res = JSON.parse(JSON.stringify(obj)); // On crée une copie de l'objet pour éviter de modifier l'original
   
   for (const key in res) {
       if (typeof res[key] === 'object') {
