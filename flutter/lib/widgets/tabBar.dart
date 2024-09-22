@@ -14,7 +14,7 @@ class TabBarWidget extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Projet ru de léo'),
+          title: const Text('Projet ru de léo',style: TextStyle(fontFamily: 'Marianne'),),
           backgroundColor: AppColors.primaryColor,
           bottom: const TabBar(
                           labelColor: Colors.white,  // Couleur du texte et de l'icône sélectionnés
