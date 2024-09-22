@@ -41,41 +41,9 @@ class _MenuWidgetState extends State<MenuWidget> {
       _menus = menus;
     });
   }
-  /*
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _isLoggedIn
-            ? (_menus.isEmpty
-                ? const Text('Chargement...')
-                : ListView.builder(
-                    itemCount: _menus.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        //remainder menu items : entrees, cuisineTraditionnelle, menuVegetalien, pizza, cuisineItalienne, grill
-                        title: Text(_menus[index].date),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Entrées: ${_menus[index].entrees ?? "rien"}\n'),
-                            Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle ?? "rien"}\n'),
-                            Text('Menu Végétalien: ${_menus[index].menuVegetalien ?? "rien"}\n'),
-                            Text('Pizza: ${_menus[index].pizza ?? "rien"}\n'),
-                            Text('Cuisine Italienne: ${_menus[index].cuisineItalienne ?? "rien"}\n'),
-                            Text('Grill: ${_menus[index].grill ?? "rien"}\n'),
-                          ],
-                        ),
-                      );
-                    },
-                  ))
-            : const Text('Please log in to view the menu'),
-      ),
-    );
-  }
-  */
-  @override
-  //TODO tester le systeme de page sur dif ecrans ???
+  //TODO factoriser le code pour avec des widgets /!\ /!\ /!\ /!\ /!\
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
@@ -98,7 +66,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                               title: Text(_menus[index].date),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                                children: [ //TODO : afficher les listes (_menus[index].entrees)
                                   Text('Entrées: ${_menus[index].entrees ?? "rien"}\n'),
                                   Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle ?? "rien"}\n'),
                                   Text('Menu Végétalien: ${_menus[index].menuVegetalien ?? "rien"}\n'),
@@ -111,7 +79,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                           },
                         ),
                       ),
-                      Row(
+                      Row( // Navigation buttons TODO : deplacer le row en haut 
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(

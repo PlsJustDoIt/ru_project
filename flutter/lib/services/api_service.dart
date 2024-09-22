@@ -114,7 +114,7 @@ class ApiService {
     }
   }
 
-  //temporary ?
+  //TODO : essayez de fait la parti getmenusD dans user provider 
   static Future<Map<String, dynamic>?> getMenus(String token) async {
     try {
       final response = await http.get(
@@ -132,7 +132,7 @@ class ApiService {
     }
   }
 
-  //Get menu as list of Menu objects, to be used in the MenuWidget, TODO : tester
+  //TODO : essayez de fait la parti getmenusD dans user provider 
   static Future<List<Menu>?> getMenusD(String token) async {
 
     try {
