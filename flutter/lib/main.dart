@@ -6,7 +6,7 @@ import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/tabBar.dart';
-import 'package:ru_project/widgets/welcomeWidget.dart';
+import 'package:ru_project/widgets/welcome.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 void main() {
@@ -38,7 +38,8 @@ class MyApp extends StatelessWidget {
           onError: Colors.white,
           brightness: Brightness.light,
 
-        )
+        ),
+        fontFamily: 'Marianne',
       ),
       home:AuthChecker(),
     );

@@ -114,19 +114,10 @@ class UserProvider with ChangeNotifier {
   Future<String?> register(String username, String password) async {
     final token = await ApiService.register(username, password);
     if (token != null) {
-      if(token is String){
-        _token = token;
-        await fetchUserData();
-        notifyListeners();
-        return "Inscription réussie";
-      }else{
-        _token = null;
-        _user = null;
-        Logger().e('Erreur de connexion: $token');
-        handleLoginError();
-        notifyListeners();
-        return "Erreur d'inscription";
-      }
+      _token = token;
+      await fetchUserData();
+      notifyListeners();
+      return "Inscription réussie";
     } else {
       _token = null;
       _user = null;

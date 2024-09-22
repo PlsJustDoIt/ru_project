@@ -12,6 +12,5 @@ class AppColors {
 
   // Error color
   static const Color errorColor = Color(0xFFB00020);
-
   static const Color textColor = Color.fromARGB(255, 255, 255, 255);
 }

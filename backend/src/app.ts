@@ -43,8 +43,8 @@ if (!isProduction) {
   app.listen(PORT, () => console.log(`Server http running on port ${PORT}`));
 } else {
   const options = {
-    cert: fs.readFileSync('/etc/ssl/private/server.key'),
-    key: fs.readFileSync('/etc/ssl/certs/server.crt')
+    key: fs.readFileSync('/etc/ssl/private/server.key'),
+    cert: fs.readFileSync('/etc/ssl/certs/server.crt')
   };
 const server = https.createServer(options,app);
 server.listen(PORT, () => console.log(`Server https running on port ${PORT}`));

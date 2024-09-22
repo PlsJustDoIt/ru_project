@@ -1,3 +1,5 @@
 {
-    "cmake.ignoreCMakeListsMissing": true
+    "cmake.ignoreCMakeListsMissing": true,
+    "[dart]": { "editor.defaultFormatter": "Dart-Code.dart-code" },
+    "editor.formatOnSave": true
 }
