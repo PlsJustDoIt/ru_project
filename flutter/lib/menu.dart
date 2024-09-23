@@ -61,14 +61,15 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
 
-  //build the widget for the menu navigation row
+  //build the widget for the menu navigation row (TODO : problem overflows if the screen is not wide enough) 
   Row buildMenuNavRow(context){
+    const buttonSize = 50.0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton( //left button
           icon: const Icon(Icons.arrow_back),
-          iconSize: 50.0,
+          iconSize: buttonSize,
           onPressed: () {
             if (_currentPage > 0) {
               _pageController.previousPage(
@@ -81,7 +82,7 @@ class _MenuWidgetState extends State<MenuWidget> {
         Text(_menus[_currentPage].date),
         IconButton( //right button
           icon: const Icon(Icons.arrow_forward),
-          iconSize: 50.0,
+          iconSize: buttonSize,
           onPressed: () {
             if (_currentPage < _menus.length - 1) {
               _pageController.nextPage(
@@ -94,7 +95,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       ],
     );
   }
-  
+
   //build the widget for the menu list
   Widget buildMenuList(BuildContext context) {
     return Expanded(
