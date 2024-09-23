@@ -4,7 +4,6 @@ import '../models/user.dart';
 import '../models/menu.dart';
 import '../services/api_service.dart';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenManager {
@@ -22,80 +21,99 @@ class TokenManager {
     await _storage.delete(key: 'jwt');
   }
 
-    // Future<bool> isTokenValid() async {
-    // final token = await _storage.read(key: 'jwt');
-    // if (token == null) return false;
+  // Future<bool> isTokenValid() async {
+  // final token = await _storage.read(key: 'jwt');
+  // if (token == null) return false;
 
-    // // Décoder la partie payload du JWT (2e partie du token séparée par des points)
-    // final parts = token.split('.');
-    // if (parts.length != 3) return false;
+  // // Décoder la partie payload du JWT (2e partie du token séparée par des points)
+  // final parts = token.split('.');
+  // if (parts.length != 3) return false;
 
-    // // Le payload est en base64
-    // final payload = json.decode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
-    
-    // // Vérification de la date d'expiration
-    // final exp = payload['exp'];
-    // final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
-    
-    // return DateTime.now().isBefore(expirationDate);  // Retourne true si le token n'est pas expiré
-    //}
+  // // Le payload est en base64
+  // final payload = json.decode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
 
+  // // Vérification de la date d'expiration
+  // final exp = payload['exp'];
+  // final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+
+  // return DateTime.now().isBefore(expirationDate);  // Retourne true si le token n'est pas expiré
+  //}
 }
 
 class UserProvider with ChangeNotifier {
   User? _user;
   String? _token;
   List<User> _friends = [];
+  final TokenManager _tokenManager = TokenManager();
 
   // Getters
   User? get user => _user;
   String? get token => _token;
   List<User> get friends => _friends;
 
-
-  Future<bool> isConnected() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('token');
-  final expirationTime = prefs.getString('tokenExpiration');
-
-  if (token == null || expirationTime == null) {
-    return false; // Pas de token ou pas d'heure d'expiration
+  UserProvider() {
+    _tokenManager.getToken().then((value) {
+      _token = value;
+      fetchUserData();
+      // fetchFriends();
+      notifyListeners();
+    });
   }
 
-  final expirationDate = DateTime.parse(expirationTime);
+//   Future<bool> isConnected() async {
+//   final prefs = await SharedPreferences.getInstance();
+//   final token = prefs.getString('token');
+//   final expirationTime = prefs.getString('tokenExpiration');
 
-  // Comparer l'heure actuelle avec l'heure d'expiration
-  if (DateTime.now().isAfter(expirationDate)) {
-    // Token expiré, supprimer le token
-    await prefs.remove('token');
-    await prefs.remove('tokenExpiration');
-    return false;
-  }
+//   if (token == null || expirationTime == null) {
+//     return false; // Pas de token ou pas d'heure d'expiration
+//   }
 
-  return true; // Token toujours valide
-}
+//   final expirationDate = DateTime.parse(expirationTime);
 
-  Future<void> storeToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
+//   // Comparer l'heure actuelle avec l'heure d'expiration
+//   if (DateTime.now().isAfter(expirationDate)) {
+//     // Token expiré, supprimer le token
+//     await prefs.remove('token');
+//     await prefs.remove('tokenExpiration');
+//     return false;
+//   }
 
-    // Stocker le token
-    await prefs.setString('token', token);
+//   return true; // Token toujours valide
+// }
 
-    // Stocker l'heure d'expiration (1 heure après l'heure actuelle)
-    final expirationTime = DateTime.now().add(const Duration(hours: 1)).toIso8601String();
-    await prefs.setString('tokenExpiration', expirationTime);
-  }
+  // Future<void> storeToken(String token) async {
+  //   final prefs = await SharedPreferences.getInstance();
+
+  //   // Stocker le token
+  //   await prefs.setString('token', token);
+
+  //   // Stocker l'heure d'expiration (1 heure après l'heure actuelle)
+  //   final expirationTime =
+  //       DateTime.now().add(const Duration(hours: 1)).toIso8601String();
+  //   await prefs.setString('tokenExpiration', expirationTime);
+  // }
 
   // Méthode pour se connecter , ApiService.login could return null or a token or an exception
-  Future<void> login(String username, String password) async { 
-    final token = await ApiService.login(username, password); //response is dynamic
+  Future<void> login(String username, String password) async {
+    var token = await _tokenManager.getToken();
+
     if (token != null) {
+      _token = token;
+      await fetchUserData();
+      notifyListeners();
+      return;
+    }
+    final response =
+        await ApiService.login(username, password); //response is dynamic
+    if (response != null) {
       //test if exception
-      if(token is String){
-        _token = token;
+      if (response is String) {
+        _tokenManager.storeToken(response);
+        _token = response; // TODO : Stocker le token dans le stockage sécurisé
         await fetchUserData();
         notifyListeners();
-      }else{
+      } else {
         _token = null;
         _user = null;
         Logger().e('Erreur de connexion: $token');
@@ -114,7 +132,7 @@ class UserProvider with ChangeNotifier {
   Future<String?> register(String username, String password) async {
     final token = await ApiService.register(username, password);
     if (token != null) {
-      _token = token;
+      // _token = token;
       await fetchUserData();
       notifyListeners();
       return "Inscription réussie";
@@ -127,7 +145,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-   // Méthode pour récupérer les données utilisateur après la connexion
+  // Méthode pour récupérer les données utilisateur après la connexion
   Future<void> fetchUserData() async {
     if (_token != null) {
       final userData = await ApiService.getUser(_token!);
@@ -138,7 +156,6 @@ class UserProvider with ChangeNotifier {
         _token = null;
       }
       notifyListeners();
-      
     }
   }
 
@@ -170,7 +187,9 @@ class UserProvider with ChangeNotifier {
 
     final friendsData = await ApiService.getFriends(_token!);
     if (friendsData != null) {
-      _friends = friendsData['friends'].map<User>((json) => User.fromJson(json)).toList();
+      _friends = friendsData['friends']
+          .map<User>((json) => User.fromJson(json))
+          .toList();
       notifyListeners();
     }
   }
@@ -207,7 +226,5 @@ class UserProvider with ChangeNotifier {
   }
 
   // TODO : Gérer les erreurs de connexion
-  void handleLoginError() {
-    
-  }
+  void handleLoginError() {}
 }

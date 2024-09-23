@@ -3,8 +3,6 @@ import 'package:ru_project/login_page.dart';
 import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
 
-
-
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
 
@@ -14,14 +12,21 @@ class TabBarWidget extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Projet ru de léo',style: TextStyle(fontFamily: 'Marianne'),),
+          title: const Text(
+            'Projet ru de léo',
+            style: TextStyle(
+                fontFamily: 'Marianne', color: AppColors.secondaryColor),
+          ),
           backgroundColor: AppColors.primaryColor,
           bottom: const TabBar(
-                          labelColor: Colors.white,  // Couleur du texte et de l'icône sélectionnés
-              unselectedLabelColor: Colors.grey,  // Couleur du texte et de l'icône non sélectionnés
-              indicatorColor: Colors.yellow,  // Couleur de l'indicateur sous l'onglet sélectionné
+            labelColor:
+                Colors.white, // Couleur du texte et de l'icône sélectionnés
+            unselectedLabelColor: AppColors
+                .greyLight, // Couleur du texte et de l'icône non sélectionnés
+            indicatorColor: Colors
+                .yellow, // Couleur de l'indicateur sous l'onglet sélectionné
             tabs: [
-              Tab(icon: Icon(Icons.login), text: 'Default'),
+              Tab(icon: Icon(Icons.login), text: 'Carte ru'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
             ],
           ),

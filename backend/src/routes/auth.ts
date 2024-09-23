@@ -36,4 +36,11 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.post('/logout', async (req, res) => {
+    //const refreshToken = req.body.token;
+    res.json({ msg: 'User logged out' });
+
+}
+);
+
 export default router;

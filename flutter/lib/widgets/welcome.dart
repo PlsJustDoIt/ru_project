@@ -177,6 +177,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget2>
   @override
   void dispose() {
     // TODO: implement dispose
+    controller.dispose();
     super.dispose();
   }
 }
