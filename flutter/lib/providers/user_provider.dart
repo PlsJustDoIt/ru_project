@@ -88,7 +88,7 @@ class UserProvider with ChangeNotifier {
 
   // Méthode pour se connecter , ApiService.login could return null or a token or an exception
   Future<void> login(String username, String password) async { 
-    final token = await ApiService.login(username, password); //response is dynamic //TODO géré les erreurs
+    final token = await ApiService.login(username, password); //response is dynamic
     if (token != null) {
       //test if exception
       if(token is String){
