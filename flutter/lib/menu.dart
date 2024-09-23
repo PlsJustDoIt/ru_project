@@ -52,6 +52,36 @@ class _MenuWidgetState extends State<MenuWidget> {
                 ? const Text('Chargement...')
                 : Column(
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton( //left button
+                            icon: const Icon(Icons.arrow_back),
+                            iconSize: 50.0,
+                            onPressed: () {
+                              if (_currentPage > 0) {
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            },
+                          ),
+                          Text(_menus[_currentPage].date),
+                          IconButton( //right button
+                            icon: const Icon(Icons.arrow_forward),
+                            iconSize: 50.0,
+                            onPressed: () {
+                              if (_currentPage < _menus.length - 1) {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                       Expanded(
                         child: PageView.builder(
                           controller: _pageController,
@@ -63,48 +93,21 @@ class _MenuWidgetState extends State<MenuWidget> {
                           },
                           itemBuilder: (context, index) {
                             return ListTile(
-                              title: Text(_menus[index].date),
+                              title: const Text('Déjeuner et Dîner'),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [ //TODO : afficher les listes (_menus[index].entrees)
-                                  Text('Entrées: ${_menus[index].entrees ?? "rien"}\n'),
-                                  Text('Cuisine Traditionnelle: ${_menus[index].cuisineTraditionnelle ?? "rien"}\n'),
-                                  Text('Menu Végétalien: ${_menus[index].menuVegetalien ?? "rien"}\n'),
-                                  Text('Pizza: ${_menus[index].pizza ?? "rien"}\n'),
-                                  Text('Cuisine Italienne: ${_menus[index].cuisineItalienne ?? "rien"}\n'),
-                                  Text('Grill: ${_menus[index].grill ?? "rien"}\n'),
+                                children: [
+                                  Text('Entrées:\n - ${_menus[index].entrees?.join('\n - ') ?? "RIEN"}\n'),
+                                  Text('Cuisine Traditionnelle:\n - ${_menus[index].cuisineTraditionnelle?.join('\n - ') ?? "RIEN"}\n'),
+                                  Text('Menu Végétalien:\n - ${_menus[index].menuVegetalien?.join('\n - ') ?? "RIEN"}\n'),
+                                  Text('Pizza:\n - ${_menus[index].pizza?.join('\n - ') ?? "RIEN"}\n'),
+                                  Text('Cuisine Italienne:\n - ${_menus[index].cuisineItalienne?.join('\n - ') ?? "RIEN"}\n'),
+                                  Text('Grill:\n - ${_menus[index].grill?.join('\n - ') ?? "RIEN"}\n'),
                                 ],
                               ),
                             );
                           },
                         ),
-                      ),
-                      Row( // Navigation buttons TODO : deplacer le row en haut 
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back),
-                            onPressed: () {
-                              if (_currentPage > 0) {
-                                _pageController.previousPage(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_forward),
-                            onPressed: () {
-                              if (_currentPage < _menus.length - 1) {
-                                _pageController.nextPage(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            },
-                          ),
-                        ],
                       ),
                     ],
                   ))
