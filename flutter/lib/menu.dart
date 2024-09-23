@@ -36,7 +36,7 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void setMenus(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    List<Menu> menus = await userProvider.fetchMenus();
+    List<Menu> menus = await userProvider.fetchMenus(); //fetchMenusALT is better
     setState(() {
       _menus = menus;
     });

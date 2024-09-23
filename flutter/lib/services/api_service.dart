@@ -113,8 +113,8 @@ class ApiService {
     }
   }
 
-  //TODO : essayez de fait la parti getmenusD dans user provider 
-  static Future<Map<String, dynamic>?> getMenus(String token) async {
+  //get menus from the API
+  static Future<dynamic> getMenus(String token) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/ru/menus'),
@@ -131,9 +131,8 @@ class ApiService {
     }
   }
 
-  //TODO : essayez de fait la parti getmenusD dans user provider 
-  static Future<List<Menu>?> getMenusD(String token) async {
-
+  //get menus from the API (way better version)
+  static Future<List<Menu>?> getMenusALT(String token) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/ru/menus'),
