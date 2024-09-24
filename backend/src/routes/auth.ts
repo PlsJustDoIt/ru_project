@@ -13,8 +13,10 @@ router.post('/register', async (req, res) => {
         if (user) return res.status(400).json({ msg: 'User already exists' });
         user = new User({ username, password });
         await user.save();
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
-        res.json({ token });
+        const accessToken = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN_SECRET as jwt.Secret, { expiresIn: '15m' });
+        const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET as jwt.Secret, { expiresIn: '7d' });
+
+        res.json({ accessToken,refreshToken });
     } catch (err) {
         res.status(500).send('Server error'+err);
     }
