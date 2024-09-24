@@ -51,7 +51,7 @@ class AuthChecker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Appel de la méthode isConnected via le UserProvider
-    bool isConnected = UserProvider().token == null ? false : true;// await UserProvider().isLoggedIn();  // Vérification synchrone
+    bool isConnected = UserProvider().accessToken != null ? true : false;// await UserProvider().isLoggedIn();  // Vérification synchrone
 
     // Choisir la page selon l'état de connexion
     if (isConnected) {

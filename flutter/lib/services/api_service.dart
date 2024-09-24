@@ -4,67 +4,138 @@ import '../models/menu.dart';
 import '../models/user.dart';
 import 'package:logger/logger.dart';
 import 'package:ru_project/config.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class ApiService {
+
+  static Dio dio = Dio();
+
   static String? baseUrl = config.apiUrl ;
   static final logger = Logger();
+  static const _secureStorage = FlutterSecureStorage();
 
-  static Future<dynamic> login(String username, String password) async {
+
+  // static Future<dynamic> login(String username, String password) async {
+  //   try {
+
+  //     final response = await http.post(
+  //       Uri.parse('$baseUrl/auth/login'),
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({'username': username, 'password': password}),
+  //     );
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body)['token'];
+  //     } else {
+  //       final errorResponse = jsonDecode(response.body);
+  //       throw Exception(errorResponse['msg'] ?? 'Erreur de connexion');
+  //     }
+  //   } catch (e) {
+  //     logger.e('Erreur de connexion: $e');
+  //     return e;
+  //   }
+  // }
+
+   // Fonction pour login
+  static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['token'];
+      final response = await dio.post('$baseUrl/auth/login', data: {
+        'username': username,
+        'password': password,
+      });
+
+      Logger().i('Response: $response');
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data; // Renvoie les données si tout va bien
       } else {
-        final errorResponse = jsonDecode(response.body);
-        throw Exception(errorResponse['msg'] ?? 'Erreur de connexion');
+        throw Exception('Invalid response from server');
       }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return e;
+      throw Exception('Login failed: $e');
     }
   }
 
-  static Future<String?> register(String username, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
+  // static Future<String?> register(String username, String password) async {
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse('$baseUrl/auth/register'),
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({'username': username, 'password': password}),
+  //     );
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['token'];
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body)['token'];
+  //     } else {
+  //       final errorResponse = jsonDecode(response.body);
+  //       throw Exception(errorResponse['msg'] ?? 'Erreur d\'inscription');
+  //     }
+  //   } catch (e) {
+  //     logger.e('Erreur d\'inscription: $e');
+  //     return null;
+  //   }
+  // }
+
+  // Fonction pour s'inscrire
+  static Future<Map<String, dynamic>> register(String username, String password) async {
+    try {
+      final response = await dio.post('$baseUrl/auth/register', data: {
+        'username': username,
+        'password': password,
+      });
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data; // Renvoie les données si tout va bien
       } else {
-        final errorResponse = jsonDecode(response.body);
-        throw Exception(errorResponse['msg'] ?? 'Erreur d\'inscription');
+        throw Exception('Invalid response from server');
       }
     } catch (e) {
-      logger.e('Erreur d\'inscription: $e');
-      return null;
+      throw Exception('Registration failed: $e');
     }
   }
 
-  static Future<Map<String, dynamic>?> getUser(String token) async {
+
+
+  // static Future<Map<String, dynamic>?> getUser(String token) async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('$baseUrl/users/me'),
+  //       headers: {'x-auth-token': token},
+  //     );
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body);
+  //     } else {
+  //       return null;
+  //     }
+  //   } catch (e) {
+  //     logger.e('Erreur de connexion: $e');
+  //     return null;
+  //   }
+
+  // }
+
+  // Fonction pour récupérer les données utilisateur
+  static Future<Map<String, dynamic>> getUser(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/users/me'),
-        headers: {'x-auth-token': token},
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+       String? accessToken = await _secureStorage.read(key: 'accessToken');
+      final response = await dio.get('$baseUrl/users/me', options: Options(
+        headers: {
+          'Authorization': 'Bearer $accessToken',  // Ajout de l'Access Token
+        },
+      ));
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data; // Renvoie les données si tout va bien
       } else {
-        return null;
+        throw Exception('Invalid response from server');
       }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return null;
+      throw Exception('Failed to get user data: $e');
     }
-
   }
 
   static Future<bool> updateStatus(String token, String status) async {

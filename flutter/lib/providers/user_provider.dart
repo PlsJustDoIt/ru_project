@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import '../models/user.dart';
@@ -6,59 +8,54 @@ import '../services/api_service.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class TokenManager {
-  final _storage = const FlutterSecureStorage();
+// class TokenManager {
+//   final _storage = const FlutterSecureStorage();
 
-  Future<void> storeToken(String token) async {
-    await _storage.write(key: 'jwt', value: token);
-  }
+//   Future<void> storeToken(String token) async {
+//     await _storage.write(key: 'jwt', value: token);
+//   }
 
-  Future<String?> getToken() async {
-    return await _storage.read(key: 'jwt');
-  }
+//   Future<String?> getToken() async {
+//     return await _storage.read(key: 'jwt');
+//   }
 
-  Future<void> deleteToken() async {
-    await _storage.delete(key: 'jwt');
-  }
+//   Future<void> deleteToken() async {
+//     await _storage.delete(key: 'jwt');
+//   }
 
-  // Future<bool> isTokenValid() async {
-  // final token = await _storage.read(key: 'jwt');
-  // if (token == null) return false;
+//   // Future<bool> isTokenValid() async {
+//   // final token = await _storage.read(key: 'jwt');
+//   // if (token == null) return false;
 
-  // // Décoder la partie payload du JWT (2e partie du token séparée par des points)
-  // final parts = token.split('.');
-  // if (parts.length != 3) return false;
+//   // // Décoder la partie payload du JWT (2e partie du token séparée par des points)
+//   // final parts = token.split('.');
+//   // if (parts.length != 3) return false;
 
-  // // Le payload est en base64
-  // final payload = json.decode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+//   // // Le payload est en base64
+//   // final payload = json.decode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
 
-  // // Vérification de la date d'expiration
-  // final exp = payload['exp'];
-  // final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+//   // // Vérification de la date d'expiration
+//   // final exp = payload['exp'];
+//   // final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
 
-  // return DateTime.now().isBefore(expirationDate);  // Retourne true si le token n'est pas expiré
-  //}
-}
+//   // return DateTime.now().isBefore(expirationDate);  // Retourne true si le token n'est pas expiré
+//   //}
+// }
 
 class UserProvider with ChangeNotifier {
   User? _user;
-  String? _token;
   List<User> _friends = [];
-  final TokenManager _tokenManager = TokenManager();
+  final _secureStorage = const FlutterSecureStorage();
+
+  String? _accessToken;
+  String? _refreshToken;
+
 
   // Getters
   User? get user => _user;
-  String? get token => _token;
+  String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
   List<User> get friends => _friends;
-
-  UserProvider() {
-    _tokenManager.getToken().then((value) {
-      _token = value;
-      fetchUserData();
-      // fetchFriends();
-      notifyListeners();
-    });
-  }
 
 //   Future<bool> isConnected() async {
 //   final prefs = await SharedPreferences.getInstance();
@@ -94,34 +91,46 @@ class UserProvider with ChangeNotifier {
   //   await prefs.setString('tokenExpiration', expirationTime);
   // }
 
+   Future<void> storeTokens(String accessToken, String refreshToken) async {
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+
+    await _secureStorage.write(key: 'accessToken', value: accessToken);
+    await _secureStorage.write(key: 'refreshToken', value: refreshToken);
+
+    notifyListeners();
+  }
+
+  Future<void> loadTokens() async {
+    _accessToken = await _secureStorage.read(key: 'accessToken');
+    _refreshToken = await _secureStorage.read(key: 'refreshToken');
+    notifyListeners();
+  }
+
+  Future<void> clearTokens() async {
+    await _secureStorage.delete(key: 'accessToken');
+    await _secureStorage.delete(key: 'refreshToken');
+
+    _accessToken = null;
+    _refreshToken = null;
+    notifyListeners();
+  }
+
   // Méthode pour se connecter , ApiService.login could return null or a token or an exception
   Future<void> login(String username, String password) async {
-    var token = await _tokenManager.getToken();
 
-    if (token != null) {
-      _token = token;
-      await fetchUserData();
-      notifyListeners();
-      return;
-    }
+
     final response =
         await ApiService.login(username, password); //response is dynamic
     if (response != null) {
       //test if exception
-      if (response is String) {
-        _tokenManager.storeToken(response);
-        _token = response; // TODO : Stocker le token dans le stockage sécurisé
-        await fetchUserData();
-        notifyListeners();
-      } else {
-        _token = null;
-        _user = null;
-        Logger().e('Erreur de connexion: $token');
-        handleLoginError();
-        notifyListeners();
-      }
+      Logger().i('Response: $response');
+      //storeTokens(response['accessToken'], refreshToken)
+      await storeTokens(response['accessToken'], response['refreshToken']);
+      loadTokens();
+      await fetchUserData();
+      notifyListeners();
     } else {
-      _token = null;
       _user = null;
       handleLoginError();
       notifyListeners();
@@ -137,7 +146,6 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
       return "Inscription réussie";
     } else {
-      _token = null;
       _user = null;
       handleLoginError();
       notifyListeners();
@@ -147,23 +155,31 @@ class UserProvider with ChangeNotifier {
 
   // Méthode pour récupérer les données utilisateur après la connexion
   Future<void> fetchUserData() async {
-    if (_token != null) {
-      final userData = await ApiService.getUser(_token!);
+    try {
+      if (_accessToken != null) {
+      final userData = await ApiService.getUser(_accessToken!);
       if (userData != null) {
         _user = User.fromJson(userData);
       } else {
         _user = null;
-        _token = null;
+        _accessToken = null;
       }
       notifyListeners();
+      }
+    } catch (e) {
+      Logger().e('Erreur de connexion: $e');
+      _user = null;
+      _accessToken = null;
+      notifyListeners();
     }
+    
   }
 
   // Méthode pour mettre à jour l'état de l'utilisateur
   Future<void> updateStatus(String newStatus) async {
-    if (_token == null || _user == null) return;
+    if (_accessToken == null || _user == null) return;
 
-    final success = await ApiService.updateStatus(_token!, newStatus);
+    final success = await ApiService.updateStatus(_accessToken!, newStatus);
     if (success) {
       _user!.status = newStatus;
       notifyListeners();
@@ -172,9 +188,9 @@ class UserProvider with ChangeNotifier {
 
   // Méthode pour ajouter un ami
   Future<void> addFriend(String friendUsername) async {
-    if (_token == null) return;
+    if (_accessToken == null) return;
 
-    final success = await ApiService.addFriend(_token!, friendUsername);
+    final success = await ApiService.addFriend(_accessToken!, friendUsername);
     if (success) {
       // Mettez à jour la liste des amis après l'ajout
       await fetchFriends();
@@ -183,9 +199,9 @@ class UserProvider with ChangeNotifier {
 
   // Méthode pour récupérer la liste des amis et leurs états
   Future<void> fetchFriends() async {
-    if (_token == null) return;
+    if (_accessToken == null) return;
 
-    final friendsData = await ApiService.getFriends(_token!);
+    final friendsData = await ApiService.getFriends(_accessToken!);
     if (friendsData != null) {
       _friends = friendsData['friends']
           .map<User>((json) => User.fromJson(json))
@@ -196,8 +212,8 @@ class UserProvider with ChangeNotifier {
 
   //the method returns a list of Menu objects, to be used in the MenuWidget
   Future<List<Menu>> fetchMenus() async {
-    if (_token == null) return [];
-    final menusData = await ApiService.getMenus(_token!);
+    if (_accessToken == null) return [];
+    final menusData = await ApiService.getMenus(_accessToken!);
     List<Menu> menusRes = [];
     if (menusData != null) {
       for (var menu in menusData) {
@@ -209,8 +225,8 @@ class UserProvider with ChangeNotifier {
 
   //the method returns a list of Menu objects, to be used in the MenuWidget (way better version)
   Future<List<Menu>> fetchMenusALT() async {
-    if (_token == null) return [];
-    final menusData = await ApiService.getMenusALT(_token!);
+    if (_accessToken == null) return [];
+    final menusData = await ApiService.getMenusALT(_accessToken!);
     if (menusData != null) {
       return menusData;
     }
@@ -220,8 +236,9 @@ class UserProvider with ChangeNotifier {
   // Méthode pour se déconnecter
   void logout() {
     _user = null;
-    _token = null;
+    _accessToken = null;
     _friends = [];
+    // TODO : add logout method to backend
     notifyListeners();
   }
 
