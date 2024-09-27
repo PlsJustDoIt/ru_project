@@ -14,7 +14,7 @@ class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
   bool _isLoggedIn = false;
   //system de page menu
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
   int _currentPage = 0;
 
   @override
@@ -61,11 +61,11 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
 
-  //build the widget for the menu navigation row (TODO : problem overflows if the screen is not wide enough) 
-  Row buildMenuNavRow(context){
+  //build the row for the menu navigation row (TODO : problem overflows if the screen is not wide enough) 
+  Row buildMenuNavRow(context){ //TODO : etat statfull widget
     const buttonSize = 50.0;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton( //left button
           icon: const Icon(Icons.arrow_back),
@@ -109,17 +109,15 @@ class _MenuWidgetState extends State<MenuWidget> {
         },
         itemBuilder: (context, index) {
           return SingleChildScrollView(
-            child: ListTile(
-              title: Text(_menus[index].date),
+            child: ListTile( //TODO : listview build
+              //alignment:
+              title: const Center(child: Text('Déjeuner et diner')),
               subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                //mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Entrées:\n - ${_menus[index].entrees?.join('\n - ') ?? "RIEN"}\n'),
-                  Text('Cuisine Traditionnelle:\n - ${_menus[index].cuisineTraditionnelle?.join('\n - ') ?? "RIEN"}\n'),
-                  Text('Menu Végétalien:\n - ${_menus[index].menuVegetalien?.join('\n - ') ?? "RIEN"}\n'),
-                  Text('Pizza:\n - ${_menus[index].pizza?.join('\n - ') ?? "RIEN"}\n'),
-                  Text('Cuisine Italienne:\n - ${_menus[index].cuisineItalienne?.join('\n - ') ?? "RIEN"}\n'),
-                  Text('Grill:\n - ${_menus[index].grill?.join('\n - ') ?? "RIEN"}\n'),
+                  //Text('Entrées:\n - ${_menus[index].entrees?.join('\n - ') ?? "RIEN"}\n'), 
+                  Text('Cuisine Traditionnelle:\n - ${_menus[index].cuisineTraditionnelle?.join('\n - ') ?? "RIEN"}\nMenu Végétalien:\n - ${_menus[index].menuVegetalien?.join('\n - ') ?? "RIEN"}\nPizza:\n - ${_menus[index].pizza?.join('\n - ') ?? "RIEN"}\nCuisine Italienne:\n - ${_menus[index].cuisineItalienne?.join('\n - ') ?? "RIEN"}\nGrill:\n - ${_menus[index].grill?.join('\n - ') ?? "RIEN"}\n'),
                 ],
               ),
             ),

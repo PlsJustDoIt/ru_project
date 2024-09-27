@@ -97,13 +97,14 @@ class UserProvider with ChangeNotifier {
   // Méthode pour se connecter , ApiService.login could return null or a token or an exception
   Future<void> login(String username, String password) async {
     var token = await _tokenManager.getToken();
-
+    /*
     if (token != null) {
       _token = token;
       await fetchUserData();
       notifyListeners();
       return;
     }
+    */
     final response =
         await ApiService.login(username, password); //response is dynamic
     if (response != null) {
