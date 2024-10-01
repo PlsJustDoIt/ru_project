@@ -5,6 +5,9 @@ class Menu {
   List<String>? pizza;
   List<String>? cuisineItalienne;
   List<String>? grill;
+  int numberOfMenus = 6;
+  List<String> menuNames = ["Entrées", "Cuisine traditionnelle", "Menu végétalien", "Pizza", "Cuisine italienne", "Grill"];
+  List<String> menuKeys = ["entrees", "cuisineTraditionnelle", "menuVegetalien", "pizza", "cuisineItalienne", "grill"];
   String date;
 
   Menu({
@@ -16,6 +19,25 @@ class Menu {
     required this.grill,
     required this.date,
   });
+
+  List<String>? getListFromKey(String key) {
+    switch (key) {
+      case "entrees":
+        return entrees;
+      case "cuisineTraditionnelle":
+        return cuisineTraditionnelle;
+      case "menuVegetalien":
+        return menuVegetalien;
+      case "pizza":
+        return pizza;
+      case "cuisineItalienne":
+        return cuisineItalienne;
+      case "grill":
+        return grill;
+      default:
+        return null;
+    }
+  }
 
   // Factory constructor for creating a Menu instance from JSON
   factory Menu.fromJson(Map<String, dynamic> json) {

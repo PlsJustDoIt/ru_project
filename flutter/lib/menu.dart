@@ -61,9 +61,9 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
 
-  //build the row for the menu navigation row (TODO : problem overflows if the screen is not wide enough) 
-  Row buildMenuNavRow(context){ //TODO : etat statfull widget
-    const buttonSize = 50.0;
+  //build the row for the menu navigation row 
+  Widget buildMenuNavRow(context){
+    const buttonSize = 50.0; //temp
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -99,22 +99,61 @@ class _MenuWidgetState extends State<MenuWidget> {
   //build the widget for the menu list
   Widget buildMenuList(BuildContext context) {
     return Expanded(
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: _menus.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentPage = index;
-          });
-        },
-        itemBuilder: (context, index) {
+      child: Column(
+        children: [
+          const Text(
+            'Déjeuner',
+            style: TextStyle(
+              fontSize: 24.0,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 16.0),
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _menus.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _menus[index].numberOfMenus,
+                  itemBuilder: (context, i) {
+                    if (_menus[index].getListFromKey(_menus[index].menuKeys[i]) != null){
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text('${_menus[index].menuNames[i]} :'),
+                          Text(' - ${_menus[index].getListFromKey(_menus[index].menuKeys[i])?.join('\n - ') ?? "RIEN"}'),
+                          const SizedBox(height: 16.0),
+                        ],
+                      );
+                      
+                    }
+                  },
+                );
+                
+              },
+            ),
+          ),
+        ],
+      )
+    );
+  }
+}
+
+/*
           return SingleChildScrollView(
             child: ListTile( //TODO : listview build
               //alignment:
-              title: const Center(child: Text('Déjeuner et diner')),
+              title: const Center(child: Text('Déjeuner')),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
-                //mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   //Text('Entrées:\n - ${_menus[index].entrees?.join('\n - ') ?? "RIEN"}\n'), 
                   Text('Cuisine Traditionnelle:\n - ${_menus[index].cuisineTraditionnelle?.join('\n - ') ?? "RIEN"}\nMenu Végétalien:\n - ${_menus[index].menuVegetalien?.join('\n - ') ?? "RIEN"}\nPizza:\n - ${_menus[index].pizza?.join('\n - ') ?? "RIEN"}\nCuisine Italienne:\n - ${_menus[index].cuisineItalienne?.join('\n - ') ?? "RIEN"}\nGrill:\n - ${_menus[index].grill?.join('\n - ') ?? "RIEN"}\n'),
@@ -122,8 +161,4 @@ class _MenuWidgetState extends State<MenuWidget> {
               ),
             ),
           );
-        },
-      ),
-    );
-  }
-}
+          */
