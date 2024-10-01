@@ -115,11 +115,11 @@ class _MenuWidgetState extends State<MenuWidget> {
           const Text(
             'Déjeuner',
             style: TextStyle(
-              fontSize: 24.0,
+              fontSize: 20.0,
               color: Colors.black,
             ),
           ),
-          const SizedBox(height: 16.0),
+          const SizedBox(height: 14.0),
           Expanded(
             child: PageView.builder(
               controller: _pageController,
