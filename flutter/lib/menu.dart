@@ -36,6 +36,12 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void setMenus(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.menus.isNotEmpty) {
+      setState(() {
+        _menus = userProvider.menus;
+      });
+      return;
+    }
     List<Menu> menus = await userProvider.fetchMenus(); //fetchMenusALT is better
     setState(() {
       _menus = menus;
@@ -61,8 +67,8 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
 
-  //build the row for the menu navigation row 
-  Widget buildMenuNavRow(context){
+  //build the widget for the menu navigation row 
+  Widget buildMenuNavRow(BuildContext context) {
     const buttonSize = 50.0; //temp
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -79,7 +85,11 @@ class _MenuWidgetState extends State<MenuWidget> {
             }
           },
         ),
-        Text(_menus[_currentPage].date),
+        Expanded(
+          child: Center(
+            child: Text('Menu du ${_menus[_currentPage].date}'),
+          ),
+        ),
         IconButton( //right button
           icon: const Icon(Icons.arrow_forward),
           iconSize: buttonSize,
@@ -95,6 +105,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       ],
     );
   }
+       
 
   //build the widget for the menu list
   Widget buildMenuList(BuildContext context) {
@@ -121,7 +132,7 @@ class _MenuWidgetState extends State<MenuWidget> {
               itemBuilder: (context, index) {
                 return ListView.builder(
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                  //physics: const NeverScrollableScrollPhysics(),
                   itemCount: _menus[index].numberOfMenus,
                   itemBuilder: (context, i) {
                     if (_menus[index].getListFromKey(_menus[index].menuKeys[i]) != null){
@@ -147,7 +158,7 @@ class _MenuWidgetState extends State<MenuWidget> {
   }
 }
 
-/*
+/* BEST VERSION HERE instead of ListView.builder
           return SingleChildScrollView(
             child: ListTile( //TODO : listview build
               //alignment:

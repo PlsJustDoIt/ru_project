@@ -45,11 +45,13 @@ class UserProvider with ChangeNotifier {
   String? _token;
   List<User> _friends = [];
   final TokenManager _tokenManager = TokenManager();
+  List<Menu> _menus = [];
 
   // Getters
   User? get user => _user;
   String? get token => _token;
   List<User> get friends => _friends;
+  List<Menu> get menus => _menus;
 
   UserProvider() {
     _tokenManager.getToken().then((value) {
@@ -205,6 +207,7 @@ class UserProvider with ChangeNotifier {
         menusRes.add(Menu.fromJson(menu));
       }
     }
+    _menus = menusRes;
     return menusRes;
   }
 
@@ -213,6 +216,7 @@ class UserProvider with ChangeNotifier {
     if (_token == null) return [];
     final menusData = await ApiService.getMenusALT(_token!);
     if (menusData != null) {
+      _menus = menusData;
       return menusData;
     }
     return [];
