@@ -56,6 +56,7 @@ class UserProvider with ChangeNotifier {
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
   List<User> get friends => _friends;
+  static var count = 0;
 
 //   Future<bool> isConnected() async {
 //   final prefs = await SharedPreferences.getInstance();
@@ -91,7 +92,36 @@ class UserProvider with ChangeNotifier {
   //   await prefs.setString('tokenExpiration', expirationTime);
   // }
 
-   Future<void> storeTokens(String accessToken, String refreshToken) async {
+   // Constructor
+  UserProvider() {
+    _initialize();
+    
+    count++;
+  }
+
+  // Initialization method
+  Future<void> _initialize() async {
+    await loadTokens();
+    if (_accessToken != null) {
+      
+      await fetchUserData();
+      // await fetchFriends(); cette fonction marche pas
+    }
+  }
+
+  Future<bool> isConnected() async {
+    if (_accessToken != null) {
+      return true;
+    }
+    _secureStorage.read(key: 'accessToken').then((accessToken) {
+          
+        });
+    
+    return false;
+  }
+  
+
+  Future<void> storeTokens(String accessToken, String refreshToken) async {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
 
@@ -102,8 +132,11 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> loadTokens() async {
+    
     _accessToken = await _secureStorage.read(key: 'accessToken');
     _refreshToken = await _secureStorage.read(key: 'refreshToken');
+    
+    
     notifyListeners();
   }
 
@@ -120,51 +153,32 @@ class UserProvider with ChangeNotifier {
   Future<void> login(String username, String password) async {
 
 
-    final response =
-        await ApiService.login(username, password); //response is dynamic
-    if (response != null) {
-      //test if exception
-      Logger().i('Response: $response');
-      //storeTokens(response['accessToken'], refreshToken)
-      await storeTokens(response['accessToken'], response['refreshToken']);
-      loadTokens();
-      await fetchUserData();
-      notifyListeners();
-    } else {
-      _user = null;
-      handleLoginError();
-      notifyListeners();
+    final response = await ApiService.login(username, password); //response is dynamic
+    //test if exception
+    
+    //storeTokens(response['accessToken'], refreshToken)
+    await storeTokens(response['accessToken'], response['refreshToken']);
+    await loadTokens();
+    await fetchUserData();
+    notifyListeners();
     }
-  }
 
   // Méthode pour s'inscrire ApiService.register could return null or a token or an exception
   Future<String?> register(String username, String password) async {
     final token = await ApiService.register(username, password);
-    if (token != null) {
-      // _token = token;
-      await fetchUserData();
-      notifyListeners();
-      return "Inscription réussie";
-    } else {
-      _user = null;
-      handleLoginError();
-      notifyListeners();
-      return "Erreur d'inscription";
+    // _token = token;
+    await fetchUserData();
+    notifyListeners();
+    return "Inscription réussie";
     }
-  }
 
   // Méthode pour récupérer les données utilisateur après la connexion
   Future<void> fetchUserData() async {
     try {
       if (_accessToken != null) {
       final userData = await ApiService.getUser(_accessToken!);
-      if (userData != null) {
-        _user = User.fromJson(userData);
-      } else {
-        _user = null;
-        _accessToken = null;
-      }
-      notifyListeners();
+      _user = User.fromJson(userData);
+          notifyListeners();
       }
     } catch (e) {
       Logger().e('Erreur de connexion: $e');
@@ -202,13 +216,12 @@ class UserProvider with ChangeNotifier {
     if (_accessToken == null) return;
 
     final friendsData = await ApiService.getFriends(_accessToken!);
-    if (friendsData != null) {
-      _friends = friendsData['friends']
-          .map<User>((json) => User.fromJson(json))
-          .toList();
-      notifyListeners();
+    Logger().i(friendsData);
+    _friends = friendsData['friends']
+        .map<User>((json) => User.fromJson(json))
+        .toList();
+    notifyListeners();
     }
-  }
 
   //the method returns a list of Menu objects, to be used in the MenuWidget
   Future<List<Menu>> fetchMenus() async {

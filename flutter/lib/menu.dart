@@ -5,7 +5,6 @@ import 'package:ru_project/providers/user_provider.dart'; // Import UserProvider
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
-
   @override
   _MenuWidgetState createState() => _MenuWidgetState();
 }
@@ -20,19 +19,19 @@ class _MenuWidgetState extends State<MenuWidget> {
   @override
   void initState() {
     super.initState();
-    // _checkLoginStatus();
+     _checkLoginStatus();
   }
 
-  // void _checkLoginStatus() async {
-  //   final userProvider = Provider.of<UserProvider>(context, listen: false);
-  //   bool isLoggedIn = userProvider.token != null;
-  //   setState(() {
-  //     _isLoggedIn = isLoggedIn;
-  //     if (_isLoggedIn) {
-  //       setMenus(context);
-  //     }
-  //   });
-  // }
+  void _checkLoginStatus() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    bool isLoggedIn = userProvider.accessToken != null;
+    setState(() {
+      _isLoggedIn = isLoggedIn;
+      if (_isLoggedIn) {
+        setMenus(context);
+      }
+    });
+  }
 
   void setMenus(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);

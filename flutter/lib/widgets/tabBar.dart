@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ru_project/login_page.dart';
 import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
+import 'package:ru_project/widgets/restaurantMap.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -31,9 +32,9 @@ class TabBarWidget extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
+        body: const TabBarView(
           children: [
-            LoginPage(),
+            restaurantMapWidget(),
             MenuWidget(),
           ],
         ),

@@ -14,7 +14,6 @@ class ApiService {
 
   static String? baseUrl = config.apiUrl ;
   static final logger = Logger();
-  static const _secureStorage = FlutterSecureStorage();
 
 
   // static Future<dynamic> login(String username, String password) async {
@@ -45,7 +44,7 @@ class ApiService {
         'password': password,
       });
 
-      Logger().i('Response: $response');
+      
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
@@ -120,10 +119,9 @@ class ApiService {
   // Fonction pour récupérer les données utilisateur
   static Future<Map<String, dynamic>> getUser(String token) async {
     try {
-       String? accessToken = await _secureStorage.read(key: 'accessToken');
       final response = await dio.get('$baseUrl/users/me', options: Options(
         headers: {
-          'Authorization': 'Bearer $accessToken',  // Ajout de l'Access Token
+          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
         },
       ));
 
@@ -138,69 +136,152 @@ class ApiService {
     }
   }
 
+  // static Future<bool> updateStatus(String token, String status) async {
+  //   try {
+  //     final response = await http.put(
+  //       Uri.parse('$baseUrl/users/status'),
+  //       headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
+  //       body: jsonEncode({'status': status}),
+  //     );
+  //     return response.statusCode == 200;
+  //   } catch (e) {
+  //     logger.e('Erreur de connexion: $e');
+  //     return false;
+  //   }
+  // }
+
+  // Fonction pour mettre à jour le statut de l'utilisateur
   static Future<bool> updateStatus(String token, String status) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/users/status'),
-        headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
-        body: jsonEncode({'status': status}),
-      );
-      return response.statusCode == 200;
+      final response = await dio.put('$baseUrl/users/status', data: {
+        'status': status,
+      }, options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
+        },
+      ));
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200) {
+        return true; // Renvoie les données si tout va bien
+      } else {
+        throw Exception('Invalid response from server');
+      }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return false;
+      throw Exception('Failed to update user status: $e');
     }
   }
 
+  // static Future<bool> addFriend(String token, String friendUsername) async {
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse('$baseUrl/users/add-friend'),
+  //       headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
+  //       body: jsonEncode({'friendUsername': friendUsername}),
+  //     );
+  //     return response.statusCode == 200;
+  //   } catch (e) {
+  //     logger.e('Erreur de connexion: $e');
+  //     return false;
+  //   }
+  // }
+
+  // Fonction pour ajouter un ami
   static Future<bool> addFriend(String token, String friendUsername) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/users/add-friend'),
-        headers: {'x-auth-token': token, 'Content-Type': 'application/json'},
-        body: jsonEncode({'friendUsername': friendUsername}),
-      );
-      return response.statusCode == 200;
+      final response = await dio.post('$baseUrl/users/add-friend', data: {
+        'friendUsername': friendUsername,
+      }, options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
+        },
+      ));
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200) {
+        return true; // Renvoie les données si tout va bien
+      } else {
+        throw Exception('Invalid response from server');
+      }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return false;
+      throw Exception('Failed to add friend: $e');
     }
   }
 
   
-  static Future<Map<String, dynamic>?> getFriends(String token) async {
+  // static Future<Map<String, dynamic>?> getFriends(String token) async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('$baseUrl/users/friends'),
+  //       headers: {'x-auth-token': token},
+  //     );
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body);
+  //     } else {
+  //       return null;
+  //     }
+  //   } catch (e) {
+  //     logger.e('Erreur de connexion: $e');
+  //     return null;
+  //   }
+  // }
+
+  // Fonction pour récupérer la liste des amis
+  static Future<Map<String, dynamic>> getFriends(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/users/friends'),
-        headers: {'x-auth-token': token},
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+      final response = await dio.get('$baseUrl/users/friends', options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
+        },
+      ));
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data; // Renvoie les données si tout va bien
       } else {
-        return null;
+        throw Exception('Invalid response from server');
       }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return null;
+      throw Exception('Failed to get friends: $e');
     }
   }
+
+  // //get menus from the API
+  // static Future<dynamic> getMenus(String token) async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('$baseUrl/ru/menus'),
+  //       headers: {'x-auth-token': token},
+  //     );
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body);
+  //     } else {
+  //       return null;
+  //     }
+  //   } catch (e) {
+  //     logger.e('Erreur de connexion: $e');
+  //     return null;
+  //   }
+  // }
 
   //get menus from the API
   static Future<dynamic> getMenus(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/ru/menus'),
-        headers: {'x-auth-token': token},
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+      final response = await dio.get('$baseUrl/ru/menus', options: Options(
+        headers: { 'Authorization': 'Bearer $token'},
+      ));
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data; // Renvoie les données si tout va bien
       } else {
-        return null;
+        throw Exception('Invalid response from server');
       }
     } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return null;
+      throw Exception('Failed to get menus: $e');
     }
   }
+
 
   //get menus from the API (way better version)
   static Future<List<Menu>?> getMenusALT(String token) async {

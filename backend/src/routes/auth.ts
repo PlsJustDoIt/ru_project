@@ -74,6 +74,7 @@ router.post('/token', async (req, res) => {
          // Vérifier si le token est expiré (optionnel, mais si tu stockes l'expiration dans la base)
         if (existingToken.expires.getTime() < Date.now()) {
             await RefreshToken.findOneAndDelete({ token });
+            // peut etre refaire un refresh token au lieu de renvoyer erreur ???
             return res.status(403).json({ msg: 'Refresh token expired' });
         }
 
