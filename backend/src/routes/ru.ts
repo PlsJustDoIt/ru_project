@@ -14,7 +14,6 @@ const ru_lumiere_id = 'r135';
 const api_url = 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/menu.xml';
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
-
 const apiDoc = {
   message: 'API pour récupérer les prochains repas du ru lumière',
   author: {
@@ -142,7 +141,7 @@ async function fetchMenusFromExternalAPI() {
   router.get('/menus',auth, async (req:Request, res:Response) => {
     try {
       // On vérifie si les menus sont en cache
-      const cachedMenus = cache.get('menus');
+      const cachedMenus:Menu[] | undefined = cache.get('menus');
       if (cachedMenus) {
         console.log('Les menus sont en cache');
         return res.json(cachedMenus);

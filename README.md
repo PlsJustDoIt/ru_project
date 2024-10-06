@@ -7,6 +7,12 @@ Projet info ru.
 
 ![alt text](image-2.png)
 
+## DOC
+
+### Backend
+
+![fonctionnement des tokens](tokens.png)
+
 ## Getting Started
 
 First, clone the project:
@@ -132,6 +138,8 @@ flutter pub get
 ```bash
 flutter run
 ```
+
+
 
 
 This project is a starting point for a Flutter application.
