@@ -143,7 +143,8 @@ class _MenuWidgetState extends State<MenuWidget> {
                   //physics: const NeverScrollableScrollPhysics(),
                   itemCount: _menus[index].numberOfMenus,
                   itemBuilder: (context, i) {
-                    if (_menus[index].getListFromKey(_menus[index].menuKeys[i]) != null){
+                    //si la liste n'est pas vide ou si menu Keys[i] n est pas "entrees"
+                    if (_menus[index].getListFromKey(_menus[index].menuKeys[i]) != null && _menus[index].menuKeys[i] != "entrees") {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -154,6 +155,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                       );
                       
                     }
+                    return null;
                   },
                 );
                 
