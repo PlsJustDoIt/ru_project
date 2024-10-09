@@ -35,7 +35,6 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void setMenus(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    /*
     // If the menus are already fetched, use them (use menu class static getter)
     if (Menu.menus.isNotEmpty) {
       setState(() {
@@ -43,13 +42,14 @@ class _MenuWidgetState extends State<MenuWidget> {
       });
       return;
     }
-    */
+    /*
     if (userProvider.menus.isNotEmpty) {
       setState(() {
         _menus = userProvider.menus;
       });
       return;
     }
+    */
     List<Menu> menus = await userProvider.fetchMenus(); //fetchMenusALT is better
     setState(() {
       _menus = menus;

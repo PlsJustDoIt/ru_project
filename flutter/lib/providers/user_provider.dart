@@ -232,6 +232,7 @@ class UserProvider with ChangeNotifier {
         menusRes.add(Menu.fromJson(menu));
       }
     }
+    Menu.menus = menusData;
     return menusRes;
   }
 
