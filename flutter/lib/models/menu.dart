@@ -9,6 +9,9 @@ class Menu {
   List<String> menuNames = ["Entrées", "Cuisine traditionnelle", "Menu végétalien", "Pizza", "Cuisine italienne", "Grill"];
   List<String> menuKeys = ["entrees", "cuisineTraditionnelle", "menuVegetalien", "pizza", "cuisineItalienne", "grill"];
   String date;
+  static List<Menu> _menus = [];
+  static List<Menu> get menus => _menus;
+  static set menus(List<Menu> menus) => _menus = menus;
 
   Menu({
     required this.entrees,

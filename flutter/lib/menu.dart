@@ -36,6 +36,15 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void setMenus(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    /*
+    // If the menus are already fetched, use them (use menu class static getter)
+    if (Menu.menus.isNotEmpty) {
+      setState(() {
+        _menus = Menu.menus;
+      });
+      return;
+    }
+    */
     if (userProvider.menus.isNotEmpty) {
       setState(() {
         _menus = userProvider.menus;
@@ -119,7 +128,7 @@ class _MenuWidgetState extends State<MenuWidget> {
               color: Colors.black,
             ),
           ),
-          const SizedBox(height: 14.0),
+          const SizedBox(height: 16.0),
           Expanded(
             child: PageView.builder(
               controller: _pageController,

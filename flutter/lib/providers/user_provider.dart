@@ -216,6 +216,8 @@ class UserProvider with ChangeNotifier {
     if (_token == null) return [];
     final menusData = await ApiService.getMenusALT(_token!);
     if (menusData != null) {
+      //set the menus in Menu class
+      Menu.menus = menusData;
       _menus = menusData;
       return menusData;
     }
