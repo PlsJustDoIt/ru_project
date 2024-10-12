@@ -53,6 +53,7 @@ class _MenuWidgetState extends State<MenuWidget> {
     List<Menu> menus = await userProvider.fetchMenus(); //fetchMenusALT is better
     setState(() {
       _menus = menus;
+      Menu.menus = _menus;
     });
   }
 

@@ -232,7 +232,6 @@ class UserProvider with ChangeNotifier {
         menusRes.add(Menu.fromJson(menu));
       }
     }
-    Menu.menus = menusData;
     return menusRes;
   }
 
@@ -242,7 +241,6 @@ class UserProvider with ChangeNotifier {
     final menusData = await ApiService.getMenusALT(_accessToken!);
     if (menusData != null) {
       //set the menus in Menu class
-      Menu.menus = menusData;
       //_menus = menusData;
       return menusData;
     }
