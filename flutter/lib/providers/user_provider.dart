@@ -228,7 +228,7 @@ class UserProvider with ChangeNotifier {
     final menusData = await ApiService.getMenus(_accessToken!);
     List<Menu> menusRes = [];
     if (menusData != null) {
-      for (var menu in menusData) {
+      for (var menu in menusData.values) {
         menusRes.add(Menu.fromJson(menu));
       }
     }

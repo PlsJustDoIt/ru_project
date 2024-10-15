@@ -265,7 +265,7 @@ class ApiService {
   // }
 
   //get menus from the API
-  static Future<dynamic> getMenus(String token) async {
+  static Future<Map<String,dynamic>> getMenus(String token) async {
     try {
       final response = await dio.get('$baseUrl/ru/menus', options: Options(
         headers: { 'Authorization': 'Bearer $token'},
