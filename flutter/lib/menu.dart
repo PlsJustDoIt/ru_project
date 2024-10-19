@@ -48,7 +48,7 @@ class _MenuWidgetState extends State<MenuWidget> {
     }
 
     Map<String,dynamic> rawMenuData = await userProvider.fetchMenus();
-    List<Menu> menus; //REDO THIS PART
+    List<Menu> menus;
     if (rawMenuData != null) {
       menus = rawMenuData.values.map<Menu>((menu) => Menu.fromJson(menu)).toList();
     } else {
@@ -69,7 +69,7 @@ class _MenuWidgetState extends State<MenuWidget> {
     return Scaffold(
       body: Center(
         child: _isLoggedIn
-            ? (!menusProvider.isMenuSet
+            ? (!menusProvider.isMenuSet //TODO TEST THIS
                 ? const Text('Chargement...')
                 : Column(
                     children: [
@@ -123,7 +123,21 @@ class _MenuWidgetState extends State<MenuWidget> {
        
   Widget buildMenuList(BuildContext context) {
     return const Expanded(
-      child: Text('Menu temp'),
+      child: Column(
+        children : [
+          Text(
+            'Déjeuner',
+            style: TextStyle(
+              fontSize: 20.0,
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(height: 16.0),
+          Expanded(
+            child: Text('TODO : PageView.builder'),
+          ),
+        ],
+      )
     );
   }
   

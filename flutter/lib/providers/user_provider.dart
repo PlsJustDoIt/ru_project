@@ -222,7 +222,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
     }
 
-  //the method returns a list of Menu objects, to be used in the MenuWidget REDO THIS
+  // Méthode pour récupérer les menus
   Future<Map<String,dynamic>> fetchMenus() async {
     if (_accessToken == null) return {}; //[]
     final menusData = await ApiService.getMenus(_accessToken!);
