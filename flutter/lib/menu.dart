@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
+import 'package:ru_project/providers/menu_provider.dart';
 import 'package:ru_project/providers/user_provider.dart'; // Import UserProvider
 
 class MenuWidget extends StatefulWidget {
@@ -11,6 +12,7 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
+  Map<String,dynamic> _rawMenuData = {};
   bool _isLoggedIn = false;
   //system de page menu
   final PageController _pageController = PageController();
@@ -35,28 +37,39 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void setMenus(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
- 
-    /*
-    if (userProvider.menus.isNotEmpty) {
+    final menusProvider = Provider.of<MenuProvider>(context, listen: false);
+
+    if (menusProvider.isMenuSet) {
       setState(() {
-        _menus = userProvider.menus;
+        _menus = menusProvider.menuList;
+        _rawMenuData = menusProvider.menuData;
       });
       return;
     }
-    */
-    List<Menu> menus = await userProvider.fetchMenus(); //fetchMenusALT is better
+
+    Map<String,dynamic> rawMenuData = await userProvider.fetchMenus();
+    List<Menu> menus; //REDO THIS PART
+    if (rawMenuData != null) {
+      menus = rawMenuData.values.map<Menu>((menu) => Menu.fromJson(menu)).toList();
+    } else {
+      menus = [];
+    }
     setState(() {
       _menus = menus;
+      _rawMenuData = rawMenuData;
+      menusProvider.setMenus(menus);
+      menusProvider.setMenuData(rawMenuData);
     });
   }
 
   @override
   //build the widget
   Widget build(BuildContext context) {
+    final menusProvider = Provider.of<MenuProvider>(context, listen: false);
     return Scaffold(
       body: Center(
         child: _isLoggedIn
-            ? (_menus.isEmpty
+            ? (!menusProvider.isMenuSet
                 ? const Text('Chargement...')
                 : Column(
                     children: [
@@ -108,8 +121,18 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
        
+  Widget buildMenuList(BuildContext context) {
+    return const Expanded(
+      child: Text('Menu temp'),
+    );
+  }
+  
+}
 
-  //build the widget for the menu list
+/* 
+old :
+
+//build the widget for the menu list
   Widget buildMenuList(BuildContext context) {
     return Expanded(
       child: Column(
@@ -160,9 +183,10 @@ class _MenuWidgetState extends State<MenuWidget> {
       )
     );
   }
-}
 
-/* BEST VERSION HERE instead of ListView.builder
+
+
+  BEST VERSION HERE instead of ListView.builder
           return SingleChildScrollView(
             child: ListTile( //TODO : listview build
               //alignment:
@@ -176,4 +200,5 @@ class _MenuWidgetState extends State<MenuWidget> {
               ),
             ),
           );
-          */
+
+*/

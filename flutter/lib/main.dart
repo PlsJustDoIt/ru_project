@@ -7,14 +7,15 @@ import 'package:ru_project/login_page.dart';
 import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/providers/menu_provider.dart';
 import 'package:ru_project/widgets/tabBar.dart';
 import 'package:ru_project/widgets/welcome.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-
 void main() {
   runApp(MultiProvider(providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
+      ChangeNotifierProvider(create: (_) => MenuProvider()),
     ],
     child: const MyApp(),
     ),

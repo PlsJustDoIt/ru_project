@@ -222,10 +222,11 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
     }
 
-  //the method returns a list of Menu objects, to be used in the MenuWidget
-  Future<List<Menu>> fetchMenus() async {
-    if (_accessToken == null) return [];
+  //the method returns a list of Menu objects, to be used in the MenuWidget REDO THIS
+  Future<Map<String,dynamic>> fetchMenus() async {
+    if (_accessToken == null) return {}; //[]
     final menusData = await ApiService.getMenus(_accessToken!);
+    /*
     List<Menu> menusRes = [];
     if (menusData != null) {
       for (var menu in menusData.values) {
@@ -233,6 +234,8 @@ class UserProvider with ChangeNotifier {
       }
     }
     return menusRes;
+    */
+    return menusData;
   }
 
   //the method returns a list of Menu objects, to be used in the MenuWidget (way better version)
