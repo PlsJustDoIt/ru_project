@@ -5,9 +5,6 @@ class Menu {
   List<String>? pizza;
   List<String>? cuisineItalienne;
   List<String>? grill;
-  int numberOfMenus = 6;
-  List<String> menuNames = ["Entrées", "Cuisine traditionnelle", "Menu végétalien", "Pizza", "Cuisine italienne", "Grill"];
-  List<String> menuKeys = ["entrees", "cuisineTraditionnelle", "menuVegetalien", "pizza", "cuisineItalienne", "grill"];
   String date;
 
   Menu({

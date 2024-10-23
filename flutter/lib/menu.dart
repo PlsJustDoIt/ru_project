@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/providers/menu_provider.dart';
@@ -12,7 +13,7 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
-  Map<String,dynamic> _rawMenuData = {};
+  List<Map<String,dynamic>> _rawMenuData = [];
   bool _isLoggedIn = false;
   //system de page menu
   final PageController _pageController = PageController();
@@ -26,7 +27,7 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void _checkLoginStatus() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    bool isLoggedIn = userProvider.accessToken != null;
+    bool isLoggedIn = await userProvider.isConnected();
     setState(() {
       _isLoggedIn = isLoggedIn;
       if (_isLoggedIn) {
@@ -36,23 +37,33 @@ class _MenuWidgetState extends State<MenuWidget> {
   }
 
   void setMenus(BuildContext context) async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
+    
+    //test si le menu a le token
+    if (menusProvider.accessToken == null) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (userProvider.accessToken == null) {
+        Logger().e('No token found in UserProvider');
+        return;
+      }
+      menusProvider.storeTokens(userProvider.accessToken!, userProvider.refreshToken!);
+    }
 
-    if (menusProvider.isMenuSet) {
+
+    //si le menu est déjà chargé dans le provider
+    if (menusProvider.menuList.isNotEmpty) {
       setState(() {
         _menus = menusProvider.menuList;
         _rawMenuData = menusProvider.menuData;
       });
       return;
     }
-
-    Map<String,dynamic> rawMenuData = await userProvider.fetchMenus();
+    List<Map<String,dynamic>> rawMenuData = await menusProvider.fetchMenus();
     List<Menu> menus;
-    if (rawMenuData != null) {
-      menus = rawMenuData.values.map<Menu>((menu) => Menu.fromJson(menu)).toList();
+    if (rawMenuData.isEmpty) {
+      menus = []; 
     } else {
-      menus = [];
+      menus = rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
     }
     setState(() {
       _menus = menus;
@@ -69,12 +80,12 @@ class _MenuWidgetState extends State<MenuWidget> {
     return Scaffold(
       body: Center(
         child: _isLoggedIn
-            ? (!menusProvider.isMenuSet //TODO TEST THIS
+            ? (menusProvider.menuList.isEmpty //TODO TEST THIS
                 ? const Text('Chargement...')
                 : Column(
                     children: [
-                      buildMenuNavRow(context),
-                      buildMenuList(context),
+                      menuNavRow(context),
+                      menuList(context),
                     ],
                   ))
             : const Text('Please log in to view the menu'),
@@ -83,7 +94,7 @@ class _MenuWidgetState extends State<MenuWidget> {
   }
 
   //build the widget for the menu navigation row 
-  Widget buildMenuNavRow(BuildContext context) {
+  Widget menuNavRow(BuildContext context) {
     const buttonSize = 50.0; //temp
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -121,20 +132,49 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
        
-  Widget buildMenuList(BuildContext context) {
-    return const Expanded(
+  Widget menuList(BuildContext context) {
+    return Expanded(
       child: Column(
         children : [
-          Text(
+          const Text(
             'Déjeuner',
             style: TextStyle(
               fontSize: 20.0,
               color: Colors.black,
             ),
           ),
-          SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
           Expanded(
-            child: Text('TODO : PageView.builder'),
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _menus.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _rawMenuData[_currentPage].length,
+                  itemBuilder: (context, i) {
+                    if (_rawMenuData[_currentPage].keys.elementAt(i) != "entrees") {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text('${_rawMenuData[_currentPage].keys.elementAt(i)} :'),
+                          Text(' - ${_rawMenuData[_currentPage].values.elementAt(i)}'),
+                          //Text(' - ${_rawMenuData[_currentPage].values.elementAt(i).join('\n - ') ?? "RIEN"}'),
+
+                          const SizedBox(height: 16.0),
+                        ],
+                      );
+                    }
+                    return null;
+                  }
+                );
+              }
+            )
           ),
         ],
       )

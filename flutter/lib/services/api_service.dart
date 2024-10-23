@@ -265,7 +265,7 @@ class ApiService {
   // }
 
   //get menus from the API
-  static Future<Map<String,dynamic>> getMenus(String token) async {
+  static Future<List<dynamic>> getMenus(String token) async {
     try {
       final response = await dio.get('$baseUrl/ru/menus', options: Options(
         headers: { 'Authorization': 'Bearer $token'},
@@ -279,26 +279,6 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to get menus: $e');
-    }
-  }
-
-
-  //get menus from the API (way better version)
-  static Future<List<Menu>?> getMenusALT(String token) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/ru/menus'),
-        headers: {'x-auth-token': token},
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<Menu>.from(data.map((x) => Menu.fromJson(x)));
-      } else {
-        return null;
-      }
-    } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return null;
     }
   }
 }

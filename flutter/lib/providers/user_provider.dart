@@ -222,32 +222,12 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
     }
 
-  // Méthode pour récupérer les menus
-  Future<Map<String,dynamic>> fetchMenus() async {
-    if (_accessToken == null) return {}; //[]
-    final menusData = await ApiService.getMenus(_accessToken!);
-    /*
-    List<Menu> menusRes = [];
-    if (menusData != null) {
-      for (var menu in menusData.values) {
-        menusRes.add(Menu.fromJson(menu));
-      }
-    }
-    return menusRes;
-    */
-    return menusData;
-  }
-
-  //the method returns a list of Menu objects, to be used in the MenuWidget (way better version)
-  Future<List<Menu>> fetchMenusALT() async {
+  // Méthode pour récupérer les menus TODO MOVE TO MENU PRIVIDER
+  Future<List<Map<String,dynamic>>> fetchMenus() async {
     if (_accessToken == null) return [];
-    final menusData = await ApiService.getMenusALT(_accessToken!);
-    if (menusData != null) {
-      //set the menus in Menu class
-      //_menus = menusData;
-      return menusData;
-    }
-    return [];
+    final menusData = await ApiService.getMenus(_accessToken!);
+
+    return List<Map<String, dynamic>>.from(menusData);
   }
 
   // Méthode pour se déconnecter
