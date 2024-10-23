@@ -158,7 +158,8 @@ class _MenuWidgetState extends State<MenuWidget> {
                   shrinkWrap: true,
                   itemCount: _rawMenuData[_currentPage].length,
                   itemBuilder: (context, i) {
-                    if (_rawMenuData[_currentPage].keys.elementAt(i) != "entrees") {
+                    if (_rawMenuData[_currentPage].keys.elementAt(i) != "Entrées"|| _rawMenuData[_currentPage].keys.elementAt(i) != "date"|| _rawMenuData[_currentPage].keys.elementAt(i) != "menu non communiqué") {
+                      Logger().i('Menu keys: ${_rawMenuData[_currentPage].keys}');
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [

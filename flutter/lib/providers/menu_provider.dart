@@ -9,7 +9,7 @@ class MenuProvider with ChangeNotifier {
   List<Map<String,dynamic>> _menuRawData = [];
   List<Menu> _menus = [];
 
-  //user token TODO ADD TOKEN MANAGER like in user provider
+  //user token 
   String? _accessToken;
   String? _refreshToken;
   final _secureStorage = const FlutterSecureStorage();
@@ -72,10 +72,10 @@ class MenuProvider with ChangeNotifier {
   //get menus from the API
   Future<List<Map<String,dynamic>>> fetchMenus() async {
     if (_accessToken == null){
-      Logger().e('No access token');
+      //Logger().e('No access token');
       return [];
     }
-    Logger().i('Fetching menus');
+    //Logger().i('Fetching menus');
     final menusData = await ApiService.getMenus(_accessToken!);
 
     return List<Map<String, dynamic>>.from(menusData);
