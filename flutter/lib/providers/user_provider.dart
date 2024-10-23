@@ -7,6 +7,8 @@ import '../models/menu.dart';
 import '../services/api_service.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/tokenStorage.dart';
+
 
 // class TokenManager {
 //   final _storage = const FlutterSecureStorage();
@@ -221,14 +223,6 @@ class UserProvider with ChangeNotifier {
         .toList();
     notifyListeners();
     }
-
-  // Méthode pour récupérer les menus TODO MOVE TO MENU PRIVIDER
-  Future<List<Map<String,dynamic>>> fetchMenus() async {
-    if (_accessToken == null) return [];
-    final menusData = await ApiService.getMenus(_accessToken!);
-
-    return List<Map<String, dynamic>>.from(menusData);
-  }
 
   // Méthode pour se déconnecter
   void logout() {

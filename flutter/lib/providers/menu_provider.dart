@@ -6,7 +6,7 @@ import '../models/menu.dart';
 
 class MenuProvider with ChangeNotifier {
   //variables
-  List<Map<String,dynamic>> _menuRawData = [];
+  // List<Map<String,dynamic>> _menuRawData = [];
   List<Menu> _menus = [];
 
   //user token 
@@ -16,16 +16,16 @@ class MenuProvider with ChangeNotifier {
 
 
   // Getters
-  List<Menu> get menuList => _menus;
-  List<Map<String,dynamic>> get menuData => _menuRawData;
+  List<Menu> get menus => _menus;
+  // List<Map<String,dynamic>> get menuData => _menuRawData;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
 
-  //Setters
-  void setMenuData(List<Map<String,dynamic>> data) {
-    _menuRawData = data;
-    notifyListeners();
-  }
+  // //Setters
+  // void setMenuData(List<Map<String,dynamic>> data) {
+  //   _menuRawData = data;
+  //   notifyListeners();
+  // }
 
   void setMenus(List<Menu> menuList) {
     _menus = menuList;

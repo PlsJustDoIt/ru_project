@@ -13,7 +13,7 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   List<Menu> _menus = [];
-  List<Map<String,dynamic>> _rawMenuData = [];
+  //List<Map<String,dynamic>> _rawMenuData = [];
   bool _isLoggedIn = false;
   //system de page menu
   final PageController _pageController = PageController();
@@ -40,6 +40,7 @@ class _MenuWidgetState extends State<MenuWidget> {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
     
     //test si le menu a le token
+    //TODO : virer cette merde de code
     if (menusProvider.accessToken == null) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       if (userProvider.accessToken == null) {
@@ -51,25 +52,28 @@ class _MenuWidgetState extends State<MenuWidget> {
 
 
     //si le menu est déjà chargé dans le provider
-    if (menusProvider.menuList.isNotEmpty) {
+    if (menusProvider.menus.isNotEmpty) { // OK
       setState(() {
-        _menus = menusProvider.menuList;
-        _rawMenuData = menusProvider.menuData;
+        _menus = menusProvider.menus;
+        //_rawMenuData = menusProvider.menuData;
       });
       return;
     }
-    List<Map<String,dynamic>> rawMenuData = await menusProvider.fetchMenus();
-    List<Menu> menus;
-    if (rawMenuData.isEmpty) {
+
+
+    List<Map<String,dynamic>> rawMenuData = await menusProvider.fetchMenus(); // OK
+    List<Menu> menus; // OK
+
+    if (rawMenuData.isEmpty) { // à voir si c'est useless ou pas
       menus = []; 
     } else {
       menus = rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
     }
     setState(() {
       _menus = menus;
-      _rawMenuData = rawMenuData;
+      //_rawMenuData = rawMenuData;
       menusProvider.setMenus(menus);
-      menusProvider.setMenuData(rawMenuData);
+      //menusProvider.setMenuData(rawMenuData);
     });
   }
 
@@ -77,10 +81,11 @@ class _MenuWidgetState extends State<MenuWidget> {
   //build the widget
   Widget build(BuildContext context) {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
+    //final userProvider = Provider.of<UserProvider>(context, listen: false); // jsp
     return Scaffold(
       body: Center(
         child: _isLoggedIn
-            ? (menusProvider.menuList.isEmpty //TODO TEST THIS
+            ? (menusProvider.menus.isEmpty //TODO TEST THIS
                 ? const Text('Chargement...')
                 : Column(
                     children: [
@@ -88,10 +93,24 @@ class _MenuWidgetState extends State<MenuWidget> {
                       menuList(context),
                     ],
                   ))
-            : const Text('Please log in to view the menu'),
+            : const Text('connecte toi frr'),
       ),
     );
   }
+
+  // build the all menu widget
+  /*
+    widget la_totale(BuildContext context, List<Menu> menus) {
+
+    foreach(Menu menu in menus) {
+      return Column(
+        children: [
+          menuNavRow(context, menu),
+          menuList(context, menu),
+        ],
+      );
+    }
+  */
 
   //build the widget for the menu navigation row 
   Widget menuNavRow(BuildContext context) {
@@ -113,7 +132,7 @@ class _MenuWidgetState extends State<MenuWidget> {
         ),
         Expanded(
           child: Center(
-            child: Text('Menu du ${_menus[_currentPage].date}'),
+            child: Text('Menu du ${_menus[_currentPage].date}'), // à voir avec _menus
           ),
         ),
         IconButton( //right button
@@ -147,7 +166,7 @@ class _MenuWidgetState extends State<MenuWidget> {
           Expanded(
             child: PageView.builder(
               controller: _pageController,
-              itemCount: _menus.length,
+              itemCount: _menus.length, // a voir
               onPageChanged: (index) {
                 setState(() {
                   _currentPage = index;
@@ -158,19 +177,19 @@ class _MenuWidgetState extends State<MenuWidget> {
                   shrinkWrap: true,
                   itemCount: _rawMenuData[_currentPage].length,
                   itemBuilder: (context, i) {
-                    if (_rawMenuData[_currentPage].keys.elementAt(i) != "Entrées"|| _rawMenuData[_currentPage].keys.elementAt(i) != "date"|| _rawMenuData[_currentPage].keys.elementAt(i) != "menu non communiqué") {
-                      Logger().i('Menu keys: ${_rawMenuData[_currentPage].keys}');
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text('${_rawMenuData[_currentPage].keys.elementAt(i)} :'),
-                          Text(' - ${_rawMenuData[_currentPage].values.elementAt(i)}'),
-                          //Text(' - ${_rawMenuData[_currentPage].values.elementAt(i).join('\n - ') ?? "RIEN"}'),
+                    // if (_rawMenuData[_currentPage].keys.elementAt(i) != "Entrées"|| _rawMenuData[_currentPage].keys.elementAt(i) != "date"|| _rawMenuData[_currentPage].keys.elementAt(i) != "menu non communiqué") {
+                    //   Logger().i('Menu keys: ${_rawMenuData[_currentPage].keys}');
+                    //   return Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.center,
+                    //     children: [
+                    //       Text('${_rawMenuData[_currentPage].keys.elementAt(i)} :'),
+                    //       Text(' - ${_rawMenuData[_currentPage].values.elementAt(i)}'),
+                    //       //Text(' - ${_rawMenuData[_currentPage].values.elementAt(i).join('\n - ') ?? "RIEN"}'),
 
-                          const SizedBox(height: 16.0),
-                        ],
-                      );
-                    }
+                    //       const SizedBox(height: 16.0),
+                    //     ],
+                    //   );
+                    // }
                     return null;
                   }
                 );
@@ -184,76 +203,3 @@ class _MenuWidgetState extends State<MenuWidget> {
   
 }
 
-/* 
-old :
-
-//build the widget for the menu list
-  Widget buildMenuList(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          const Text(
-            'Déjeuner',
-            style: TextStyle(
-              fontSize: 20.0,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 16.0),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _menus.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                return ListView.builder(
-                  shrinkWrap: true,
-                  //physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _menus[index].numberOfMenus,
-                  itemBuilder: (context, i) {
-                    //si la liste n'est pas vide ou si menu Keys[i] n est pas "entrees"
-                    if (_menus[index].getListFromKey(_menus[index].menuKeys[i]) != null && _menus[index].menuKeys[i] != "entrees") {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text('${_menus[index].menuNames[i]} :'),
-                          Text(' - ${_menus[index].getListFromKey(_menus[index].menuKeys[i])?.join('\n - ') ?? "RIEN"}'),
-                          const SizedBox(height: 16.0),
-                        ],
-                      );
-                      
-                    }
-                    return null;
-                  },
-                );
-                
-              },
-            ),
-          ),
-        ],
-      )
-    );
-  }
-
-
-
-  BEST VERSION HERE instead of ListView.builder
-          return SingleChildScrollView(
-            child: ListTile( //TODO : listview build
-              //alignment:
-              title: const Center(child: Text('Déjeuner')),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  //Text('Entrées:\n - ${_menus[index].entrees?.join('\n - ') ?? "RIEN"}\n'), 
-                  Text('Cuisine Traditionnelle:\n - ${_menus[index].cuisineTraditionnelle?.join('\n - ') ?? "RIEN"}\nMenu Végétalien:\n - ${_menus[index].menuVegetalien?.join('\n - ') ?? "RIEN"}\nPizza:\n - ${_menus[index].pizza?.join('\n - ') ?? "RIEN"}\nCuisine Italienne:\n - ${_menus[index].cuisineItalienne?.join('\n - ') ?? "RIEN"}\nGrill:\n - ${_menus[index].grill?.join('\n - ') ?? "RIEN"}\n'),
-                ],
-              ),
-            ),
-          );
-
-*/
