@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/home_page.dart';
-import 'package:ru_project/login_page.dart';
-import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/providers/menu_provider.dart';
 import 'package:ru_project/widgets/tabBar.dart';
 import 'package:ru_project/widgets/welcome.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-
 void main() {
   runApp(MultiProvider(providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
@@ -59,7 +54,6 @@ class MyApp extends StatelessWidget {
           
         });
 
-        
         if (snapshot.data != null) {
           return const TabBarWidget();
         } else {
@@ -93,6 +87,7 @@ class AuthChecker extends StatelessWidget {
     return FutureBuilder(future: UserProvider().isConnected(), builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done) {
 
+          
         
         if (snapshot.data == true) {
           return const TabBarWidget();

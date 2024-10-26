@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/home_page.dart';
 import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/widgets/test_statefull.dart';
 // class WelcomeWidget extends StatefulWidget {
 //   @override
 //   _WelcomeWidgetState createState() => _WelcomeWidgetState();
@@ -88,6 +89,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget2>
                 'test',
                 style: TextStyle(fontSize: 32, fontFamily: 'Marianne'),
               ),
+              const StateWidget(),
               const Text(
                 'Bienvenue !',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
