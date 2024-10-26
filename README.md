@@ -62,7 +62,7 @@ create a database:
 mongosh
 use admin
 db.createUser({
-    user:"username", 
+    user:"{your username}", 
     pwd:"password", 
     roles:[{role: "root", db:"admin"}]
     })
@@ -73,22 +73,32 @@ use the database:
 
 ```bash
 use ru_project
-```bash
 db.createUser({
     user:"ru_project_user",
     pwd:"ru_project_password",
     roles:[{role: "readWrite", db:"ru_project"}]
     })
-```
+
 exit()
 ```
 
 ##### env file
+
+the following instructions are for development mode : 
+
+generate a JWT_SECRET with the following command:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**copy the key**
+
 add a .env file in the backend directory with the following content:
 
 ```bash
 MONGO_URI="mongodb://ru_project_user:ru_project_password@127.0.0.1:27017/ru_project?authSource=ru_project"
-JWT_SECRET="9b9f4cf8d331fbe0110b7a42b196512790062d7dc29369fcdfa84a5e8d6301c8"
+JWT_SECRET="{your generated key}"
 ```
 
 
@@ -110,11 +120,12 @@ finish the installation of flutter and dart plugins.
 
 #### local installation
 
-##### env file
-add a .env file in the flutter directory with the following content:
+in flutter/lib/config.dart, configure the backend url:
 
-```bash
-API_URL="http://localhost:5000/api"
+```dart
+    class config {
+    static const String apiUrl = "http://localhost:5000/api";
+}
 ```
 
 ## Running the project
