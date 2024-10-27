@@ -6,27 +6,14 @@ import '../services/SecureStorage.dart';
 
 class MenuProvider with ChangeNotifier {
   //variables
-  // List<Map<String,dynamic>> _menuRawData = [];
   List<Menu> _menus = [];
-
-  //user token 
-  String? _accessToken;
-  String? _refreshToken;
   final _secureStorage = SecureStorage();
 
 
   // Getters
   List<Menu> get menus => _menus;
-  // List<Map<String,dynamic>> get menuData => _menuRawData;
-  String? get accessToken => _accessToken;
-  String? get refreshToken => _refreshToken;
 
-  // //Setters
-  // void setMenuData(List<Map<String,dynamic>> data) {
-  //   _menuRawData = data;
-  //   notifyListeners();
-  // }
-
+  // Setters  
   void setMenus(List<Menu> menuList) {
     _menus = menuList;
     notifyListeners();
@@ -34,45 +21,17 @@ class MenuProvider with ChangeNotifier {
 
 
   //constructor
-  MenuProvider(){
-    loadTokens();
-  }
-
-  //functions
-  Future<void> storeTokens(String accessToken, String refreshToken) async {
-    _accessToken = accessToken;
-    _refreshToken = refreshToken;
-
-    await _secureStorage.storeTokens(accessToken, refreshToken);
-
-    notifyListeners();
-  }
-
-  Future<void> loadTokens() async {
-    final tokens = await _secureStorage.getTokens();
-    _accessToken = tokens['accessToken'];
-    _refreshToken = tokens['refreshToken'];
-    
-    notifyListeners();
-  }
-
-  Future<void> clearTokens() async {
-    await _secureStorage.clearTokens();
-
-    _accessToken = null;
-    _refreshToken = null;
-    notifyListeners();
-  }
+  MenuProvider();
 
 
   //get menus from the API
   Future<List<Map<String,dynamic>>> fetchMenus() async {
-    if (_accessToken == null){
-      //Logger().e('No access token');
+
+    final tokens = await _secureStorage.getTokens();
+    if (tokens['accessToken'] == null) {
       return [];
     }
-    //Logger().i('Fetching menus');
-    final menusData = await ApiService.getMenus(_accessToken!);
+    final menusData = await ApiService.getMenus(tokens['accessToken']!);
 
     return List<Map<String, dynamic>>.from(menusData);
   }

@@ -11,11 +11,9 @@ class MenuWidget extends StatefulWidget {
   State<MenuWidget> createState() => _MenuWidgetState();
 }
 
-class _MenuWidgetState extends State<MenuWidget> {
-  int _currentState = 1; // 1 = loading menu, 2 = menu loaded
+class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
-  //List<Map<String,dynamic>> _rawMenuData = [];
-  bool _isLoggedIn = false;
+  bool _isConnected = false;
   //system de page menu
   final PageController _pageController = PageController();
   int _currentPage = 0;
@@ -23,71 +21,73 @@ class _MenuWidgetState extends State<MenuWidget> {
   @override
   void initState() {
     super.initState();
-    if (_currentState == 1) {
+    if (_menus.isEmpty) {
       _checkLoginStatus();
     }
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+  
+
+  //check if the user is connected and set the menus
   void _checkLoginStatus() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     bool isLoggedIn = await userProvider.isConnected();
-    setState(() {
-      _isLoggedIn = isLoggedIn;
-      if (_isLoggedIn) {
-        setMenus(context);
-      }
-    });
-  }
 
-  void setMenus(BuildContext context) async {
-    final menusProvider = Provider.of<MenuProvider>(context, listen: false);
-    
-    //test si le menu a le token
-    if (menusProvider.accessToken == null) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      if (userProvider.accessToken == null) {
-        Logger().e('No token found in UserProvider');
-        return;
-      }
-      menusProvider.storeTokens(userProvider.accessToken!, userProvider.refreshToken!);
-    }
-
-
-    //si le menu est déjà chargé dans le provider
-    if (menusProvider.menus.isNotEmpty) { // OK
-      setState(() {
-        _menus = menusProvider.menus;
-        _currentState = 2;
-        //_rawMenuData = menusProvider.menuData;
-      });
+    if (!isLoggedIn || context.mounted == false) {
       return;
     }
 
+    setState(() {
+      _isConnected = true;
+    });
+  
+    setMenus(context);
 
+  }
+
+  //set the menus
+  void setMenus(BuildContext context) async {
+    final menusProvider = Provider.of<MenuProvider>(context, listen: false);
+    
+    //si le menu est déjà chargé dans le provider
+
+
+    // if (menusProvider.menus.isNotEmpty) { // OK
+    //   setState(() {
+    //     _menus = menusProvider.menus;
+    //   });
+    //   return;
+    // }
+    if (_menus.isNotEmpty) {
+      Logger().i('Les menus ne sont pas vides');
+    }
     List<Map<String,dynamic>> rawMenuData = await menusProvider.fetchMenus(); // OK
     List<Menu> menus; // OK
 
-    if (rawMenuData.isEmpty) { // à voir si c'est useless ou pas
+    if (rawMenuData.isEmpty) { //ok
       menus = []; 
     } else {
       menus = rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
     }
     setState(() {
       _menus = menus;
-      //_rawMenuData = rawMenuData;
       menusProvider.setMenus(menus);
-      _currentState = 2;
-      //menusProvider.setMenuData(rawMenuData);
     });
   }
 
   @override
   //build the widget
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       body: Center(
-        child: _isLoggedIn
-            ? ((_currentState==1)
+        child: _isConnected
+            ? ((_menus.isEmpty)
                 ? const Text('Chargement...')
                 : Column(
                     children: [
@@ -187,17 +187,20 @@ class _MenuWidgetState extends State<MenuWidget> {
       children: [],
     );
     plats.forEach((key, value) {
-      /*
-        //continue if the value is null, not a list or if key is "Entrées"
-        //(en gros si le menu est pas communiqué et si c'est une entrée sa dégage)
-        if (value == null || value is String || key == "Entrées") {
-          return;
-        }
-      */
+    
+      //continue if the value is null, not a list or if key is "Entrées"
+      //(en gros si le menu est pas communiqué et si c'est une entrée sa dégage)
+      if (value == null || value == "menu non communiqué" || key == "Entrées") {
+        return;
+      }
+    
       //center the text
       res.children.add(Center(
         child: Text(key),
       ));
+
+      //TODO add GAP
+
       if (value is String) { //case string
         res.children.add(Center(
           child: Text("- $value"),
@@ -212,6 +215,9 @@ class _MenuWidgetState extends State<MenuWidget> {
 
     return res;
   }
+  
+  @override
+  bool get wantKeepAlive => true;
 }
 
 /*

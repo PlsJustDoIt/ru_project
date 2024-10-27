@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class SecureStorage { //TODO remane Token stoage
+class SecureStorage {
   final _secureStorage = const FlutterSecureStorage();
 
 
