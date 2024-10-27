@@ -1,7 +1,7 @@
 class User {
   String id;
   String username;
-  String status;
+  String status; // status : en ligne, au ru, absent
   List<User>? friends;
 
   User({required this.id, required this.username, required this.status, this.friends});

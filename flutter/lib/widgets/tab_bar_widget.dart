@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/tables.dart';
+import 'package:ru_project/widgets/profile.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user_provider = Provider.of<UserProvider>(context);
+    Logger().i('User: ${user_provider.user}');
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -28,13 +34,19 @@ class TabBarWidget extends StatelessWidget {
             tabs: [
               Tab(icon: Icon(Icons.login), text: 'Carte ru'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
+              Tab(icon: Icon(Icons.person), text: 'Profil'),
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            CafeteriaLayout(),
-            MenuWidget(),
+            const CafeteriaLayout(),
+            const MenuWidget(),
+            ProfileWidget(user: user_provider.user, onUserUpdated: (user) {
+              // save to backend
+              Logger().i("User updated: $user['username'])");
+              Logger().i('User updated: $user');
+            }),
           ],
         ),
       ),
