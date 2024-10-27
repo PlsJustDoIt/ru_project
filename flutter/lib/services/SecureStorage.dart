@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class Tokenstorage {
+class SecureStorage { //TODO remane Token stoage
   final _secureStorage = const FlutterSecureStorage();
 
 
@@ -17,7 +17,6 @@ class Tokenstorage {
     var refreshToken = await _secureStorage.read(key: 'refreshToken');
 
     return {'accessToken': accessToken, 'refreshToken': refreshToken};
-    
     
   }
 

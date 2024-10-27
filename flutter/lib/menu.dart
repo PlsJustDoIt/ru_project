@@ -12,6 +12,7 @@ class MenuWidget extends StatefulWidget {
 }
 
 class _MenuWidgetState extends State<MenuWidget> {
+  int _currentState = 1; // 1 = loading menu, 2 = menu loaded
   List<Menu> _menus = [];
   //List<Map<String,dynamic>> _rawMenuData = [];
   bool _isLoggedIn = false;
@@ -22,7 +23,9 @@ class _MenuWidgetState extends State<MenuWidget> {
   @override
   void initState() {
     super.initState();
-     _checkLoginStatus();
+    if (_currentState == 1) {
+      _checkLoginStatus();
+    }
   }
 
   void _checkLoginStatus() async {
@@ -40,7 +43,6 @@ class _MenuWidgetState extends State<MenuWidget> {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
     
     //test si le menu a le token
-    //TODO : virer cette merde de code
     if (menusProvider.accessToken == null) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       if (userProvider.accessToken == null) {
@@ -48,6 +50,10 @@ class _MenuWidgetState extends State<MenuWidget> {
         return;
       }
       menusProvider.storeTokens(userProvider.accessToken!, userProvider.refreshToken!);
+      //change state
+      setState(() {
+        _currentState = 2;
+      });
     }
 
 
@@ -81,7 +87,6 @@ class _MenuWidgetState extends State<MenuWidget> {
   //build the widget
   Widget build(BuildContext context) {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
-    //final userProvider = Provider.of<UserProvider>(context, listen: false); // jsp
     return Scaffold(
       body: Center(
         child: _isLoggedIn
@@ -97,20 +102,6 @@ class _MenuWidgetState extends State<MenuWidget> {
       ),
     );
   }
-
-  // build the all menu widget
-  /*
-    widget la_totale(BuildContext context, List<Menu> menus) {
-
-    foreach(Menu menu in menus) {
-      return Column(
-        children: [
-          menuNavRow(context, menu),
-          menuList(context, menu),
-        ],
-      );
-    }
-  */
 
   //build the widget for the menu navigation row 
   Widget menuNavRow(BuildContext context) {
@@ -145,12 +136,14 @@ class _MenuWidgetState extends State<MenuWidget> {
                 curve: Curves.easeInOut,
               );
             }
+            
           },
         ),
       ],
     );
   }
-       
+  
+  //build the widget for the menu list
   Widget menuList(BuildContext context) {
     return Expanded(
       child: Column(
@@ -166,7 +159,7 @@ class _MenuWidgetState extends State<MenuWidget> {
           Expanded(
             child: PageView.builder(
               controller: _pageController,
-              itemCount: _menus.length, // a voir
+              itemCount: _menus.length,
               onPageChanged: (index) {
                 setState(() {
                   _currentPage = index;
@@ -175,22 +168,9 @@ class _MenuWidgetState extends State<MenuWidget> {
               itemBuilder: (context, index) {
                 return ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _rawMenuData[_currentPage].length,
+                  itemCount: 1,
                   itemBuilder: (context, i) {
-                    // if (_rawMenuData[_currentPage].keys.elementAt(i) != "Entrées"|| _rawMenuData[_currentPage].keys.elementAt(i) != "date"|| _rawMenuData[_currentPage].keys.elementAt(i) != "menu non communiqué") {
-                    //   Logger().i('Menu keys: ${_rawMenuData[_currentPage].keys}');
-                    //   return Column(
-                    //     crossAxisAlignment: CrossAxisAlignment.center,
-                    //     children: [
-                    //       Text('${_rawMenuData[_currentPage].keys.elementAt(i)} :'),
-                    //       Text(' - ${_rawMenuData[_currentPage].values.elementAt(i)}'),
-                    //       //Text(' - ${_rawMenuData[_currentPage].values.elementAt(i).join('\n - ') ?? "RIEN"}'),
-
-                    //       const SizedBox(height: 16.0),
-                    //     ],
-                    //   );
-                    // }
-                    return null;
+                    return menuPlat(context, _menus[index].plats);
                   }
                 );
               }
@@ -201,5 +181,61 @@ class _MenuWidgetState extends State<MenuWidget> {
     );
   }
   
+  //build the widget for the menu plats (map key = String, value = List of dynamic or string)
+  Column? menuPlat(BuildContext context, Map<String, dynamic> plats) {
+    
+    // ignore: prefer_const_constructors
+    Column res = Column(
+      // ignore: prefer_const_literals_to_create_immutables
+      children: [],
+    );
+    plats.forEach((key, value) {
+      /*
+        //continue if the value is null, not a list or if key is "Entrées"
+        //(en gros si le menu est pas communiqué et si c'est une entrée sa dégage)
+        if (value == null || value is String || key == "Entrées") {
+          return;
+        }
+      */
+      //center the text
+      res.children.add(Center(
+        child: Text(key),
+      ));
+      if (value is String) { //case string
+        res.children.add(Center(
+          child: Text("- $value"),
+        ));
+      }else{ //case list dynamic
+        String joinedValue = value.map((item) => item.toString()).join('\n- ');
+        res.children.add(Center(
+          child: Text("- $joinedValue"),
+        ));
+      }
+    });
+
+    return res;
+  }
 }
 
+/*
+Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _menus.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: 1,
+                  itemBuilder: (context, i) {
+                    return menuPlat(context, _menus[index].plats);
+                  }
+                );
+              }
+            )
+          ),
+ */

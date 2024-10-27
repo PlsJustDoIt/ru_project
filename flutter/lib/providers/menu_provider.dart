@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:ru_project/services/api_service.dart';
 import '../models/menu.dart';
+import '../services/SecureStorage.dart';
 
 class MenuProvider with ChangeNotifier {
   //variables
@@ -12,7 +13,7 @@ class MenuProvider with ChangeNotifier {
   //user token 
   String? _accessToken;
   String? _refreshToken;
-  final _secureStorage = const FlutterSecureStorage();
+  final _secureStorage = SecureStorage();
 
 
   // Getters
@@ -39,29 +40,25 @@ class MenuProvider with ChangeNotifier {
   }
 
   //functions
-
   Future<void> storeTokens(String accessToken, String refreshToken) async {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
 
-    await _secureStorage.write(key: 'accessToken', value: accessToken);
-    await _secureStorage.write(key: 'refreshToken', value: refreshToken);
+    await _secureStorage.storeTokens(accessToken, refreshToken);
 
     notifyListeners();
   }
 
   Future<void> loadTokens() async {
-    
-    _accessToken = await _secureStorage.read(key: 'accessToken');
-    _refreshToken = await _secureStorage.read(key: 'refreshToken');
-    
+    final tokens = await _secureStorage.getTokens();
+    _accessToken = tokens['accessToken'];
+    _refreshToken = tokens['refreshToken'];
     
     notifyListeners();
   }
 
   Future<void> clearTokens() async {
-    await _secureStorage.delete(key: 'accessToken');
-    await _secureStorage.delete(key: 'refreshToken');
+    await _secureStorage.clearTokens();
 
     _accessToken = null;
     _refreshToken = null;
