@@ -145,7 +145,7 @@ class _CafeteriaLayoutState extends State<CafeteriaLayout> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
 
                 // Entrance
                 Positioned(

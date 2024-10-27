@@ -8,7 +8,7 @@ import 'package:ru_project/providers/user_provider.dart'; // Import UserProvider
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
   @override
-  _MenuWidgetState createState() => _MenuWidgetState();
+  State<MenuWidget> createState() => _MenuWidgetState();
 }
 
 class _MenuWidgetState extends State<MenuWidget> {

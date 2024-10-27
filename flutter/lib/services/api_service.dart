@@ -1,18 +1,13 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/menu.dart';
-import '../models/user.dart';
 import 'package:logger/logger.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class ApiService {
 
   static Dio dio = Dio();
 
-  static String? baseUrl = config.apiUrl ;
+  static String? baseUrl = Config.apiUrl ;
   static final logger = Logger();
 
 
