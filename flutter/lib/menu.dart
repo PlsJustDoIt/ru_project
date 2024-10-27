@@ -50,10 +50,6 @@ class _MenuWidgetState extends State<MenuWidget> {
         return;
       }
       menusProvider.storeTokens(userProvider.accessToken!, userProvider.refreshToken!);
-      //change state
-      setState(() {
-        _currentState = 2;
-      });
     }
 
 
@@ -61,6 +57,7 @@ class _MenuWidgetState extends State<MenuWidget> {
     if (menusProvider.menus.isNotEmpty) { // OK
       setState(() {
         _menus = menusProvider.menus;
+        _currentState = 2;
         //_rawMenuData = menusProvider.menuData;
       });
       return;
@@ -79,6 +76,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       _menus = menus;
       //_rawMenuData = rawMenuData;
       menusProvider.setMenus(menus);
+      _currentState = 2;
       //menusProvider.setMenuData(rawMenuData);
     });
   }
@@ -86,11 +84,10 @@ class _MenuWidgetState extends State<MenuWidget> {
   @override
   //build the widget
   Widget build(BuildContext context) {
-    final menusProvider = Provider.of<MenuProvider>(context, listen: false);
     return Scaffold(
       body: Center(
         child: _isLoggedIn
-            ? (menusProvider.menus.isEmpty //TODO TEST THIS
+            ? ((_currentState==1)
                 ? const Text('Chargement...')
                 : Column(
                     children: [
@@ -98,7 +95,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                       menuList(context),
                     ],
                   ))
-            : const Text('connecte toi frr'),
+            : const Text('Vous devez être connecté pour voir les menus.'),
       ),
     );
   }
