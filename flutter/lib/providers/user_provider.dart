@@ -1,11 +1,8 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import '../models/user.dart';
-import '../models/menu.dart';
 import '../services/api_service.dart';
-import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/SecureStorage.dart';
 
@@ -145,27 +142,51 @@ class UserProvider with ChangeNotifier {
   }
 
   // Méthode pour se connecter , ApiService.login could return null or a token or an exception
-  Future<void> login(String username, String password) async {
+  Future<Map<String,dynamic>> login(String username, String password) async {
 
+    try {
+      final response = await ApiService.login(username, password); //response is dynamic
 
-    final response = await ApiService.login(username, password); //response is dynamic
-    //test if exception
-    
-    //storeTokens(response['accessToken'], refreshToken)
     await storeTokens(response['accessToken'], response['refreshToken']);
     await loadTokens();
     await fetchUserData();
     notifyListeners();
+    return {
+      'success': true,
+      'message': 'Connexion réussie'
+    };
+    } catch (e) {
+      Logger().e('Erreur de connexion: $e');
+      return {
+        'success': false,
+        'message': 'Erreur de connexion'
+      };
     }
+    
+  }
 
   // Méthode pour s'inscrire ApiService.register could return null or a token or an exception
-  Future<String?> register(String username, String password) async {
-    final token = await ApiService.register(username, password);
-    // _token = token;
-    await fetchUserData();
-    notifyListeners();
-    return "Inscription réussie";
+  Future<Map<String,dynamic>> register(String username, String password) async {
+
+    try {
+      final response = await ApiService.register(username, password);
+      await storeTokens(response['accessToken'], response['refreshToken']);
+      await loadTokens();
+      await fetchUserData();
+      notifyListeners();
+      return {
+        'success': true,
+        'message': 'Inscription réussie'
+      };
+    } catch (e) {
+      Logger().e('Erreur d\'inscription: $e');
+      return {
+        'success': false,
+        'message': 'Erreur d\'inscription'
+      };
+  
     }
+  }
 
   // Méthode pour récupérer les données utilisateur après la connexion
   Future<void> fetchUserData() async {

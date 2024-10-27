@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:logger/logger.dart';
 import 'package:ru_project/services/api_service.dart';
 import '../models/menu.dart';
 import '../services/SecureStorage.dart';

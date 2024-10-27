@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/home_page.dart';
-import 'package:ru_project/login_page.dart';
-import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/providers/menu_provider.dart';
-import 'package:ru_project/widgets/tabBar.dart';
+import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-
 void main() {
   runApp(MultiProvider(providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
@@ -29,7 +23,7 @@ class MyApp extends StatelessWidget {
   @override 
   Widget build(BuildContext context) {
 
-    FlutterSecureStorage storage = FlutterSecureStorage();
+    FlutterSecureStorage storage = const FlutterSecureStorage();
     UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
     userProvider.loadTokens();
     
@@ -59,11 +53,10 @@ class MyApp extends StatelessWidget {
           
         });
 
-        
         if (snapshot.data != null) {
           return const TabBarWidget();
         } else {
-          return  WelcomeWidget2();
+          return  const WelcomeWidget();
         }
       } else {
         return const Scaffold(
@@ -79,6 +72,8 @@ class MyApp extends StatelessWidget {
 
 
 class AuthChecker extends StatelessWidget {
+  const AuthChecker({super.key});
+
   @override
   Widget  build(BuildContext context) {
     // Appel de la méthode isConnected via le UserProvider
@@ -93,11 +88,12 @@ class AuthChecker extends StatelessWidget {
     return FutureBuilder(future: UserProvider().isConnected(), builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done) {
 
+          
         
         if (snapshot.data == true) {
           return const TabBarWidget();
         } else {
-          return  WelcomeWidget2();
+          return  const WelcomeWidget();
         }
       } else {
         return const Scaffold(
