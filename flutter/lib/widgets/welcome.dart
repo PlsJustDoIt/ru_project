@@ -28,7 +28,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
       vsync: this,
       duration: const Duration(seconds: 20),
     );
-    _videoController = VideoPlayerController.asset('assets/video.mp4')
+    _videoController = VideoPlayerController.asset('assets/images/video.mp4')
       ..initialize().then((_) {
         setState(() {
           

@@ -99,7 +99,11 @@ class UserProvider with ChangeNotifier {
 
   // Initialization method
   Future<void> _initialize() async {
+
+    Logger().i('initializing user provider');
+
     await loadTokens();
+
     if (_accessToken != null) {
       
       await fetchUserData();
@@ -126,11 +130,15 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> loadTokens() async {
-    final tokens = await _secureStorage.getTokens();
-    _accessToken = tokens['accessToken'];
-    _refreshToken = tokens['refreshToken'];
-    
-    notifyListeners();
+
+    try {
+      final tokens = await _secureStorage.getTokens();
+      _accessToken = tokens['accessToken'];
+      _refreshToken = tokens['refreshToken'];
+      notifyListeners();
+    } catch (e) {
+      Logger().e('Erreur de chargement des tokens: $e');
+    }
   }
 
   Future<void> clearTokens() async {

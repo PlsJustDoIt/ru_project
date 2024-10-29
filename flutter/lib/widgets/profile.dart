@@ -118,7 +118,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                     radius: 60,
                     backgroundImage: _imageFile != null
                         ? FileImage(_imageFile!)
-                        : const AssetImage('assets/images/default-avatar.png') 
+                        : const AssetImage('images/default-avatar.png') 
                             as ImageProvider,
                   ),
                   FloatingActionButton.small(
