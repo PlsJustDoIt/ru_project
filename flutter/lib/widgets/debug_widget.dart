@@ -24,7 +24,7 @@ class DebugWidget extends StatelessWidget {
             Text('Refresh Token:', style: TextStyle(fontWeight: FontWeight.bold)),
             SelectableText(refreshToken ?? 'No Refresh Token'),
              Image.asset(
-              "images/jm.jpg"
+              "assets/images/jm.jpg"
             ),
           ],
         ),
