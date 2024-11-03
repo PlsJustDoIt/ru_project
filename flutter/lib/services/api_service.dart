@@ -1,36 +1,31 @@
 import 'package:logger/logger.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
+import 'package:ru_project/models/user.dart';
+import 'package:ru_project/services/secure_storage.dart';
 
 
 class ApiService {
 
   late final Dio dio = Dio();
-
-  static String? baseUrl = Config.apiUrl ;
+  static String? baseUrl = Config.apiUrl;
   static final logger = Logger();
 
-  // // Singleton pattern
-  // static final ApiService _instance = ApiService._internal();
-  
-  // factory ApiService() {
-  //   return _instance;
-  // }
+  // Singleton pattern
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
 
-  ApiService() {
+
+  ApiService._internal() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onError: (DioException e,ErrorInterceptorHandler handler) async {
           if (e.response?.statusCode == 401) {
             // If a 401 response is received, refresh the access token
-            // String newAccessToken = await refreshToken();
+            await refreshToken();
 
-            // // Update the request header with the new access token
-            // e.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
-
-            // Repeat the request with the updated header
-            return handler.resolve(await dio.fetch(e.requestOptions));
           }
+
           return handler.next(e);
         },
       ),
@@ -112,13 +107,29 @@ class ApiService {
   
 
 
-  // Future<void> refreshToken() async {
-  //   try {
-  //     final response = await dio.post('$baseUrl/auth/token', options: Options(
-  //       headers: {
-  //         'Authorization ': 'Bearer $accessToken',
-  //       },
-  // }
+  Future<void> refreshToken() async {
+    final response = await SecureStorage().getTokens(); 
+    final accessToken = response['accessToken'];
+    try {
+      final response = await dio.post('$baseUrl/auth/token', options: Options(
+        headers: {
+          'Authorization ': 'Bearer $accessToken',
+        },
+      ));
+
+      if (response.statusCode == 200 && response.data != null) {
+        final newAccessToken = response.data['accessToken'];
+        final newRefreshToken = response.data['refreshToken'];
+
+        await SecureStorage().storeTokens(newAccessToken, newRefreshToken);
+      } else {
+        throw Exception('Invalid response from server');
+      }
+    } catch (e) {
+      throw Exception('Failed to refresh token: $e');
+    }
+
+  }
 
    // Fonction pour login
   Future<Map<String, dynamic>> login(String username, String password) async {
@@ -163,7 +174,7 @@ class ApiService {
 
 
   // Fonction pour récupérer les données utilisateur
-  Future<Map<String, dynamic>> getUser(String token) async {
+  Future<User> getUser(String token) async {
     try {
       final response = await dio.get('$baseUrl/users/me', options: Options(
         headers: {
