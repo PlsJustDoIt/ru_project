@@ -57,7 +57,6 @@ class UserProvider with ChangeNotifier {
   List<User> get friends => _friends;
 
  
-
 //   Future<bool> isConnected() async {
 //   final prefs = await SharedPreferences.getInstance();
 //   final token = prefs.getString('token');
@@ -155,21 +154,21 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await ApiService.login(username, password); //response is dynamic
 
-    await storeTokens(response['accessToken'], response['refreshToken']);
-    await loadTokens();
-    await fetchUserData();
-    notifyListeners();
-    return {
-      'success': true,
-      'message': 'Connexion réussie'
-    };
-    } catch (e) {
-      Logger().e('Erreur de connexion: $e');
+      await storeTokens(response['accessToken'], response['refreshToken']);
+      await loadTokens();
+      await fetchUserData();
+      notifyListeners();
       return {
-        'success': false,
-        'message': 'Erreur de connexion'
+        'success': true,
+        'message': 'Connexion réussie'
       };
-    }
+      } catch (e) {
+        Logger().e('Erreur de connexion: $e');
+        return {
+          'success': false,
+          'message': 'Erreur de connexion'
+        };
+      }
     
   }
 

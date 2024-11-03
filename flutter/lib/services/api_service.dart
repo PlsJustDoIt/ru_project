@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 
 class ApiService {
 
-  static Dio dio = Dio();
+  late final Dio dio = Dio();
 
   static String? baseUrl = Config.apiUrl ;
   static final logger = Logger();
@@ -20,13 +20,13 @@ class ApiService {
   ApiService() {
     dio.interceptors.add(
       InterceptorsWrapper(
-        onError: (DioException e, handler) async {
+        onError: (DioException e,ErrorInterceptorHandler handler) async {
           if (e.response?.statusCode == 401) {
             // If a 401 response is received, refresh the access token
-            String newAccessToken = await refreshToken();
+            // String newAccessToken = await refreshToken();
 
-            // Update the request header with the new access token
-            e.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+            // // Update the request header with the new access token
+            // e.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
 
             // Repeat the request with the updated header
             return handler.resolve(await dio.fetch(e.requestOptions));
@@ -112,14 +112,16 @@ class ApiService {
   
 
 
-  Future<String> refreshToken() async {
-    // Perform a request to the refresh token endpoint and return the new access token.
-    // You can replace this with your own implementation.
-  return 'your_new_access_token';
-  }
+  // Future<void> refreshToken() async {
+  //   try {
+  //     final response = await dio.post('$baseUrl/auth/token', options: Options(
+  //       headers: {
+  //         'Authorization ': 'Bearer $accessToken',
+  //       },
+  // }
 
    // Fonction pour login
-  static Future<Map<String, dynamic>> login(String username, String password) async {
+  Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await dio.post('$baseUrl/auth/login', data: {
         'username': username,
@@ -141,7 +143,7 @@ class ApiService {
 
 
   // Fonction pour s'inscrire
-  static Future<Map<String, dynamic>> register(String username, String password) async {
+  Future<Map<String, dynamic>> register(String username, String password) async {
     try {
       final response = await dio.post('$baseUrl/auth/register', data: {
         'username': username,
@@ -161,7 +163,7 @@ class ApiService {
 
 
   // Fonction pour récupérer les données utilisateur
-  static Future<Map<String, dynamic>> getUser(String token) async {
+  Future<Map<String, dynamic>> getUser(String token) async {
     try {
       final response = await dio.get('$baseUrl/users/me', options: Options(
         headers: {
@@ -182,7 +184,7 @@ class ApiService {
 
 
   // Fonction pour mettre à jour le statut de l'utilisateur
-  static Future<bool> updateStatus(String token, String status) async {
+  Future<bool> updateStatus(String token, String status) async {
     try {
       final response = await dio.put('$baseUrl/users/status', data: {
         'status': status,
@@ -204,7 +206,7 @@ class ApiService {
   }
 
   // Fonction pour ajouter un ami
-  static Future<bool> addFriend(String token, String friendUsername) async {
+  Future<bool> addFriend(String token, String friendUsername) async {
     try {
       final response = await dio.post('$baseUrl/users/add-friend', data: {
         'friendUsername': friendUsername,
@@ -227,7 +229,7 @@ class ApiService {
 
 
   // Fonction pour récupérer la liste des amis
-  static Future<Map<String, dynamic>> getFriends(String token) async {
+  Future<Map<String, dynamic>> getFriends(String token) async {
     try {
       final response = await dio.get('$baseUrl/users/friends', options: Options(
         headers: {
@@ -248,7 +250,7 @@ class ApiService {
 
 
   //get menus from the API
-  static Future<List<dynamic>> getMenus(String token) async {
+  Future<List<dynamic>> getMenus(String token) async {
     try {
       final response = await dio.get('$baseUrl/ru/menus', options: Options(
         headers: { 'Authorization': 'Bearer $token'},
