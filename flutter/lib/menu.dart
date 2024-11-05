@@ -199,7 +199,7 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
         child: Text(key),
       ));
 
-      //TODO add GAP
+      
 
       if (value is String) { //case string
         res.children.add(Center(
@@ -211,6 +211,8 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
           child: Text("- $joinedValue"),
         ));
       }
+
+      res.children.add(const SizedBox(height: 16.0));
     });
 
     return res;
