@@ -1,9 +1,9 @@
 
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/SecureStorage.dart';
+import 'package:ru_project/services/logger.dart';
 
 
 // class TokenManager {
@@ -40,6 +40,7 @@ import '../services/SecureStorage.dart';
 //   //}
 // }
 
+
 class UserProvider with ChangeNotifier {
   User? _user;
   List<User> _friends = [];
@@ -49,13 +50,13 @@ class UserProvider with ChangeNotifier {
   String? _refreshToken;
 
 
+
   // Getters
   User? get user => _user;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
   List<User> get friends => _friends;
 
- 
 
 //   Future<bool> isConnected() async {
 //   final prefs = await SharedPreferences.getInstance();
@@ -99,7 +100,7 @@ class UserProvider with ChangeNotifier {
   // Initialization method
   Future<void> _initialize() async {
 
-    Logger().i('initializing user provider');
+    logger.i('initializing user provider');
 
     await loadTokens();
 
@@ -136,7 +137,7 @@ class UserProvider with ChangeNotifier {
       _refreshToken = tokens['refreshToken'];
       notifyListeners();
     } catch (e) {
-      Logger().e('Erreur de chargement des tokens: $e');
+      logger.e('Erreur de chargement des tokens: $e');
     }
   }
 
@@ -163,7 +164,7 @@ class UserProvider with ChangeNotifier {
       'message': 'Connexion réussie'
     };
     } catch (e) {
-      Logger().e('Erreur de connexion: $e');
+      logger.e('Erreur de connexion: $e');
       return {
         'success': false,
         'message': 'Erreur de connexion'
@@ -186,7 +187,7 @@ class UserProvider with ChangeNotifier {
         'message': 'Inscription réussie'
       };
     } catch (e) {
-      Logger().e('Erreur d\'inscription: $e');
+      logger.e('Erreur d\'inscription: $e');
       return {
         'success': false,
         'message': 'Erreur d\'inscription'
@@ -200,11 +201,12 @@ class UserProvider with ChangeNotifier {
     try {
       if (_accessToken != null) {
       final userData = await ApiService.getUser(_accessToken!);
+      logger.i(" test : ${userData.toString()}");
       _user = User.fromJson(userData);
           notifyListeners();
       }
     } catch (e) {
-      Logger().e('Erreur de connexion: $e');
+      logger.e('Erreur de connexion: $e');
       _user = null;
       _accessToken = null;
       notifyListeners();
@@ -239,7 +241,7 @@ class UserProvider with ChangeNotifier {
     if (_accessToken == null) return;
 
     final friendsData = await ApiService.getFriends(_accessToken!);
-    Logger().i(friendsData);
+    logger.i(friendsData);
     _friends = friendsData['friends']
         .map<User>((json) => User.fromJson(json))
         .toList();

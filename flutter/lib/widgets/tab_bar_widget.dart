@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/menu.dart';
 import 'package:ru_project/models/color.dart';
@@ -14,7 +14,7 @@ class TabBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    Logger().i('User: ${userProvider.user}');
+    logger.i('User: ${userProvider.user}');
     return DefaultTabController(
       length: 4,
       child: Scaffold(
@@ -46,8 +46,8 @@ class TabBarWidget extends StatelessWidget {
             const MenuWidget(),
             ProfileWidget(user: userProvider.user, onUserUpdated: (user) {
               // save to backend
-              Logger().i("User updated: $user['username'])");
-              Logger().i('User updated: $user');
+              logger.i("User updated: $user['username'])");
+              logger.i('User updated: $user');
             }),
             DebugWidget(),
           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
+import 'package:ru_project/services/logger.dart';
+
 
 class CafeteriaTable {
   final int id;
@@ -99,7 +100,7 @@ class _CafeteriaLayoutState extends State<CafeteriaLayout> {
             if (tableSize <=30) {
               tableSize = 30;
             }
-            Logger().i('Table size: $tableSize');
+            logger.i('Table size: $tableSize');
 
             return Stack(
               children: [
@@ -356,7 +357,7 @@ class _CafeteriaLayoutState extends State<CafeteriaLayout> {
 //   //       child: LayoutBuilder(
 //   //         builder: (context, constraints) {
 //   //           double containerSize = constraints.maxWidth > 400 ? 400 : constraints.maxWidth * 0.9;
-//   //           Logger().i('Container size: $containerSize');
+//   //           logger.i('Container size: $containerSize');
 //   //           return Container(
 //   //             height: containerSize,
 //   //             width: containerSize,

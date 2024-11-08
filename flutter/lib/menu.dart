@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/providers/menu_provider.dart';
@@ -64,7 +64,7 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
     //   return;
     // }
     if (_menus.isNotEmpty) {
-      Logger().i('Les menus ne sont pas vides');
+      logger.i('Les menus ne sont pas vides');
     }
     List<Map<String,dynamic>> rawMenuData = await menusProvider.fetchMenus(); // OK
     List<Menu> menus; // OK

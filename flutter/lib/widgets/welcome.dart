@@ -5,6 +5,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/test_statefull.dart';
 import 'package:video_player/video_player.dart';
+import 'package:ru_project/services/logger.dart';
 
 class WelcomeWidget extends StatefulWidget {
   const WelcomeWidget({super.key});
@@ -81,13 +82,13 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
               const Text(
                 'Bienvenue !',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              )
-                  .animate()
-                  .fadeIn(duration: 500.ms, begin: 0)
-                  .tint(color: Colors.green)
-                  .slide(duration: 500.ms, curve: Curves.easeIn)
-                  .animate(onPlay: (controller) => controller.repeat())
-                  .shake(delay: 1.seconds),
+              ),
+                  // .animate()
+                  // .fadeIn(duration: 500.ms, begin: 0)
+                  // .tint(color: Colors.green)
+                  // .slide(duration: 500.ms, curve: Curves.easeIn)
+                  // .animate(onPlay: (controller) => controller.repeat())
+                  // .shake(delay: 1.seconds),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
@@ -113,8 +114,11 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     padding: const EdgeInsets.all(8.0),
                     child: ElevatedButton(
                       onPressed: () async {
-                        await userProvider.login(
+                        final response = await userProvider.login(
                             _usernameController.text, _passwordController.text);
+                        response.forEach((key, value) {
+                            logger.i('$key: $value');
+                        });
                         if (context.mounted == false) {
                           return;
                         }
