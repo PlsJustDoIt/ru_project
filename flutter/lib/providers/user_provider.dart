@@ -120,21 +120,17 @@ class UserProvider with ChangeNotifier {
   }
   
 
-  Future<void> storeTokens(String accessToken, String refreshToken) async {
-    _accessToken = accessToken;
-    _refreshToken = refreshToken;
-
-    await _secureStorage.storeTokens(accessToken, refreshToken);
-
-    notifyListeners();
-  }
-
   Future<void> loadTokens() async {
 
     try {
       final tokens = await _secureStorage.getTokens();
+      if (tokens['accessToken'] == null || tokens['refreshToken'] == null) {
+        return;
+      }
+
       _accessToken = tokens['accessToken'];
       _refreshToken = tokens['refreshToken'];
+      logger.i('Tokens chargés: $_accessToken, $_refreshToken');
       notifyListeners();
     } catch (e) {
       logger.e('Erreur de chargement des tokens: $e');
@@ -155,7 +151,9 @@ class UserProvider with ChangeNotifier {
     try {
       final response = await ApiService.login(username, password); //response is dynamic
 
-    await storeTokens(response['accessToken'], response['refreshToken']);
+    await _secureStorage.storeTokens(response['accessToken'], response['refreshToken']);
+    notifyListeners();
+
     await loadTokens();
     await fetchUserData();
     notifyListeners();
@@ -178,7 +176,7 @@ class UserProvider with ChangeNotifier {
 
     try {
       final response = await ApiService.register(username, password);
-      await storeTokens(response['accessToken'], response['refreshToken']);
+      await _secureStorage.storeTokens(response['accessToken'], response['refreshToken']);
       await loadTokens();
       await fetchUserData();
       notifyListeners();
@@ -200,7 +198,9 @@ class UserProvider with ChangeNotifier {
   Future<void> fetchUserData() async {
     try {
       if (_accessToken != null) {
-      final userData = await ApiService.getUser(_accessToken!);
+        late final String token = _accessToken!;
+        logger.i(_accessToken);
+      final userData = await ApiService.getUser(token);
       logger.i(" test : ${userData.toString()}");
       _user = User.fromJson(userData);
           notifyListeners();
