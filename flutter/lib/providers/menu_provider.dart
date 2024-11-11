@@ -24,15 +24,5 @@ class MenuProvider with ChangeNotifier {
   MenuProvider();
 
 
-  //get menus from the API
-  Future<List<Map<String,dynamic>>> fetchMenus() async {
 
-    final tokens = await _secureStorage.getTokens();
-    if (tokens['accessToken'] == null) {
-      return [];
-    }
-    final menusData = await ApiService.getMenus(tokens['accessToken']!);
-
-    return List<Map<String, dynamic>>.from(menusData);
-  }
 }

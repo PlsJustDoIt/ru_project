@@ -14,7 +14,6 @@ class TabBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    Logger().i('User: ${userProvider.user}');
     return DefaultTabController(
       length: 4,
       child: Scaffold(

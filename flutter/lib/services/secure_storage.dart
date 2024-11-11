@@ -25,6 +25,14 @@ class SecureStorage {
     
   }
 
+  Future<String?> getAccessToken() async {
+    return await _secureStorage.read(key: 'accessToken');
+  }
+
+  Future<String?> getRefreshToken() async {
+    return await _secureStorage.read(key: 'refreshToken');
+  }
+
   Future<void> clearTokens() async {
     await _secureStorage.delete(key: 'accessToken');
     await _secureStorage.delete(key: 'refreshToken');
