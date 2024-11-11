@@ -1,7 +1,12 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorage {
+
+  static final SecureStorage _instance = SecureStorage._internal();
+  factory SecureStorage() => _instance;
   final _secureStorage = const FlutterSecureStorage();
+
+  SecureStorage._internal();
 
 
   Future<void> storeTokens(String accessToken, String refreshToken) async {
@@ -20,10 +25,17 @@ class SecureStorage {
     
   }
 
+  Future<String?> getAccessToken() async {
+    return await _secureStorage.read(key: 'accessToken');
+  }
+
+  Future<String?> getRefreshToken() async {
+    return await _secureStorage.read(key: 'refreshToken');
+  }
+
   Future<void> clearTokens() async {
     await _secureStorage.delete(key: 'accessToken');
     await _secureStorage.delete(key: 'refreshToken');
-
   }
 
 }

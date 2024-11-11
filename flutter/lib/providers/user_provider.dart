@@ -1,62 +1,21 @@
 
 import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../services/api_service.dart';
-import '../services/SecureStorage.dart';
+import 'package:ru_project/models/user.dart';
+import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
-
-
-// class TokenManager {
-//   final _storage = const FlutterSecureStorage();
-
-//   Future<void> storeToken(String token) async {
-//     await _storage.write(key: 'jwt', value: token);
-//   }
-
-//   Future<String?> getToken() async {
-//     return await _storage.read(key: 'jwt');
-//   }
-
-//   Future<void> deleteToken() async {
-//     await _storage.delete(key: 'jwt');
-//   }
-
-//   // Future<bool> isTokenValid() async {
-//   // final token = await _storage.read(key: 'jwt');
-//   // if (token == null) return false;
-
-//   // // Décoder la partie payload du JWT (2e partie du token séparée par des points)
-//   // final parts = token.split('.');
-//   // if (parts.length != 3) return false;
-
-//   // // Le payload est en base64
-//   // final payload = json.decode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
-
-//   // // Vérification de la date d'expiration
-//   // final exp = payload['exp'];
-//   // final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
-
-//   // return DateTime.now().isBefore(expirationDate);  // Retourne true si le token n'est pas expiré
-//   //}
-// }
+import 'package:ru_project/services/secure_storage.dart';
 
 
 class UserProvider with ChangeNotifier {
   User? _user;
   List<User> _friends = [];
   final SecureStorage _secureStorage = SecureStorage();
-
-  String? _accessToken;
-  String? _refreshToken;
-
+  final _api = ApiService();
 
 
   // Getters
   User? get user => _user;
-  String? get accessToken => _accessToken;
-  String? get refreshToken => _refreshToken;
   List<User> get friends => _friends;
-
 
 //   Future<bool> isConnected() async {
 //   final prefs = await SharedPreferences.getInstance();
@@ -101,159 +60,44 @@ class UserProvider with ChangeNotifier {
   Future<void> _initialize() async {
 
     logger.i('initializing user provider');
+    try {
+    
+      final String? accessToken = await _secureStorage.getAccessToken();
 
-    await loadTokens();
+      if (accessToken != null) {
+        
+        final User? user = await _api.getUser();
+        if (user != null) {
+          _user = user;
+          notifyListeners();
+        } else {
+          handleLoginError();
+        }
+        // await fetchFriends(); cette fonction marche pas
+      }
 
-    if (_accessToken != null) {
-      
-      await fetchUserData();
-      // await fetchFriends(); cette fonction marche pas
+    } catch (e) {
+      throw Exception('Failed to initialize user provider: $e');
     }
   }
 
   Future<bool> isConnected() async {
-    if (_accessToken != null) {
+    if (user != null) {
       return true;
     }
     
     return false;
   }
+
+  void setUser(User user) {
+    _user = user;
+    notifyListeners();
+  }
   
-
-  Future<void> loadTokens() async {
-
-    try {
-      final tokens = await _secureStorage.getTokens();
-      if (tokens['accessToken'] == null || tokens['refreshToken'] == null) {
-        return;
-      }
-
-      _accessToken = tokens['accessToken'];
-      _refreshToken = tokens['refreshToken'];
-      logger.i('Tokens chargés: $_accessToken, $_refreshToken');
-      notifyListeners();
-    } catch (e) {
-      logger.e('Erreur de chargement des tokens: $e');
-    }
-  }
-
-  Future<void> clearTokens() async {
-    await _secureStorage.clearTokens();
-
-    _accessToken = null;
-    _refreshToken = null;
-    notifyListeners();
-  }
-
-  // Méthode pour se connecter , ApiService.login could return null or a token or an exception
-  Future<Map<String,dynamic>> login(String username, String password) async {
-
-    try {
-      final response = await ApiService.login(username, password); //response is dynamic
-
-    await _secureStorage.storeTokens(response['accessToken'], response['refreshToken']);
-    notifyListeners();
-
-    await loadTokens();
-    await fetchUserData();
-    notifyListeners();
-    return {
-      'success': true,
-      'message': 'Connexion réussie'
-    };
-    } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      return {
-        'success': false,
-        'message': 'Erreur de connexion'
-      };
-    }
-    
-  }
-
-  // Méthode pour s'inscrire ApiService.register could return null or a token or an exception
-  Future<Map<String,dynamic>> register(String username, String password) async {
-
-    try {
-      final response = await ApiService.register(username, password);
-      await _secureStorage.storeTokens(response['accessToken'], response['refreshToken']);
-      await loadTokens();
-      await fetchUserData();
-      notifyListeners();
-      return {
-        'success': true,
-        'message': 'Inscription réussie'
-      };
-    } catch (e) {
-      logger.e('Erreur d\'inscription: $e');
-      return {
-        'success': false,
-        'message': 'Erreur d\'inscription'
-      };
-  
-    }
-  }
-
-  // Méthode pour récupérer les données utilisateur après la connexion
-  Future<void> fetchUserData() async {
-    try {
-      if (_accessToken != null) {
-        late final String token = _accessToken!;
-        logger.i(_accessToken);
-      final userData = await ApiService.getUser(token);
-      logger.i(" test : ${userData.toString()}");
-      _user = User.fromJson(userData);
-          notifyListeners();
-      }
-    } catch (e) {
-      logger.e('Erreur de connexion: $e');
-      _user = null;
-      _accessToken = null;
-      notifyListeners();
-    }
-    
-  }
-
-  // Méthode pour mettre à jour l'état de l'utilisateur
-  Future<void> updateStatus(String newStatus) async {
-    if (_accessToken == null || _user == null) return;
-
-    final success = await ApiService.updateStatus(_accessToken!, newStatus);
-    if (success) {
-      _user!.status = newStatus;
-      notifyListeners();
-    }
-  }
-
-  // Méthode pour ajouter un ami
-  Future<void> addFriend(String friendUsername) async {
-    if (_accessToken == null) return;
-
-    final success = await ApiService.addFriend(_accessToken!, friendUsername);
-    if (success) {
-      // Mettez à jour la liste des amis après l'ajout
-      await fetchFriends();
-    }
-  }
-
-  // Méthode pour récupérer la liste des amis et leurs états
-  Future<void> fetchFriends() async {
-    if (_accessToken == null) return;
-
-    final friendsData = await ApiService.getFriends(_accessToken!);
-    logger.i(friendsData);
-    _friends = friendsData['friends']
-        .map<User>((json) => User.fromJson(json))
-        .toList();
-    notifyListeners();
-    }
-
   // Méthode pour se déconnecter
   void logout() {
     _user = null;
-    _accessToken = null;
     _friends = [];
-    // TODO : add logout method to backend
     notifyListeners();
   }
 

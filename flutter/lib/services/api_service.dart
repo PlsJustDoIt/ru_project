@@ -1,139 +1,100 @@
 import 'package:logger/logger.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
+import 'package:ru_project/models/menu.dart';
+import 'package:ru_project/models/user.dart';
+import 'package:ru_project/services/secure_storage.dart';
 
 
 class ApiService {
 
-  static Dio dio = Dio();
+  late final Dio _dio;
+  static final _logger = Logger();
+  final SecureStorage _secureStorage = SecureStorage();
 
-  static String? baseUrl = Config.apiUrl ;
-  static final logger = Logger();
+  // Singleton pattern
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
 
-  // // Singleton pattern
-  // static final ApiService _instance = ApiService._internal();
-  
-  // factory ApiService() {
-  //   return _instance;
-  // }
 
-  ApiService() {
-    dio.interceptors.add(
+  ApiService._internal() {
+    _dio = Dio(BaseOptions(
+      baseUrl: Config.apiUrl,
+      connectTimeout: Duration(milliseconds: 5000),
+      receiveTimeout: Duration(milliseconds: 3000),
+    ));
+    _dio.interceptors.add(
       InterceptorsWrapper(
-        onError: (DioException e, handler) async {
+
+        onRequest: (options, handler) async {
+          final token = await _secureStorage.getAccessToken();
+
+          // Exclure les requêtes `login` et `register`
+          if (token != null && !options.path.contains('/login') && !options.path.contains('/register')) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+
+          return handler.next(options); // Passer au prochain intercepteur ou à la requête
+        },
+
+        onError: (DioException e,ErrorInterceptorHandler handler) async {
           if (e.response?.statusCode == 401) {
             // If a 401 response is received, refresh the access token
-            String newAccessToken = await refreshToken();
+            await refreshToken();
 
-            // Update the request header with the new access token
-            e.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
-
-            // Repeat the request with the updated header
-            return handler.resolve(await dio.fetch(e.requestOptions));
           }
+
           return handler.next(e);
         },
       ),
     );
   }
 
-//   import 'package:dio/dio.dart';
-// import 'package:flutter_secure_storage.dart';
+  Future<void> refreshToken() async {
+    try {
+      final String? refreshToken = await _secureStorage.getRefreshToken();
+      final Response response = await _dio.post('/auth/token', data: {'refreshToken': refreshToken,});
 
-// class ApiService {
-//   late final Dio _dio;
-//   final FlutterSecureStorage _storage;
-  
-//   // Singleton pattern
-//   static final ApiService _instance = ApiService._internal();
-  
-//   factory ApiService() {
-//     return _instance;
-//   }
-  
-//   ApiService._internal() : _storage = FlutterSecureStorage() {
-//     _dio = Dio(BaseOptions(
-//       baseUrl: 'votre_url_base',
-//       connectTimeout: const Duration(seconds: 5),
-//       receiveTimeout: const Duration(seconds: 3),
-//     ));
-    
-//     _dio.interceptors.add(TokenInterceptor(dio: _dio, storage: _storage));
-//   }
-  
-//   // Exemples de méthodes d'API
-//   Future<Map<String, dynamic>> getUserProfile() async {
-//     try {
-//       final response = await _dio.get('/user/profile');
-//       return response.data;
-//     } catch (e) {
-//       // Gérer les erreurs de manière appropriée
-//       rethrow;
-//     }
-//   }
-  
-//   Future<List<Map<String, dynamic>>> getPosts() async {
-//     try {
-//       final response = await _dio.get('/posts');
-//       return List<Map<String, dynamic>>.from(response.data);
-//     } catch (e) {
-//       rethrow;
-//     }
-//   }
-  
-//   Future<Map<String, dynamic>> createPost(Map<String, dynamic> postData) async {
-//     try {
-//       final response = await _dio.post('/posts', data: postData);
-//       return response.data;
-//     } catch (e) {
-//       rethrow;
-//     }
-//   }
-  
-//   // Méthodes de gestion du token
-//   Future<void> setTokens({
-//     required String accessToken,
-//     required String refreshToken,
-//   }) async {
-//     await _storage.write(key: 'access_token', value: accessToken);
-//     await _storage.write(key: 'refresh_token', value: refreshToken);
-//   }
-  
-//   Future<void> clearTokens() async {
-//     await _storage.delete(key: 'access_token');
-//     await _storage.delete(key: 'refresh_token');
-//   }
-// }
+      if (response.statusCode == 200 && response.data != null) {
+        final String newAccessToken = response.data['accessToken'];
+        final String newRefreshToken = response.data['refreshToken'];
 
-// // L'intercepteur qu'on a créé précédemment
-// class TokenInterceptor extends Interceptor {
-//   // ... (même code que précédemment)
-// }
-  
+        await SecureStorage().storeTokens(newAccessToken, newRefreshToken);
+      } else {
+        throw Exception('Invalid response from server');
+      }
+    } catch (e) {
+      throw Exception('Failed to refresh token: $e');
+    }
 
-
-  Future<String> refreshToken() async {
-    // Perform a request to the refresh token endpoint and return the new access token.
-    // You can replace this with your own implementation.
-  return 'your_new_access_token';
   }
 
    // Fonction pour login
-  static Future<Map<String, dynamic>> login(String username, String password) async {
+  Future<User> login(String username, String password) async {
     try {
-      final response = await dio.post('$baseUrl/auth/login', data: {
+      final Response response = await _dio.post('/auth/login', data: {
         'username': username,
         'password': password,
       });
 
-      
-
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        return response.data; // Renvoie les données si tout va bien
-      } else {
-        throw Exception('Invalid response from server');
+        final String accessToken = response.data['accessToken'];
+        final String refreshToken = response.data['refreshToken'];
+
+        await _secureStorage.storeTokens(accessToken, refreshToken);
+        final User? user = await getUser();
+        if (user != null) {
+          return user;
+        } else {
+          throw Exception('Failed to get user data');
+        }
+        
       }
+
+      throw Exception('Invalid response from server');
+    
+
     } catch (e) {
       throw Exception('Login failed: $e');
     }
@@ -141,16 +102,25 @@ class ApiService {
 
 
   // Fonction pour s'inscrire
-  static Future<Map<String, dynamic>> register(String username, String password) async {
+  Future<User> register(String username, String password) async {
     try {
-      final response = await dio.post('$baseUrl/auth/register', data: {
+      final response = await _dio.post('/auth/register', data: {
         'username': username,
         'password': password,
       });
 
       // Vérifie si la réponse contient des données valides
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data; // Renvoie les données si tout va bien
+      if (response.statusCode == 201 && response.data != null) {
+        final String accessToken = response.data['accessToken'];
+        final String refreshToken = response.data['refreshToken'];
+
+        await _secureStorage.storeTokens(accessToken, refreshToken);
+        final User? user = await getUser();
+        if (user != null) {
+          return user;
+        } else {
+          throw Exception('Failed to get user data');
+        }
       } else {
         throw Exception('Invalid response from server');
       }
@@ -161,17 +131,13 @@ class ApiService {
 
 
   // Fonction pour récupérer les données utilisateur
-  static Future<Map<String, dynamic>> getUser(String token) async {
+  Future<User?> getUser() async {
     try {
-      final response = await dio.get('$baseUrl/users/me', options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
-        },
-      ));
+      final response = await _dio.get('/users/me');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        return response.data; // Renvoie les données si tout va bien
+        return User.fromJson(response.data); // Renvoie les données si tout va bien
       } else {
         throw Exception('Invalid response from server');
       }
@@ -182,15 +148,11 @@ class ApiService {
 
 
   // Fonction pour mettre à jour le statut de l'utilisateur
-  static Future<bool> updateStatus(String token, String status) async {
+  Future<bool> updateStatus(String status) async {
     try {
-      final response = await dio.put('$baseUrl/users/status', data: {
+      final response = await _dio.put('/users/status', data: {
         'status': status,
-      }, options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
-        },
-      ));
+      });
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200) {
@@ -204,15 +166,11 @@ class ApiService {
   }
 
   // Fonction pour ajouter un ami
-  static Future<bool> addFriend(String token, String friendUsername) async {
+  Future<bool> addFriend(String friendUsername) async {
     try {
-      final response = await dio.post('$baseUrl/users/add-friend', data: {
+      final response = await _dio.post('/users/add-friend', data: {
         'friendUsername': friendUsername,
-      }, options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
-        },
-      ));
+      });
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200) {
@@ -227,13 +185,9 @@ class ApiService {
 
 
   // Fonction pour récupérer la liste des amis
-  static Future<Map<String, dynamic>> getFriends(String token) async {
+  Future<Map<String, dynamic>> getFriends() async {
     try {
-      final response = await dio.get('$baseUrl/users/friends', options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',  // Ajout de l'Access Token
-        },
-      ));
+      final response = await _dio.get('/users/friends');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
@@ -248,22 +202,64 @@ class ApiService {
 
 
   //get menus from the API
-  static Future<List<dynamic>> getMenus(String token) async {
+  Future<List<Menu>> getMenus() async {
     try {
-      final response = await dio.get('$baseUrl/ru/menus', options: Options(
-        headers: { 'Authorization': 'Bearer $token'},
-      ));
+      final response = await _dio.get('/ru/menus');
 
-      // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        return response.data; // Renvoie les données si tout va bien
+        final List<dynamic> rawMenuData = response.data;
+        return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
       } else {
         throw Exception('Invalid response from server');
       }
+
     } catch (e) {
       throw Exception('Failed to get menus: $e');
     }
+
+      // Vérifie si la réponse contient des données valides
+    //   if (response.statusCode == 200 && response.data != null) {
+    //     List<Menu> menus;
+    //     final List<Map<String, dynamic>> rawMenuData = List<Map<String, dynamic>>.from(response.data);
+
+    //     if (rawMenuData.isEmpty) { //ok
+    //       menus = []; 
+    //     } else {
+    //       menus = rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
+    //     }
+
+    //     return menus;
+        
+    //   } else {
+    //     throw Exception('Invalid response from server');
+    //   }
+    // } catch (e) {
+    //   throw Exception('Failed to get menus: $e');
+    // }
+
+     
+
   }
+
+  Future<bool> logout() async {
+    try {
+      final String? refreshToken = await _secureStorage.getRefreshToken();
+      if (refreshToken == null) {
+        throw Exception('No refresh token found');
+      }
+      final response = await _dio.get('/auth/logout',data: {refreshToken: refreshToken});
+      await _secureStorage.clearTokens();
+      if (response.statusCode != 200) {
+        throw Exception('Invalid response from server');
+      }
+      return true;
+    } catch (e) {
+      throw Exception('Failed to logout: $e');
+    }
+  }
+
+
+
 }
 
 

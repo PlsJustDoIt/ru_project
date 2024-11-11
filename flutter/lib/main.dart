@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/providers/menu_provider.dart';
+import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
 void main() {
   runApp(MultiProvider(providers: [
       ChangeNotifierProvider(create: (_) => UserProvider()),
       ChangeNotifierProvider(create: (_) => MenuProvider()),
+      Provider(create: (_) => ApiService()),
     ],
     child: const MyApp(),
     ),
@@ -22,14 +24,10 @@ class MyApp extends StatelessWidget {
 
   @override 
   Widget build(BuildContext context) {
-
+    //TODO : à supprimer un jour
     FlutterSecureStorage storage = const FlutterSecureStorage();
     UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
-    userProvider.loadTokens();
     
-    storage.read(key: 'accessToken').then((accessToken) {
-          
-        });
     return MaterialApp(
       debugShowCheckedModeBanner: false, 
       theme: ThemeData(
@@ -49,9 +47,6 @@ class MyApp extends StatelessWidget {
       ),
       home:FutureBuilder(future: storage.read(key: 'accessToken'), builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done) {
-        storage.read(key: 'accessToken').then((accessToken) {
-          
-        });
 
         if (snapshot.data != null) {
           return const TabBarWidget();

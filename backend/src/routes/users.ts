@@ -13,6 +13,8 @@ router.get('/me', auth, async (req:Request, res:Response) => {
     }
 });
 
+
+//TODO : à revoir le modèle
 router.put('/status', auth, async (req:Request, res:Response) => {
     const { status } = req.body;
     try {
