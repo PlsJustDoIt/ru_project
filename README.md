@@ -86,7 +86,7 @@ exit()
 
 the following instructions are for development mode : 
 
-generate a JWT_SECRET with the following command:
+generate a JWT_ACCESS_SECRET with the following command:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -94,11 +94,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 **copy the key**
 
+**_repeat the operation for the JWT_REFRESH_SECRET._**
+
 add a .env file in the backend directory with the following content:
 
 ```bash
 MONGO_URI="mongodb://ru_project_user:ru_project_password@127.0.0.1:27017/ru_project?authSource=ru_project"
-JWT_SECRET="{your generated key}"
+JWT_ACCESS_SECRET="{your first generated key}"
+JWT_REFRESH_SECRET="{your second generated key}"
 ```
 
 
