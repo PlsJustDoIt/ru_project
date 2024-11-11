@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import User from '../models/user.js';
 import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.post('/register', async (req, res) => {
         // Sauvegarder le refresh token dans la base (optionnel)
         const refreshTokenInstance = new RefreshToken({ token: refreshToken, userId: user._id, expires: new Date(Date.now() + 7*24*60*60*1000) });
         await refreshTokenInstance.save();
-        res.json({ accessToken, refreshToken });
+        res.status(201).json({ accessToken, refreshToken });
     } catch (err) {
         res.status(500).send('Server error'+err);
     }
@@ -41,7 +42,6 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     console.log(req.body);
     try {
-        console.log('test');
         const user = await User.findOne({ username });
         if (!user) return res.status(400).json({ msg: 'This user does not exists' });
         const isMatch = await bcrypt.compare(password, user.password);
@@ -63,23 +63,21 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.post('/token', async (req, res) => {
-    const { token } = req.body;
-    if (!token) return res.status(401).json({ msg: 'Refresh token required' });
-
+router.post('/token',auth, async (req, res) => {
+    const refreshToken = req.body.refreshToken;
     try {
-        const existingToken = await RefreshToken.findOne({ token });
+        const existingToken = await RefreshToken.findOne({ refreshToken });
         if (!existingToken) return res.status(403).json({ msg: 'Invalid refresh token' });
 
          // Vérifier si le token est expiré (optionnel, mais si tu stockes l'expiration dans la base)
         if (existingToken.expires.getTime() < Date.now()) {
-            await RefreshToken.findOneAndDelete({ token });
+            await RefreshToken.findOneAndDelete({ refreshToken });
             // peut etre refaire un refresh token au lieu de renvoyer erreur ???
             return res.status(403).json({ msg: 'Refresh token expired' });
         }
 
         // Vérifier si le refresh token est valide
-        const decoded =  jwt.verify(token, process.env.JWT_REFRESH_SECRET as jwt.Secret) as JwtPayload;
+        const decoded =  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as JwtPayload;
         console.log(decoded);
         
         const userIdFromToken = decoded.id;
@@ -99,10 +97,10 @@ router.post('/token', async (req, res) => {
     }
 });
 
-router.post('/logout', async (req, res) => {
-    const { token } = req.body;
+router.post('/logout',auth, async (req, res) => {
+    const refreshToken = req.body.refreshToken;
     try {
-        await RefreshToken.findOneAndDelete({ token });
+        await RefreshToken.findOneAndDelete({ refreshToken });
         res.json({ msg: 'Logged out' });
     } catch (err) {
         res.status(500).json({ msg: 'Server error: ' + err });
