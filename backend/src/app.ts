@@ -6,21 +6,37 @@ import ruRoutes from './routes/ru.js';
 import cors from 'cors';
 import fs from 'fs';
 import https from 'https';
+import path from 'path';
+import morgan from 'morgan';
+import logger from './tools/logger.js';
 
 import dotenv from 'dotenv';
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 import { exit } from 'process';
+import { log } from 'console';
 
 const app = express();
 console.log(process.env.MONGO_URI);
+
+//define dirnames
+const __dirname = path.resolve();
+
+//set up log file stream in logs folder
+const accessLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'access.log'), { flags: 'a' });
+
+//log requests combined format
+app.use(morgan('combined', { stream: accessLogStream }));
+
+
 
 mongoose.set("strictQuery", false);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 if (process.env.MONGO_URI == null) {
+  logger.error('MONGO_URI is not defined');
   console.error('MONGO_URI is not defined');
   exit(1);
 }
@@ -40,13 +56,14 @@ app.use('/api/ru', ruRoutes);
 const PORT = process.env.PORT || 5000;
 
 if (!isProduction) {
+  logger.info('Server http running on port ' + PORT);
   app.listen(PORT, () => console.log(`Server http running on port ${PORT}`));
 } else {
   const options = {
     key: fs.readFileSync('/etc/ssl/private/server.key'),
     cert: fs.readFileSync('/etc/ssl/certs/server.crt')
   };
-const server = https.createServer(options,app);
-server.listen(PORT, () => console.log(`Server https running on port ${PORT}`));
-
+  const server = https.createServer(options,app);
+  logger.info('Server https running on port ' + PORT);
+  server.listen(PORT, () => console.log(`Server https running on port ${PORT}`));
 }
