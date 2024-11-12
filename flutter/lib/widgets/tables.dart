@@ -1,20 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ru_project/services/logger.dart';
-
-
-class CafeteriaTable {
-  final int id;
-  final double xPercent; // Position as percentage of container width
-  final double yPercent; // Position as percentage of container height
-  bool isOccupied;
-
-  CafeteriaTable({
-    required this.id,
-    required this.xPercent,
-    required this.yPercent,
-    this.isOccupied = false,
-  });
-}
+import 'package:ru_project/models/cafeteria_table.dart';
 
 class CafeteriaLayout extends StatefulWidget {
   const CafeteriaLayout({super.key});
