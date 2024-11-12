@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/providers/menu_provider.dart';
-import 'package:ru_project/providers/user_provider.dart'; // Import UserProvider
+import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/services/api_service.dart'; // Import UserProvider
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -53,27 +54,12 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
   //set the menus
   void setMenus(BuildContext context) async {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
+    final apiService = Provider.of<ApiService>(context, listen: false);
     
-    //si le menu est déjà chargé dans le provider
-
-
-    // if (menusProvider.menus.isNotEmpty) { // OK
-    //   setState(() {
-    //     _menus = menusProvider.menus;
-    //   });
-    //   return;
-    // }
     if (_menus.isNotEmpty) {
-      Logger().i('Les menus ne sont pas vides');
+      logger.i('Les menus ne sont pas vides');
     }
-    List<Map<String,dynamic>> rawMenuData = await menusProvider.fetchMenus(); // OK
-    List<Menu> menus; // OK
-
-    if (rawMenuData.isEmpty) { //ok
-      menus = []; 
-    } else {
-      menus = rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
-    }
+    List<Menu> menus = await apiService.getMenus(); // OK
     setState(() {
       _menus = menus;
       menusProvider.setMenus(menus);
