@@ -8,6 +8,7 @@ import fs from 'fs';
 import { Menu,MenuXml } from '../interfaces/menu.js';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import logger from '../services/logger.js';
 
 const router = Router();
 const ru_lumiere_id = 'r135';
@@ -143,7 +144,7 @@ async function fetchMenusFromExternalAPI() {
       // On vérifie si les menus sont en cache
       const cachedMenus:Menu[] | undefined = cache.get('menus');
       if (cachedMenus) {
-        console.log('Les menus sont en cache');
+        logger.info('Les menus sont en cache');
         return res.json(cachedMenus);
       }
   

@@ -5,6 +5,8 @@ import User from '../models/user.js';
 import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
+import logger from '../services/logger.js';
+import user from '../models/user.js';
 
 const router = express.Router();
 
@@ -18,7 +20,6 @@ const generateRefreshToken = (id:Types.ObjectId) => {
 
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
-    console.log(username, password);
     try {
         let user = await User.findOne({ username });
         if (user) return res.status(400).json({ msg: 'User already exists' });
@@ -32,6 +33,7 @@ router.post('/register', async (req, res) => {
         // Sauvegarder le refresh token dans la base (optionnel)
         const refreshTokenInstance = new RefreshToken({ token: refreshToken, userId: user._id, expires: new Date(Date.now() + 7*24*60*60*1000) });
         await refreshTokenInstance.save();
+        logger.info(`Engistrement de l'utilisateur ${username}`);
         res.status(201).json({ accessToken, refreshToken });
     } catch (err) {
         res.status(500).send('Server error'+err);
@@ -40,7 +42,7 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    console.log(req.body);
+    
     try {
         const user = await User.findOne({ username });
         if (!user) return res.status(400).json({ msg: 'This user does not exists' });
@@ -55,10 +57,11 @@ router.post('/login', async (req, res) => {
         const refreshTokenInstance = new RefreshToken({ token: refreshToken, userId: user._id, expires: new Date(Date.now() + 7*24*60*60*1000) });
         await refreshTokenInstance.save();
 
-        console.log(accessToken, refreshToken);
+        logger.info(`Connection de l'utilisateur ${username} :\n accessToken: ${accessToken} \n refreshToken: ${refreshToken}`);
+
         res.json({ accessToken, refreshToken });
     } catch (err) {
-        console.log(err);
+        logger.error(err);
         res.status(500).send('Server error '+err);
     }
 });
@@ -78,7 +81,7 @@ router.post('/token',auth, async (req, res) => {
 
         // Vérifier si le refresh token est valide
         const decoded =  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as JwtPayload;
-        console.log(decoded);
+        logger.info(decoded);
         
         const userIdFromToken = decoded.id;
 
@@ -89,6 +92,9 @@ router.post('/token',auth, async (req, res) => {
 
         // Générer un nouveau access token
         const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
+        
+        logger.info(`Nouveau token créé pour l'utilisateur ${req.user} :\n accessToken: ${accessToken}`);
+
         res.json({ accessToken });
 
         // });
@@ -101,6 +107,7 @@ router.post('/logout',auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
         await RefreshToken.findOneAndDelete({ refreshToken });
+        logger.info(`Déconnexion de l'utilisateur ${req.user}`);
         res.json({ msg: 'Logged out' });
     } catch (err) {
         res.status(500).json({ msg: 'Server error: ' + err });
