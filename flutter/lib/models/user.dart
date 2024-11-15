@@ -23,4 +23,16 @@ class User {
       status: json['status']
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'username': username,
+      'status': status,
+      'friends': friends,
+    };
+
+  }
+
+  
 }

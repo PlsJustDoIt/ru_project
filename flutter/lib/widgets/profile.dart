@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/services/api_service.dart';
 
 enum UserStatus {
   enLigne,
@@ -38,6 +40,7 @@ class ProfileWidget extends StatefulWidget {
   final User? user;
   final Function(User) onUserUpdated;
 
+
   const ProfileWidget({
     super.key, 
     required this.user,
@@ -54,6 +57,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   late UserStatus _selectedStatus;
+  
 
   @override
   void initState() {
@@ -75,6 +79,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         });
       }
     } catch (e) {
+      if (mounted != true) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to pick image')),
       );
@@ -82,6 +89,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 
   void _saveChanges() {
+    final ApiService apiService = Provider.of<ApiService>(context);
     if (_formKey.currentState!.validate()) {
       final updatedUser = User(
         id: widget.user!.id,
@@ -90,7 +98,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         friends: widget.user!.friends,
       );
       
-      widget.onUserUpdated(updatedUser);
+      //apiService.updateUser(updatedUser);
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully')),
@@ -100,6 +108,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   @override
   Widget build(BuildContext context) {
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
