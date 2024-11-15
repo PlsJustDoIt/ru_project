@@ -53,7 +53,7 @@ class ApiService {
   Future<void> refreshToken() async {
     try {
       final String? refreshToken = await _secureStorage.getRefreshToken();
-      final Response response = await _dio.post('/auth/token', data: {'refreshToken': refreshToken,});
+      final Response response = await _dio.post('/auth/token', data: {'refreshToken': refreshToken});
 
       if (response.statusCode == 200 && response.data != null) {
         final String newAccessToken = response.data['accessToken'];
@@ -104,7 +104,7 @@ class ApiService {
   // Fonction pour s'inscrire
   Future<User> register(String username, String password) async {
     try {
-      final response = await _dio.post('/auth/register', data: {
+      final Response response = await _dio.post('/auth/register', data: {
         'username': username,
         'password': password,
       });
@@ -133,7 +133,7 @@ class ApiService {
   // Fonction pour récupérer les données utilisateur
   Future<User?> getUser() async {
     try {
-      final response = await _dio.get('/users/me');
+      final Response response = await _dio.get('/users/me');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
@@ -150,7 +150,7 @@ class ApiService {
   // Fonction pour mettre à jour le statut de l'utilisateur
   Future<bool> updateStatus(String status) async {
     try {
-      final response = await _dio.put('/users/status', data: {
+      final Response response = await _dio.put('/users/status', data: {
         'status': status,
       });
 
@@ -168,7 +168,7 @@ class ApiService {
   // Fonction pour ajouter un ami
   Future<bool> addFriend(String friendUsername) async {
     try {
-      final response = await _dio.post('/users/add-friend', data: {
+      final Response response = await _dio.post('/users/add-friend', data: {
         'friendUsername': friendUsername,
       });
 
@@ -187,7 +187,7 @@ class ApiService {
   // Fonction pour récupérer la liste des amis
   Future<Map<String, dynamic>> getFriends() async {
     try {
-      final response = await _dio.get('/users/friends');
+      final Response response = await _dio.get('/users/friends');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
@@ -204,7 +204,7 @@ class ApiService {
   //get menus from the API
   Future<List<Menu>> getMenus() async {
     try {
-      final response = await _dio.get('/ru/menus');
+      final Response response = await _dio.get('/ru/menus');
 
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> rawMenuData = response.data;
@@ -215,29 +215,7 @@ class ApiService {
 
     } catch (e) {
       throw Exception('Failed to get menus: $e');
-    }
-
-      // Vérifie si la réponse contient des données valides
-    //   if (response.statusCode == 200 && response.data != null) {
-    //     List<Menu> menus;
-    //     final List<Map<String, dynamic>> rawMenuData = List<Map<String, dynamic>>.from(response.data);
-
-    //     if (rawMenuData.isEmpty) { //ok
-    //       menus = []; 
-    //     } else {
-    //       menus = rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
-    //     }
-
-    //     return menus;
-        
-    //   } else {
-    //     throw Exception('Invalid response from server');
-    //   }
-    // } catch (e) {
-    //   throw Exception('Failed to get menus: $e');
-    // }
-
-     
+    }     
 
   }
 
@@ -247,7 +225,7 @@ class ApiService {
       if (refreshToken == null) {
         throw Exception('No refresh token found');
       }
-      final response = await _dio.get('/auth/logout',data: {refreshToken: refreshToken});
+      final Response response = await _dio.get('/auth/logout',data: {refreshToken: refreshToken});
       await _secureStorage.clearTokens();
       if (response.statusCode != 200) {
         throw Exception('Invalid response from server');

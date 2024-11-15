@@ -17,40 +17,6 @@ class UserProvider with ChangeNotifier {
   User? get user => _user;
   List<User> get friends => _friends;
 
-//   Future<bool> isConnected() async {
-//   final prefs = await SharedPreferences.getInstance();
-//   final token = prefs.getString('token');
-//   final expirationTime = prefs.getString('tokenExpiration');
-
-//   if (token == null || expirationTime == null) {
-//     return false; // Pas de token ou pas d'heure d'expiration
-//   }
-
-//   final expirationDate = DateTime.parse(expirationTime);
-
-//   // Comparer l'heure actuelle avec l'heure d'expiration
-//   if (DateTime.now().isAfter(expirationDate)) {
-//     // Token expiré, supprimer le token
-//     await prefs.remove('token');
-//     await prefs.remove('tokenExpiration');
-//     return false;
-//   }
-
-//   return true; // Token toujours valide
-// }
-
-  // Future<void> storeToken(String token) async {
-  //   final prefs = await SharedPreferences.getInstance();
-
-  //   // Stocker le token
-  //   await prefs.setString('token', token);
-
-  //   // Stocker l'heure d'expiration (1 heure après l'heure actuelle)
-  //   final expirationTime =
-  //       DateTime.now().add(const Duration(hours: 1)).toIso8601String();
-  //   await prefs.setString('tokenExpiration', expirationTime);
-  // }
-
    // Constructor
   UserProvider() {
     _initialize();
