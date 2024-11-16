@@ -6,7 +6,6 @@ import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import user from '../models/user.js';
 
 const router = express.Router();
 
@@ -57,7 +56,7 @@ router.post('/login', async (req, res) => {
         const refreshTokenInstance = new RefreshToken({ token: refreshToken, userId: user._id, expires: new Date(Date.now() + 7*24*60*60*1000) });
         await refreshTokenInstance.save();
 
-        logger.info(`Connection de l'utilisateur ${username} :\n accessToken: ${accessToken} \n refreshToken: ${refreshToken}`);
+        logger.info(`Connexion de l'utilisateur ${username}`);
 
         res.json({ accessToken, refreshToken });
     } catch (err) {

@@ -7,7 +7,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const logger = winston.createLogger({
 level: 'info',
 format: winston.format.combine(
-    winston.format.timestamp(),
+    winston.format.timestamp({format: 'DD-MM-YYYY HH:mm:ss'}),
+    winston.format.prettyPrint({colorize: true}),
+    winston.format.colorize({message:true}),
     winston.format.printf(({ timestamp, level, message }) => {
         return `${timestamp} ${level}: ${message}`;
     })

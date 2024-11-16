@@ -24,6 +24,12 @@ mongoose.set("strictQuery", false);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+if (isProduction) {
+  console.log('lancement en production');
+} else {
+  console.log('lancement en dev');
+}
+
 
 
 if (isProduction) {
