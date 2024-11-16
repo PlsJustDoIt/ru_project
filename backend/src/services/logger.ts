@@ -23,7 +23,7 @@ transports: [
 if (isProduction) {
 
 
-    const __dirname = path.dirname(path.resolve())+'logs';
+    const __dirname = path.dirname(path.resolve())+'/logs';
 
 
 // Vérifie si le dossier 'logs' existe, et le crée s'il n'existe pas

@@ -69,6 +69,5 @@ if (!isProduction) {
     cert: fs.readFileSync('/etc/ssl/certs/server.crt')
   };
   const server = https.createServer(options,app);
-  logger.info('Server https running on port ' + PORT);
   server.listen(PORT, () => logger.info(`Server https running on port ${PORT}`));
 }
