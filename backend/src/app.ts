@@ -61,13 +61,15 @@ app.use('/api/ru', ruRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-if (!isProduction) {
-  app.listen(PORT, () => logger.info(`Server http running on port ${PORT}`));
-} else {
-  const options = {
-    key: fs.readFileSync('/etc/ssl/private/server.key'),
-    cert: fs.readFileSync('/etc/ssl/certs/server.crt')
-  };
-  const server = https.createServer(options,app);
-  server.listen(PORT, () => logger.info(`Server https running on port ${PORT}`));
-}
+// if (!isProduction) {
+//   app.listen(PORT, () => logger.info(`Server http running on port ${PORT}`));
+// } else {
+//   const options = {
+//     key: fs.readFileSync('/etc/ssl/private/server.key'),
+//     cert: fs.readFileSync('/etc/ssl/certs/server.crt')
+//   };
+//   const server = https.createServer(options,app);
+//   server.listen(PORT, () => logger.info(`Server https running on port ${PORT}`));
+// }
+
+app.listen(PORT, () => logger.info(`Server http running on port ${PORT}`));
