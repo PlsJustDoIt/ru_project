@@ -36,7 +36,7 @@ if (isProduction) {
   //define dirnames
   const __dirname = path.dirname(path.resolve());
   //set up log file stream in logs folder
-  const accessLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'access.log'), { flags: 'a' });
+  const accessLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'access.log'), { flags: 'a+' });
   //log requests combined format
   app.use(morgan('combined', { stream: accessLogStream }));
 }
