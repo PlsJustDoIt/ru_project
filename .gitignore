@@ -46,3 +46,4 @@ app.*.map.json
 /backend/node_modules/
 
 **/.env
+env.sh
