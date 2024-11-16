@@ -1,5 +1,6 @@
 import path from 'path';
 import winston from 'winston';
+import fs from 'fs';
 
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -20,7 +21,16 @@ transports: [
 });
 
 if (isProduction) {
+
+
     const __dirname = path.dirname(path.resolve())+'logs';
+
+
+// Vérifie si le dossier 'logs' existe, et le crée s'il n'existe pas
+    if (!fs.existsSync(__dirname)) {
+        fs.mkdirSync(__dirname, { recursive: true });
+    }
+
     logger.add(new winston.transports.File({ filename: 'server.log', dirname: __dirname }));
     logger.add(new winston.transports.File({ filename: 'error.log', dirname: __dirname ,level: 'error' }));
 }
