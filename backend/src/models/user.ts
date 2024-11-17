@@ -1,19 +1,23 @@
 
-import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
+import {CallbackError, Schema, model} from 'mongoose';
+import {genSalt, hash} from 'bcrypt';
 
-const UserSchema = new mongoose.Schema({
+const UserSchema = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     status: { type: String, default: 'Inactif' },
-    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 });
 
 UserSchema.pre('save', async function(next): Promise<void> {
-    if (!this.isModified('password')) return next();
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
+    try {
+        if (!this.isModified('password')) return next();
+        const salt = await genSalt(10);
+        this.password = await hash(this.password, salt);
+        next();
+    } catch (error : unknown) {
+        next(error as CallbackError);
+    }
 });
 
-export default mongoose.model('User', UserSchema);
+export default model('User', UserSchema);
