@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/logger.dart';
 
 enum UserStatus {
   enLigne,
@@ -54,6 +55,8 @@ class ProfileWidget extends StatefulWidget {
 class _ProfileWidgetState extends State<ProfileWidget> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
+  late TextEditingController _passwordConfirmController;
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   late UserStatus _selectedStatus;
@@ -63,6 +66,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   void initState() {
     super.initState();
     _usernameController = TextEditingController(text: widget.user!.username);
+    _passwordController = TextEditingController();
+    _passwordConfirmController = TextEditingController();
     _selectedStatus = UserStatus.fromString(widget.user!.status);
   }
 
@@ -88,21 +93,40 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
   }
 
-  void _saveChanges() {
-    final ApiService apiService = Provider.of<ApiService>(context);
-    if (_formKey.currentState!.validate()) {
-      final updatedUser = User(
-        id: widget.user!.id,
-        username: _usernameController.text,
-        status: _selectedStatus.toDisplayString(),
-        friends: widget.user!.friends,
-      );
-      
-      //apiService.updateUser(updatedUser);
-      
+  Future<void> _saveChanges() async {
+    final ApiService apiService = Provider.of<ApiService>(context, listen: false);
+
+    // Validate form
+    if (_passwordController.text != _passwordConfirmController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        const SnackBar(content: Text('Passwords do not match')),
       );
+      return;
+    }
+
+    if (_formKey.currentState!.validate()) {
+      final Map<String, dynamic> updatedUser = {
+        'username' : _usernameController.text,
+        'status' : _selectedStatus.toDisplayString(),
+        'friends' : widget.user!.friends,
+        'password' : _passwordController.text,
+      };
+      
+      bool res = await apiService.updateUser(updatedUser);
+
+      if (mounted != true) {
+        return;
+      }
+
+      if (!res) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile failed to update')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
     }
   }
 
@@ -144,7 +168,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person),
                 ),
-                validator: (value) {
+                validator: (value) { //TODO ?? Secure username/imput
                   if (value == null || value.isEmpty) {
                     return 'Please enter a username';
                   }
@@ -152,6 +176,49 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                     return 'Username must be at least 3 characters';
                   }
                   return null;
+                },
+                onSaved: (value) {
+                  // TODO mettre à jour le nom d'utilisateur à implémenter
+                  logger.i('Username saved: $value');
+                },
+              ),
+              //password :
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                decoration: InputDecoration(             
+                  labelText: 'Mot de passe',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                ),
+                obscureText: true,
+                validator: (value) { //TODO ?? Secure password/imput
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a password';
+                  }
+                  if (value.length < 3) { 
+                    return 'Password must be at least 3 characters';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  //  TODO mettre à jour le mot de passe implémenter
+                  logger.i('Password saved: $value');
+                },
+              ),
+              //comfirm password : //TODO compare password TODO add validator
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordConfirmController,
+                decoration: InputDecoration(             
+                  labelText: 'Confirmer le mot de passe',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                ),
+                obscureText: true,
+                onSaved: (value) {
+                  //  TODO mettre à jour le mot de passe implémenter
+                  logger.i('Password saved: $value');
                 },
               ),
               const SizedBox(height: 16),
@@ -197,3 +264,14 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     super.dispose();
   }
 }
+/*
+username : 
+
+password :
+
+status : en ligne, au ru, absent //TODO backend
+
+avatar :
+ .jpg .jpeg 
+ /uploads/avatars/id/avatar.jpg
+ */
