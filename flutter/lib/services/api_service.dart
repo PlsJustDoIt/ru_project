@@ -3,6 +3,7 @@ import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 
 
@@ -225,7 +226,7 @@ class ApiService {
       if (refreshToken == null) {
         throw Exception('No refresh token found');
       }
-      final Response response = await _dio.get('/auth/logout',data: {refreshToken: refreshToken});
+      final Response response = await _dio.post('/auth/logout',data: {refreshToken: refreshToken});
       await _secureStorage.clearTokens();
       if (response.statusCode != 200) {
         throw Exception('Invalid response from server');
@@ -236,7 +237,20 @@ class ApiService {
     }
   }
 
-
+  //update user profile
+  Future<bool> updateUser(Map<String, dynamic> user) async {
+    try {
+      final Response response = await _dio.put('/users/update', data: user);
+      if (response.statusCode == 200) {
+        logger.i('User updated: ${user['username']}');
+        return true;
+      } else {
+        throw Exception('Invalid response from server');
+      }
+    } catch (e) {
+      throw Exception('Failed to update user: $e');
+    }
+  }
 
 }
 
