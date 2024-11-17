@@ -106,7 +106,7 @@ router.post('/logout',auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
         await RefreshToken.findOneAndDelete({ refreshToken });
-        logger.info(`Déconnexion de l'utilisateur ${req.user}`);
+        logger.info(`Déconnexion de l'utilisateur ${req.user.username}`);
         res.json({ msg: 'Logged out' });
     } catch (err) {
         res.status(500).json({ msg: 'Server error: ' + err });

@@ -1,8 +1,6 @@
 import { Router,Request,Response } from 'express';
 import User from '../models/user.js';
 import auth from '../middleware/auth.js';
-import mongoose from 'mongoose';
-
 const router = Router();
 
 router.get('/me', auth, async (req:Request, res:Response) => {
@@ -17,24 +15,17 @@ router.get('/me', auth, async (req:Request, res:Response) => {
 
 
 
-router.get('/update', auth, async (req:Request, res:Response) => {
+router.put('/update', auth, async (req:Request, res:Response) => {
 
-    
     try {
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ msg: 'User not found' });
         }
 
-        interface UserUpdated {
-            _id: string;
-            username: string;
-            status: string;
-            friends: mongoose.Types.ObjectId[]; 
-        }
+        const user_updated = req.body;
 
-        const user_updated: UserUpdated = req.body;
-
+        user.password = user_updated.password;
         user.username = user_updated.username;
         user.status = user_updated.status;
         user.friends = user_updated.friends;
