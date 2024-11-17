@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/menu.dart';
@@ -7,6 +8,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
 import 'package:ru_project/widgets/tables.dart';
 import 'package:ru_project/widgets/profile.dart';
+import 'package:ru_project/widgets/welcome.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -24,6 +26,19 @@ class TabBarWidget extends StatelessWidget {
             style: TextStyle(
                 fontFamily: 'Marianne', color: AppColors.secondaryColor),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              color: Colors.white,
+              onPressed: () {
+                UserProvider().logout();
+                ApiService().logout();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const WelcomeWidget()),
+                );
+            }),
+          ],
           backgroundColor: AppColors.primaryColor,
           bottom: const TabBar(
             labelColor:
@@ -56,3 +71,4 @@ class TabBarWidget extends StatelessWidget {
     );
   }
 }
+

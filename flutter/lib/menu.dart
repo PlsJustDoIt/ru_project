@@ -207,26 +207,3 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
   @override
   bool get wantKeepAlive => true;
 }
-
-/*
-Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _menus.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: 1,
-                  itemBuilder: (context, i) {
-                    return menuPlat(context, _menus[index].plats);
-                  }
-                );
-              }
-            )
-          ),
- */
