@@ -18,6 +18,10 @@ router.get('/me', auth, async (req:Request, res:Response) => {
 router.put('/update', auth, async (req:Request, res:Response) => {
 
     try {
+        //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
+        if (!req.body.username || !req.body.password || req.body.username.length < 3 || req.body.username.length > 32 || req.body.password.length < 3 || req.body.password.length > 32 || !req.body.username.replace(/\s/g, '').length || !req.body.password.replace(/\s/g, '').length) {
+            return res.status(400).json({ msg: 'Invalid username or password' });
+        }
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ msg: 'User not found' });

@@ -20,6 +20,10 @@ const generateRefreshToken = (id:Types.ObjectId) => {
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
     try {
+        //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
+        if (!username || !password || username.length < 3 || username.length > 32 || password.length < 3 || password.length > 32 || !username.replace(/\s/g, '').length || !password.replace(/\s/g, '').length) {
+            return res.status(400).json({ msg: 'Invalid username or password' });
+        }
         let user = await User.findOne({ username });
         if (user) return res.status(400).json({ msg: 'User already exists' });
         user = new User({ username, password });
@@ -43,6 +47,10 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     
     try {
+        //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
+        if (!username || !password || username.length < 3 || username.length > 32 || password.length < 3 || password.length > 32 || !username.replace(/\s/g, '').length || !password.replace(/\s/g, '').length) {
+            return res.status(400).json({ msg: 'Invalid username or password' });
+        }
         const user = await User.findOne({ username });
         if (!user) return res.status(400).json({ msg: 'This user does not exists' });
         const isMatch = await bcrypt.compare(password, user.password);
