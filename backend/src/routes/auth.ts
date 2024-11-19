@@ -6,8 +6,12 @@ import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
+import { log } from 'console';
 
 const router = express.Router();
+
+const TEXT_MIN_LENGTH = 3;
+const TEXT_MAX_LENGTH = 32;
 
 const generateAccessToken = (id: Types.ObjectId) => {
     return jwt.sign({ id: id }, process.env.JWT_ACCESS_SECRET as jwt.Secret, { expiresIn: '15m' });
@@ -18,14 +22,29 @@ const generateRefreshToken = (id:Types.ObjectId) => {
 };
 
 router.post('/register', async (req, res) => {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
     try {
         //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
-        if (!username || !password || username.length < 3 || username.length > 32 || password.length < 3 || password.length > 32 || !username.replace(/\s/g, '').length || !password.replace(/\s/g, '').length) {
-            return res.status(400).json({ msg: 'Invalid username or password' });
+        if (!username || !password) {
+            logger.error('Username or password field dosn\'t exists');
+            res.status(400).json({ msg: 'Username or password dosn\'t exists' });
         }
+
+        username = username.trim();
+        password = password.trim();
+
+        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ msg: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
+        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ msg: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
         let user = await User.findOne({ username });
-        if (user) return res.status(400).json({ msg: 'User already exists' });
+        if (user)  res.status(400).json({ msg: 'User already exists' });
         user = new User({ username, password });
         await user.save();
         // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
@@ -44,13 +63,29 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
     
     try {
         //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
-        if (!username || !password || username.length < 3 || username.length > 32 || password.length < 3 || password.length > 32 || !username.replace(/\s/g, '').length || !password.replace(/\s/g, '').length) {
-            return res.status(400).json({ msg: 'Invalid username or password' });
+
+        if (!username || !password) {
+            logger.error('Username or password field dosn\'t exists');
+            return res.status(400).json({ msg: 'Username or password dosn\'t exists' });
         }
+
+        username = username.trim();
+        password = password.trim();
+
+        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ msg: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
+        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ msg: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
         const user = await User.findOne({ username });
         if (!user) return res.status(400).json({ msg: 'This user does not exists' });
         const isMatch = await bcrypt.compare(password, user.password);

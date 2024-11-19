@@ -1,6 +1,7 @@
 import { Router,Request,Response } from 'express';
 import User from '../models/user.js';
 import auth from '../middleware/auth.js';
+import logger from '../services/logger.js';
 const router = Router();
 
 router.get('/me', auth, async (req:Request, res:Response) => {
@@ -13,15 +14,36 @@ router.get('/me', auth, async (req:Request, res:Response) => {
     }
 });
 
-
+const TEXT_MIN_LENGTH = 3;
+const TEXT_MAX_LENGTH = 32;
 
 router.put('/update', auth, async (req:Request, res:Response) => {
 
     try {
+        let username = req.body.username;
+        let password = req.body.password;
+
         //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
-        if (!req.body.username || !req.body.password || req.body.username.length < 3 || req.body.username.length > 32 || req.body.password.length < 3 || req.body.password.length > 32 || !req.body.username.replace(/\s/g, '').length || !req.body.password.replace(/\s/g, '').length) {
-            return res.status(400).json({ msg: 'Invalid username or password' });
+
+        if (!username || !password) {
+            logger.error('Username or password field dosn\'t exists');
+            return res.status(400).json({ msg: 'Username or password dosn\'t exists' });
         }
+                
+        username = username.trim();
+        password = password.trim();
+
+        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ msg: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
+        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ msg: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
+
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ msg: 'User not found' });
