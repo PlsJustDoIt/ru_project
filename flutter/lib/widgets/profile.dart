@@ -167,22 +167,22 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               TextFormField(
                 controller: _usernameController,
                 decoration: const InputDecoration(
-                  labelText: 'Username',
+                  labelText: 'Username (3-32 caractères)',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person),
                 ),
                 validator: (value) { //TODO ?? Secure username/imput
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a username';
+                    return 'Veuillez entrer un nom d\'utilisateur';
                   }
                   if (value.trim().isEmpty) {
-                    return 'Please enter a valid username';
+                    return 'Veuillez entrer un nom d\'utilisateur valide';
                   }
                   if (value.length > 32) {
-                    return 'Username must be less than 32 characters';
+                    return 'Le nom d\'utilisateur doit être inférieur à 32 caractères';
                   }
                   if (value.length < 3) {
-                    return 'Username must be at least 3 characters';
+                    return 'Le nom d\'utilisateur doit être supérieur à 3 caractères';
                   }
                   return null;
                 },
@@ -196,23 +196,23 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               TextFormField(
                 controller: _passwordController,
                 decoration: InputDecoration(             
-                  labelText: 'Mot de passe',
+                  labelText: 'Mot de passe (3-32 caractères)',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock),
                 ),
                 obscureText: true,
                 validator: (value) { //TODO ?? Secure password/imput
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a password';
+                    return 'Veuillez entrer un mot de passe (3-32 caractères)';
                   }
                   if (value.trim().isEmpty) {
-                    return 'Please enter a valid password';
+                    return 'Veuillez entrer un mot de passe valide';
                   }
                   if (value.length < 3) { 
-                    return 'Password must be at least 3 characters';
+                    return 'Le mot de passe doit être supérieur à 3 caractères';
                   }
                   if (value.length > 32) {
-                    return 'Password must be less than 32 characters';
+                    return 'Le mot de passe doit être inférieur à 32 caractères';
                   }
                   return null;
                 },

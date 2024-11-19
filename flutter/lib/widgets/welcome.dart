@@ -100,10 +100,10 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                   child: TextFormField(
                     controller: _usernameController,
                     decoration:
-                        const InputDecoration(labelText: 'Nom d\'utilisateur(3-32 caractères)'),
+                        const InputDecoration(labelText: 'Nom d\'utilisateur (3-32 caractères)'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer un nom d\'utilisateur';
+                        return 'Veuillez entrer un nom d\'utilisateur (3-32 caractères)';
                       }
                       if (value.trim().isEmpty) {
                         return 'Veuillez entrer un nom d\'utilisateur valide';
@@ -128,16 +128,16 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
+                        return 'Veillez entrer un mot de passe (3-32 caractères)';
                       }
                       if (value.trim().isEmpty) {
-                        return 'Please enter a valid password';
+                        return 'Veillez entrer un mot de passe valide';
                       }
-                      if (value.length < 3) { 
-                        return 'Password must be at least 3 characters';
+                      if (value.length < 3) {
+                        return 'Le mot de passe doit comporter au moins 3 caractères';
                       }
                       if (value.length > 32) {
-                        return 'Password must be less than 32 characters';
+                        return 'Le mot de passe doit comporter moins de 32 caractères';
                       }
                       return null;
                       },
