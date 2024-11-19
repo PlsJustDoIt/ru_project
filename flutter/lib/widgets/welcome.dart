@@ -100,7 +100,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                   child: TextFormField(
                     controller: _usernameController,
                     decoration:
-                        const InputDecoration(labelText: 'Nom d\'utilisateur'),
+                        const InputDecoration(labelText: 'Nom d\'utilisateur(3-32 caractères)'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Veuillez entrer un nom d\'utilisateur';
@@ -123,7 +123,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                   child: TextFormField(
                     controller: _passwordController,
                     decoration: const InputDecoration(
-                      labelText: 'Mot de passe',
+                      labelText: 'Mot de passe (3-32 caractères)',
                     ),
                     obscureText: true,
                     validator: (value) {
