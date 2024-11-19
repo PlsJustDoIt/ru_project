@@ -97,12 +97,15 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
 
     // Validate form
+
+    /*
     if (_passwordController.text != _passwordConfirmController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Passwords do not match')),
       );
       return;
     }
+    */
 
     if (_formKey.currentState!.validate()) {
       final Map<String, dynamic> updatedUser = {
@@ -172,6 +175,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a username';
                   }
+                  if (value.trim().isEmpty) {
+                    return 'Please enter a valid username';
+                  }
+                  if (value.length > 32) {
+                    return 'Username must be less than 32 characters';
+                  }
                   if (value.length < 3) {
                     return 'Username must be at least 3 characters';
                   }
@@ -196,13 +205,18 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a password';
                   }
+                  if (value.trim().isEmpty) {
+                    return 'Please enter a valid password';
+                  }
                   if (value.length < 3) { 
                     return 'Password must be at least 3 characters';
+                  }
+                  if (value.length > 32) {
+                    return 'Password must be less than 32 characters';
                   }
                   return null;
                 },
                 onSaved: (value) {
-                  //  TODO mettre à jour le mot de passe implémenter
                   logger.i('Password saved: $value');
                 },
               ),
@@ -219,6 +233,15 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                 onSaved: (value) {
                   //  TODO mettre à jour le mot de passe implémenter
                   logger.i('Password saved: $value');
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please confirm your password';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -265,9 +288,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 }
 /*
-username : 
-
-password :
+username, password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
 
 status : en ligne, au ru, absent //TODO backend
 

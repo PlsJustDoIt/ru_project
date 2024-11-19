@@ -23,6 +23,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late VideoPlayerController _videoController;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -51,128 +52,167 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-                _videoController.value.isInitialized
-                  ? SizedBox(
-                    width: 200, // Set the desired width
-                    child: AspectRatio(
-                    aspectRatio: _videoController.value.aspectRatio,
-                    child: VideoPlayer(_videoController),
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                  _videoController.value.isInitialized
+                    ? SizedBox(
+                      width: 200, // Set the desired width
+                      child: AspectRatio(
+                      aspectRatio: _videoController.value.aspectRatio,
+                      child: VideoPlayer(_videoController),
+                      ),
+                    )
+                    : const CircularProgressIndicator(),
+                    IconButton(
+                      icon: _videoController.value.isPlaying ? const Icon(Icons.pause) : const Icon(Icons.play_arrow),
+                      onPressed: () {
+                        setState(() {
+                          if (_videoController.value.isPlaying) {
+                            _videoController.pause();
+                          } else {
+                            _videoController.play();
+                          }
+                        });
+                      },
                     ),
-                  )
-                  : const CircularProgressIndicator(),
-                  IconButton(
-                    icon: _videoController.value.isPlaying ? const Icon(Icons.pause) : const Icon(Icons.play_arrow),
-                    onPressed: () {
-                      setState(() {
-                        if (_videoController.value.isPlaying) {
-                          _videoController.pause();
-                        } else {
-                          _videoController.play();
-                        }
-                      });
+                const Text(
+                  'test',
+                  style: TextStyle(fontSize: 32, fontFamily: 'Marianne'),
+                ),
+                const StateWidget(),
+                const Text(
+                  'Bienvenue !',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+                    // .animate()
+                    // .fadeIn(duration: 500.ms, begin: 0)
+                    // .tint(color: Colors.green)
+                    // .slide(duration: 500.ms, curve: Curves.easeIn)
+                    // .animate(onPlay: (controller) => controller.repeat())
+                    // .shake(delay: 1.seconds),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextFormField(
+                    controller: _usernameController,
+                    decoration:
+                        const InputDecoration(labelText: 'Nom d\'utilisateur'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer un nom d\'utilisateur';
+                      }
+                      if (value.trim().isEmpty) {
+                        return 'Veuillez entrer un nom d\'utilisateur valide';
+                      }
+                      if (value.length > 32) {
+                        return 'Le nom d\'utilisateur doit comporter moins de 32 caractères';
+                      }
+                      if (value.length < 3) {
+                        return 'Le nom d\'utilisateur doit comporter au moins 3 caractères';
+                      }
+                      return null;
                     },
                   ),
-              const Text(
-                'test',
-                style: TextStyle(fontSize: 32, fontFamily: 'Marianne'),
-              ),
-              const StateWidget(),
-              const Text(
-                'Bienvenue !',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-                  // .animate()
-                  // .fadeIn(duration: 500.ms, begin: 0)
-                  // .tint(color: Colors.green)
-                  // .slide(duration: 500.ms, curve: Curves.easeIn)
-                  // .animate(onPlay: (controller) => controller.repeat())
-                  // .shake(delay: 1.seconds),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _usernameController,
-                  decoration:
-                      const InputDecoration(labelText: 'Nom d\'utilisateur'),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Mot de passe',
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Mot de passe',
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (value.trim().isEmpty) {
+                        return 'Please enter a valid password';
+                      }
+                      if (value.length < 3) { 
+                        return 'Password must be at least 3 characters';
+                      }
+                      if (value.length > 32) {
+                        return 'Password must be less than 32 characters';
+                      }
+                      return null;
+                      },
                   ),
-                  obscureText: true,
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final User user =await apiService.login(
-                            _usernameController.text, _passwordController.text);
-                            userProvider.setUser(user);
-                        if (context.mounted == false) {
-                          return;
-                        }
-                        if (userProvider.user != null) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const TabBarWidget()),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Erreur de connexion')));
-                        }
-                      },
-                      child: const Text('Se connecter'),
-                    )
-                        .animate()
-                        .fade(duration: 500.ms)
-                        .scale(delay: 0.6.seconds),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final User user = await apiService.register(
-                            _usernameController.text, _passwordController.text);
-                            userProvider.setUser(user);
-                        if (context.mounted == false) {
-                          return;
-                        }
-                        if (userProvider.user != null) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const TabBarWidget()),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content:
-                                  Text('Erreur d\'inscription')));
-                        }
-                      },
-                      child: const Text('S\'inscrire'),
-                    )
-                        .animate()
-                        .fade(duration: 500.ms)
-                        .scale(delay: 0.6.seconds),
-                  ),
-                ],
-              ),
-            ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (!_formKey.currentState!.validate()) {
+                            return;
+                          }
+                          final User user =await apiService.login(
+                              _usernameController.text, _passwordController.text);
+                              userProvider.setUser(user);
+                          if (context.mounted == false) {
+                            return;
+                          }
+                          if (userProvider.user != null) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const TabBarWidget()),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Erreur de connexion')));
+                          }
+                        },
+                        child: const Text('Se connecter'),
+                      )
+                          .animate()
+                          .fade(duration: 500.ms)
+                          .scale(delay: 0.6.seconds),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (!_formKey.currentState!.validate()) {
+                            return;
+                          }
+                          final User user = await apiService.register(
+                              _usernameController.text, _passwordController.text);
+                              userProvider.setUser(user);
+                          if (context.mounted == false) {
+                            return;
+                          }
+                          if (userProvider.user != null) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const TabBarWidget()),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content:
+                                    Text('Erreur d\'inscription')));
+                          }
+                        },
+                        child: const Text('S\'inscrire'),
+                      )
+                          .animate()
+                          .fade(duration: 500.ms)
+                          .scale(delay: 0.6.seconds),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
+      )
     );
   }
 
@@ -184,6 +224,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
     super.dispose();
   }
 }
+
+//username, password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
 
 // class AuthForm extends StatelessWidget {
 //   @override

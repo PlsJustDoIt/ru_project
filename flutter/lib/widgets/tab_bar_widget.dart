@@ -28,7 +28,7 @@ class TabBarWidget extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout), //TODO fix bug avec le logout
               color: Colors.white,
               onPressed: () {
                 UserProvider().logout();
