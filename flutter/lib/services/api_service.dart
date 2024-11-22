@@ -51,18 +51,22 @@ class ApiService {
     );
   }
 
-  Future<void> refreshToken() async {
+  Future<String?> refreshToken() async {
     try {
       final String? refreshToken = await _secureStorage.getRefreshToken();
       final Response response = await _dio.post('/auth/token', data: {'refreshToken': refreshToken});
 
+      // if (response.statusCode == 403) {
+      //   throw Exception('Invalid refresh token');
+      // }
+
       if (response.statusCode == 200 && response.data != null) {
         final String newAccessToken = response.data['accessToken'];
-        final String newRefreshToken = response.data['refreshToken'];
+        return newAccessToken;
 
-        await SecureStorage().storeTokens(newAccessToken, newRefreshToken);
       } else {
-        throw Exception('Invalid response from server');
+        // return response.data['msg'];
+        return "problème de connexion";
       }
     } catch (e) {
       throw Exception('Failed to refresh token: $e');

@@ -83,8 +83,6 @@ class AuthChecker extends StatelessWidget {
     return FutureBuilder(future: UserProvider().isConnected(), builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.done) {
 
-          
-        
         if (snapshot.data == true) {
           return const TabBarWidget();
         } else {

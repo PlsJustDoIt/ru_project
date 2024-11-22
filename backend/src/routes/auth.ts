@@ -6,8 +6,6 @@ import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import { log } from 'console';
-
 const router = express.Router();
 
 const TEXT_MIN_LENGTH = 3;
@@ -63,6 +61,7 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+
     let { username, password } = req.body;
     
     try {
@@ -149,12 +148,15 @@ router.post('/logout',auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
         await RefreshToken.findOneAndDelete({ refreshToken });
-        logger.info(`Déconnexion de l'utilisateur ${req.user.username}`);
+        const user = await User.findById(req.user.id);
+        if (user === null) {
+            return res.status(404).json({ msg: 'problem with the middleware' });
+        }
+        logger.info(`Déconnexion de l'utilisateur ${user.username}`);
         res.json({ msg: 'Logged out' });
     } catch (err) {
         res.status(500).json({ msg: 'Server error: ' + err });
     }
-
 });
 
 export default router;

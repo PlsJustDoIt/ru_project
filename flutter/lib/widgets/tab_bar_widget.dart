@@ -16,6 +16,8 @@ class TabBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
+    final apiService = Provider.of<ApiService>(context);
+
     logger.i('User: ${userProvider.user}');
     return DefaultTabController(
       length: 4,
@@ -31,8 +33,8 @@ class TabBarWidget extends StatelessWidget {
               icon: const Icon(Icons.logout), //TODO fix bug avec le logout
               color: Colors.white,
               onPressed: () {
-                UserProvider().logout();
-                ApiService().logout();
+                userProvider.logout();
+                apiService.logout();
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const WelcomeWidget()),

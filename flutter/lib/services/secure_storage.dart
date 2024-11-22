@@ -16,6 +16,14 @@ class SecureStorage {
 
   }
 
+  Future<void> storeAccessToken(String accessToken) async {
+    await _secureStorage.write(key:"accessToken", value: accessToken);
+  }
+
+  Future<void> storeRefreshToken(String refreshToken) async {
+    await _secureStorage.write(key:"refreshToken", value: refreshToken);
+  }
+
   Future<Map<String, String?>> getTokens() async {
     
     var accessToken = await _secureStorage.read(key: 'accessToken');
