@@ -27,7 +27,7 @@ router.put('/update', auth, async (req:Request, res:Response) => {
 
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ msg: 'Username or password dosn\'t exists' });
+            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
         }
                 
         username = username.trim();
@@ -35,18 +35,18 @@ router.put('/update', auth, async (req:Request, res:Response) => {
 
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ msg: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ msg: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
 
         const user = await User.findById(req.user.id);
         if (user === null) {
-            return res.status(404).json({ msg: 'User not found' });
+            return res.status(404).json({ error: 'User not found' });
         }
 
         const user_updated = req.body;
@@ -73,7 +73,7 @@ router.put('/status', auth, async (req:Request, res:Response) => {
     try {
         const user = await User.findById(req.user.id);
         if (user === null) {
-            return res.status(404).json({ msg: 'User not found' });
+            return res.status(404).json({ error: 'User not found' });
         }
         user.status = status;
         await user.save();
@@ -87,7 +87,7 @@ router.get('/friends', auth, async (req:Request, res:Response) => {
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         if (user == null) {
-            return res.status(404).json({ msg: 'User not found' });
+            return res.status(404).json({ error: 'User not found' });
         }
         res.json(user.friends);
     } catch (err:unknown) {
@@ -99,13 +99,13 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
     const { friendUsername } = req.body;
     try {
         const friend = await User.findOne({ username: friendUsername });
-        if (!friend) return res.status(404).json({ msg: 'Friend not found' });
+        if (!friend) return res.status(404).json({ error: 'Friend not found' });
         const user = await User.findById(req.user.id);
         if (user === null) {
-            return res.status(404).json({ msg: 'User not found' });
+            return res.status(404).json({ error: 'User not found' });
         }
         if (user.friends.includes(friend._id)) {
-            return res.status(400).json({ msg: 'Already friends' });
+            return res.status(400).json({ error: 'Already friends' });
         }
         user.friends.push(friend._id);
         await user.save();
@@ -119,7 +119,7 @@ router.delete('/remove-friend/:id', auth, async (req:Request, res:Response) => {
     try {
         const user = await User.findById(req.user.id);
         if (user == null) {
-            return res.status(404).json({ msg: 'User not found' });
+            return res.status(404).json({ error: 'User not found' });
         }
         user.friends = user.friends.filter((friend: { toString: () => string; }) => friend.toString() !== req.params.id);
         await user.save();

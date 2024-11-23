@@ -30,13 +30,18 @@ class TabBarWidget extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout), //TODO fix bug avec le logout
+              icon: const Icon(Icons.logout),
               color: Colors.white,
-              onPressed: () {
+              onPressed: () async {
                 userProvider.logout();
-                apiService.logout();
+                //log out apiservice (test bool)
+                if (await apiService.logout()) {
+                  logger.i('Logout successful');
+                } else {
+                  logger.e('Logout failed');
+                }
                 Navigator.pushReplacement(
-                  context,
+                  context, //TODO: à changer
                   MaterialPageRoute(builder: (context) => const WelcomeWidget()),
                 );
             }),

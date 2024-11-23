@@ -160,6 +160,13 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                             return;
                           }
                           if (userProvider.user != null) {
+                            if (userProvider.user?.id == '-1'){ //error
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(user.username)));
+                              userProvider.logout();
+                              return;
+                            }
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(builder: (context) => const TabBarWidget()),
@@ -190,6 +197,13 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                             return;
                           }
                           if (userProvider.user != null) {
+                            if (userProvider.user?.id == '-1'){ //error
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(user.username)));
+                              userProvider.logout();
+                              return;
+                            }
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(builder: (context) => const TabBarWidget()),

@@ -92,16 +92,21 @@ class ApiService {
         if (user != null) {
           return user;
         } else {
-          throw Exception('Failed to get user data');
+          //throw Exception('Failed to get user data');
+          logger.e('Failed to get user data in login()');
+          return User(id: '-1', username: 'Impossible d\'obtenir les données utilisateur', status: '-1');
         }
         
       }
-
-      throw Exception('Invalid response from server');
+      logger.e('Invalid response from server in login(): ${response.statusCode} ${response.data['error']}');
+      return User(id: '-1', username: response.data['error'], status: '-1');
+      //throw Exception('Réponse invalide du serveur');
     
 
     } catch (e) {
-      throw Exception('Login failed: $e');
+      logger.e('Failed to login: $e');
+      return User(id: '-1', username: 'Impossible de se connecter', status: '-1');
+      //throw Exception('Login failed: $e');
     }
   }
 
@@ -124,13 +129,19 @@ class ApiService {
         if (user != null) {
           return user;
         } else {
-          throw Exception('Failed to get user data');
+          logger.e('Failed to get user data in register()');
+          return User(id: '-1', username: 'Impossible d\'obtenir les données utilisateur', status: '-1');
+          //throw Exception('Failed to get user data');
         }
       } else {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in register(): ${response.statusCode} ${response.data['error']}');
+        return User(id: '-1', username: response.data['error'], status: '-1');
+        //throw Exception('Invalid response from server');
       }
     } catch (e) {
-      throw Exception('Registration failed: $e');
+      logger.e('Failed to register: $e');
+      return User(id: '-1', username: 'Impossible de s\'inscrire', status: '-1');
+      //throw Exception('Registration failed: $e');
     }
   }
 
@@ -144,10 +155,15 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         return User.fromJson(response.data); // Renvoie les données si tout va bien
       } else {
-        throw Exception('Invalid response from server');
+        //log status code et data.error
+        logger.e('Invalid response from server in getUser(): ${response.statusCode} ${response.data['error']}');
+        return null;
+        //throw Exception('Invalid response from server');
       }
     } catch (e) {
-      throw Exception('Failed to get user data: $e');
+      logger.e('Failed to get user data in getUser(): $e');
+      return null;
+      //throw Exception('Failed to get user data: $e');
     }
   }
 
@@ -163,10 +179,14 @@ class ApiService {
       if (response.statusCode == 200) {
         return true; // Renvoie les données si tout va bien
       } else {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in updateStatus(): ${response.statusCode} ${response.data['error']}');
+        return false;
+        //throw Exception('Invalid response from server');
       }
     } catch (e) {
-      throw Exception('Failed to update user status: $e');
+      logger.e('Failed to update user status: $e');
+      return false;
+      //throw Exception('Failed to update user status: $e');
     }
   }
 
@@ -181,10 +201,14 @@ class ApiService {
       if (response.statusCode == 200) {
         return true; // Renvoie les données si tout va bien
       } else {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in addFriend(): ${response.statusCode} ${response.data['error']}');
+        return false;
+        //throw Exception('Invalid response from server');
       }
     } catch (e) {
-      throw Exception('Failed to add friend: $e');
+      logger.e('Failed to add friend: $e');
+      return false;
+      //throw Exception('Failed to add friend: $e');
     }
   }
 
@@ -198,10 +222,14 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         return response.data; // Renvoie les données si tout va bien
       } else {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in getFriends(): ${response.statusCode} ${response.data['error']}');
+        return {};
+        //throw Exception('Invalid response from server');
       }
     } catch (e) {
-      throw Exception('Failed to get friends: $e');
+      logger.e('Failed to get friends: $e');
+      return {};
+      //throw Exception('Failed to get friends: $e');
     }
   }
 
@@ -215,11 +243,15 @@ class ApiService {
         final List<dynamic> rawMenuData = response.data;
         return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
       } else {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in getMenus(): ${response.statusCode} ${response.data['error']}');
+        return [];
+        //throw Exception('Invalid response from server');
       }
 
     } catch (e) {
-      throw Exception('Failed to get menus: $e');
+      logger.e('Failed to get menus: $e');
+      return [];
+      //throw Exception('Failed to get menus: $e');
     }     
 
   }
@@ -233,11 +265,15 @@ class ApiService {
       final Response response = await _dio.post('/auth/logout',data: {refreshToken: refreshToken});
       await _secureStorage.clearTokens();
       if (response.statusCode != 200) {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in logout(): ${response.statusCode} ${response.data['error']}');
+        return false;
+        //throw Exception('Invalid response from server');
       }
       return true;
     } catch (e) {
-      throw Exception('Failed to logout: $e');
+      logger.e('Failed to logout: $e');
+      return false;
+      //throw Exception('Failed to logout: $e');
     }
   }
 
@@ -249,10 +285,14 @@ class ApiService {
         logger.i('User updated: ${user['username']}');
         return true;
       } else {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server in updateUser(): ${response.statusCode} ${response.data['error']}');
+        return false; 
+        //throw Exception('Invalid response from server');
       }
     } catch (e) {
-      throw Exception('Failed to update user: $e');
+      logger.e('Failed to update user: $e');
+      return false;
+      //throw Exception('Failed to update user: $e');
     }
   }
 
