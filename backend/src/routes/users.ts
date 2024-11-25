@@ -5,7 +5,6 @@ import logger from '../services/logger.js';
 const router = Router();
 
 router.get('/me', auth, async (req:Request, res:Response) => {
-
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         res.json(user);
@@ -43,6 +42,9 @@ router.put('/update', auth, async (req:Request, res:Response) => {
             return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
+        //check if new username already exists
+        let testUser = await User.findOne({ username });
+        if (testUser)  res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
         if (user === null) {
@@ -60,26 +62,121 @@ router.put('/update', auth, async (req:Request, res:Response) => {
 
         res.send('User updated');
     } catch (err:unknown) {
-        res.status(500).send('Could not update user : '+err);
+        logger.error(`Could not update user : ${err}`);
+        res.status(500).send({ error : `Could not update user : ${err} `});
     }
 
 });
 
-
-
-//TODO : à revoir le modèle
-router.put('/status', auth, async (req:Request, res:Response) => {
-    const { status } = req.body;
+//update only username, we need username and id
+router.put('/username', auth, async (req:Request, res:Response) => {
     try {
-        const user = await User.findById(req.user.id);
+        //test validation username
+        let username = req.body.username;
+        if (!username) {
+            logger.error('Username field dosn\'t exists');
+            return res.status(400).json({ error: 'Username dosn\'t exists' });
+        }
+        username = username.trim();
+        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+        
+        let testUser = await User.findOne({ username });
+        if (testUser)  res.status(400).json({ error: 'User already exists' });
+
+        const IdUser = req.body.id;
+        const user = await User.findById(IdUser);
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
         }
-        user.status = status;
+        user.username = username;
+
         await user.save();
-        res.json(user);
+
+        res.send('Username updated');
+
     } catch (err:unknown) {
-        res.status(500).send('Could not update status : '+err);
+        logger.error(`Could not update username : ${err}`);
+        res.status(500).send({ error : `Could not update username : ${err} `});
+    }
+
+});
+
+//update only password, we need password, old password and id
+router.put('/password', auth, async (req:Request, res:Response) => {
+    try {
+        //test validation password
+        let password = req.body.newPassword;
+        if (!password) {
+            logger.error('Password field dosn\'t exists');
+            return res.status(400).json({ error: 'Password dosn\'t exists' });
+        }
+        password = password.trim();
+        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
+            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
+            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+        }
+
+        const IdUser = req.body.id;
+        const user = await User.findById(IdUser);
+
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        //check if old password is correct
+        let oldPassword = req.body.oldPassword;
+        if (!oldPassword) {
+            logger.error('Old password field dosn\'t exists');
+            return res.status(400).json({ error: 'Old password dosn\'t exists' });
+        }
+
+        //check if old password is correct //TODO  test ?? hash old password
+        if (user.password == oldPassword) {
+            //return res.status(400).json({ error: 'Old password is incorrect' });
+        }
+
+        user.password = password;
+
+        await user.save();
+
+        res.send('Password updated');
+        
+    }
+    catch (err:unknown) {
+        logger.error(`Could not update password : ${err}`);
+        res.status(500).send({ error : `Could not update password : ${err} `});
+    }
+});
+
+//update only status, we need status and id
+router.put('/status', auth, async (req:Request, res:Response) => {
+    try {
+        //test validation status
+        let status = req.body.status;
+        if (!status) {
+            logger.error('Status field dosn\'t exists');
+            return res.status(400).json({ error: 'Status dosn\'t exists' });
+        }
+
+        const IdUser = req.body.id;
+        const user = await User.findById(IdUser);
+
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        user.status = status;
+
+        await user.save();
+
+        res.send('Status updated');
+    }
+    catch (err:unknown) {
+        logger.error(`Could not update status : ${err}`);
+        res.status(500).send({ error : `Could not update status : ${err} `});
     }
 });
 

@@ -7,7 +7,7 @@ export default function(req: Request, res: Response, next: NextFunction): void {
     const token = authHeader && authHeader.split(' ')[1];
     //const token = req.header('x-auth-token'); // pas ouf 
     if (token == null || token == undefined) {
-        res.status(401).json({ msg: 'No token, authorization denied' });
+        res.status(401).json({ error: 'No token, authorization denied' });
         return;
     } 
     try {

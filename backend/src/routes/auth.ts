@@ -57,6 +57,7 @@ router.post('/register', async (req, res) => {
         logger.info(`Engistrement de l'utilisateur ${username}`);
         res.status(201).json({ accessToken, refreshToken });
     } catch (err) {
+        logger.error(err);
         res.status(500).send('Server error'+err);
     }
 });
@@ -141,6 +142,7 @@ router.post('/token',auth, async (req, res) => {
 
         // });
     } catch (err) {
+        logger.error(err);
         res.status(500).send('Server error: ' + err);
     }
 });
@@ -156,6 +158,7 @@ router.post('/logout',auth, async (req, res) => {
         logger.info(`Déconnexion de l'utilisateur ${user.username}`);
         res.json({ msg: 'Logged out' });
     } catch (err) {
+        logger.error(err);
         res.status(500).json({ error: 'Server error: ' + err });
     }
 });
