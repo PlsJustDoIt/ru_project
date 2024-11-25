@@ -2,25 +2,19 @@ class User {
   String id;
   String username;
   String status; // status : en ligne, au ru, absent
-  List<User>? friends;
+  List<String>? friendIds;
 
-  User({required this.id, required this.username, required this.status, this.friends});
+  String? avatarUrl;
+
+  User({required this.id, required this.username, required this.status, required this.friendIds, this.avatarUrl});
 
   factory User.fromJson(Map<String, dynamic> json) {
-    if (json['friends'] != null) {
-      var friendObjsJson = json['friends'] as List;
-      List<User> friends = friendObjsJson.map((friendJson) => User.fromJson(friendJson)).toList();
-      return User(
-        id: json['_id'],
-        username: json['username'],
-        status: json['status'],
-        friends: friends,
-      );
-    }
     return User(
       id: json['_id'],
       username: json['username'],
-      status: json['status']
+      status: json['status'],
+      avatarUrl: json['avatarUrl'],
+      friendIds: json['friendIds'],
     );
   }
 
@@ -29,9 +23,9 @@ class User {
       '_id': id,
       'username': username,
       'status': status,
-      'friends': friends,
+      'avatarUrl': avatarUrl,
+      'friends': friendIds?.map((friend) => friend).toList(),
     };
-
   }
 
   
