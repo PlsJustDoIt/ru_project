@@ -142,7 +142,7 @@ router.put('/password', auth, async (req:Request, res:Response) => {
 router.put('/status', auth, async (req:Request, res:Response) => {
     try {
         //test validation status
-        let status = req.body.status;
+        const { status } = req.body;
         if (!status) {
             logger.error('Status field dosn\'t exists');
             return res.status(400).json({ error: 'Status dosn\'t exists' });
