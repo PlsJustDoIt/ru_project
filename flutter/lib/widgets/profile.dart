@@ -146,6 +146,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -282,6 +283,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         ),
     );
   }
+
+  //change username widget
 
   @override
   void dispose() {

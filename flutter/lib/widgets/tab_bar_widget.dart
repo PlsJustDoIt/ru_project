@@ -32,11 +32,27 @@ class TabBarWidget extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout), //TODO fix bug avec le logout
+              icon: const Icon(Icons.logout),
               color: Colors.white,
-              onPressed: () {
+              onPressed: () async {
                 userProvider.logout();
-                apiService.logout();
+                bool res = await apiService.logout();
+                //log out apiservice (test bool)
+                if (!context.mounted) {
+                  return;
+                }
+                if (res) {
+                  logger.i('Logout successful');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Déconnexion réussie')));
+                } else {
+                  logger.e('Logout failed');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Déconnexion échouée')));
+                }
+
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const WelcomeWidget()),

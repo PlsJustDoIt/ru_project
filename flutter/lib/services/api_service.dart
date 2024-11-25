@@ -1,4 +1,3 @@
-import 'package:logger/logger.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
@@ -10,7 +9,6 @@ import 'package:ru_project/services/secure_storage.dart';
 class ApiService {
 
   late final Dio _dio;
-  static final _logger = Logger();
   final SecureStorage _secureStorage = SecureStorage();
 
   // Singleton pattern
@@ -81,9 +79,8 @@ class ApiService {
         'username': username,
         'password': password,
       });
-
       // Vérifie si la réponse contient des données valides
-      if (response.statusCode == 200 && response.data != null) {
+      if (response.statusCode == 200 && response.data['error'] == null) {
         final String accessToken = response.data['accessToken'];
         final String refreshToken = response.data['refreshToken'];
 
@@ -91,17 +88,13 @@ class ApiService {
         final User? user = await getUser();
         if (user != null) {
           return user;
-        } else {
-          throw Exception('Failed to get user data');
         }
-        
+        throw Exception('Failed to get user');
       }
-
-      throw Exception('Invalid response from server');
-    
-
+      throw Exception('${response.statusCode} ${response.data['error']}');
     } catch (e) {
-      throw Exception('Login failed: $e');
+      logger.e('Failed to login: $e');
+      throw Exception('$e');
     }
   }
 
@@ -123,14 +116,13 @@ class ApiService {
         final User? user = await getUser();
         if (user != null) {
           return user;
-        } else {
-          throw Exception('Failed to get user data');
         }
-      } else {
-        throw Exception('Invalid response from server');
+        throw Exception('Failed to get user');
       }
+      throw Exception('${response.statusCode} ${response.data['error']}');
     } catch (e) {
-      throw Exception('Registration failed: $e');
+      logger.e('Failed to register: $e');
+      throw Exception('$e');
     }
   }
 
@@ -139,34 +131,14 @@ class ApiService {
   Future<User?> getUser() async {
     try {
       final Response response = await _dio.get('/users/me');
-
-      // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        return User.fromJson(response.data); // Renvoie les données si tout va bien
-      } else {
-        throw Exception('Invalid response from server');
+        return User.fromJson(response.data);
       }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data?['error']}');
+      return null;
     } catch (e) {
-      throw Exception('Failed to get user data: $e');
-    }
-  }
-
-
-  // Fonction pour mettre à jour le statut de l'utilisateur
-  Future<bool> updateStatus(String status) async {
-    try {
-      final Response response = await _dio.put('/users/status', data: {
-        'status': status,
-      });
-
-      // Vérifie si la réponse contient des données valides
-      if (response.statusCode == 200) {
-        return true; // Renvoie les données si tout va bien
-      } else {
-        throw Exception('Invalid response from server');
-      }
-    } catch (e) {
-      throw Exception('Failed to update user status: $e');
+      logger.e('Failed to get user data: $e');
+      return null;
     }
   }
 
@@ -198,11 +170,12 @@ class ApiService {
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200) {
         return true; // Renvoie les données si tout va bien
-      } else {
-        throw Exception('Invalid response from server');
-      }
+      } 
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
     } catch (e) {
-      throw Exception('Failed to add friend: $e');
+      logger.e('Failed to add friend: $e'); 
+      return false; // Renvoie une exception si quelque chose ne va pas
     }
   }
 
@@ -215,11 +188,12 @@ class ApiService {
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
         return response.data; // Renvoie les données si tout va bien
-      } else {
-        throw Exception('Invalid response from server');
       }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return {};
     } catch (e) {
-      throw Exception('Failed to get friends: $e');
+      logger.e('Failed to get friends: $e');
+      return {};
     }
   }
 
@@ -232,12 +206,13 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> rawMenuData = response.data;
         return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
-      } else {
-        throw Exception('Invalid response from server');
       }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return [];
 
     } catch (e) {
-      throw Exception('Failed to get menus: $e');
+      logger.e('Failed to get menus: $e');
+      return [];
     }     
 
   }
@@ -251,31 +226,89 @@ class ApiService {
       final Response response = await _dio.post('/auth/logout',data: {refreshToken: refreshToken});
       await _secureStorage.clearTokens();
       if (response.statusCode != 200) {
-        throw Exception('Invalid response from server');
+        logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+        return false;
       }
       return true;
     } catch (e) {
-      throw Exception('Failed to logout: $e');
+      logger.e('Failed to logout: $e');
+      return false;
     }
   }
 
-  //update user profile
+  //update user profile (all fields)
   Future<bool> updateUser(Map<String, dynamic> user) async {
     try {
       final Response response = await _dio.put('/users/update', data: user);
       if (response.statusCode == 200) {
         logger.i('User updated: ${user['username']}');
         return true;
-      } else {
-        throw Exception('Invalid response from server');
       }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false; 
     } catch (e) {
-      throw Exception('Failed to update user: $e');
+      logger.e('Failed to update user: $e');
+      return false;
     }
   }
 
+  //update user password (requires user id also requires the old password for verification)
+  Future<bool> updatePassword(String password) async {
+    try {
+      final Response response = await _dio.put('/users/password', data: {
+        'password': password,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Password updated');
+        return true;
+      }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to update password: $e');
+      return false;
+    }
+  }
+
+  //update user status
+  Future<bool> updateStatus(String status) async {
+    try {
+      final Response response = await _dio.put('/users/status', data: {
+        'status': status,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Status updated: $status');
+        return true;
+      }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to update status: $e');
+      return false;
+    }
+  }
+
+  //update username (requires user id)
+  Future<bool> updateUsername(String username) async {
+    try {
+      final Response response = await _dio.put('/users/username', data: {
+        'username': username,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Username updated: $username');
+        return true;
+      }
+      logger.e('Invalid response from server in updateUsername(): ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to update username: $e');
+      return false;
+    }
+  }
+
+  //update user profile picture (requires user id) //TODO: implement
+
+
+
 }
-
-
-
 

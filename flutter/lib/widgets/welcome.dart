@@ -24,6 +24,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   final TextEditingController _passwordController = TextEditingController();
   late VideoPlayerController _videoController;
   final _formKey = GlobalKey<FormState>();
+  bool hasSubmitted = false;
 
   @override
   void initState() {
@@ -54,6 +55,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
+          //autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -98,6 +100,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextFormField(
+                    autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
                     controller: _usernameController,
                     decoration:
                         const InputDecoration(labelText: 'Nom d\'utilisateur (3-32 caractères)'),
@@ -121,6 +124,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextFormField(
+                    autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
                     controller: _passwordController,
                     decoration: const InputDecoration(
                       labelText: 'Mot de passe (3-32 caractères)',
@@ -150,25 +154,38 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                       padding: const EdgeInsets.all(8.0),
                       child: ElevatedButton(
                         onPressed: () async {
+                          setState(() {
+                            hasSubmitted = true;
+                          });  
                           if (!_formKey.currentState!.validate()) {
+                              setState(() {
+                              hasSubmitted = true;
+                          });
                             return;
                           }
-                          final User user =await apiService.login(
-                              _usernameController.text, _passwordController.text);
-                              userProvider.setUser(user);
+                          final User? user; 
+                          try {
+                            user = await apiService.login(_usernameController.text, _passwordController.text);
+                          } catch (e) {
+                            
+                            if (context.mounted == false) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erreur de connexion.')));
+                            return;
+                          }
                           if (context.mounted == false) {
                             return;
                           }
-                          if (userProvider.user != null) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const TabBarWidget()),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Erreur de connexion')));
+                          userProvider.setUser(user);
+                          if (context.mounted == false) {
+                            return;
                           }
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const TabBarWidget()),
+                          );
                         },
                         child: const Text('Se connecter'),
                       )
@@ -179,26 +196,33 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: ElevatedButton(
-                        onPressed: () async {
+                        onPressed: () async {  
+                          setState(() {
+                            hasSubmitted = true;
+                          });              
                           if (!_formKey.currentState!.validate()) {
                             return;
                           }
-                          final User user = await apiService.register(
-                              _usernameController.text, _passwordController.text);
-                              userProvider.setUser(user);
+                          final User user;
+                          try {
+                            user = await apiService.register(_usernameController.text, _passwordController.text);
+                          } catch (e) {
+                            if (context.mounted == false) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erreur d\'inscription.')));
+                            return;
+                          }
+                          userProvider.setUser(user);
+
                           if (context.mounted == false) {
                             return;
                           }
-                          if (userProvider.user != null) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const TabBarWidget()),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content:
-                                    Text('Erreur d\'inscription')));
-                          }
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const TabBarWidget()),
+                          );
                         },
                         child: const Text('S\'inscrire'),
                       )
