@@ -39,7 +39,7 @@ class ApiService {
         },
 
         onError: (DioException e,ErrorInterceptorHandler handler) async {
-          if (e.response?.statusCode == 401) {
+          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
             // If a 401 response is received, refresh the access token
             await refreshToken();
 
@@ -167,6 +167,24 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to update user status: $e');
+    }
+  }
+
+  Future<List<User>> searchUsers(String query) async {
+    try {
+      final Response response = await _dio.get('/users/search', queryParameters: {
+        'query': query,
+      });
+
+      if (response.statusCode == 200 && response.data != null) {
+        final List<dynamic> rawUserData = response.data;
+        return rawUserData.map((user) => User.fromJson(user)).toList();
+      } else {
+        throw Exception('Invalid response from server');
+      }
+    } catch (e) {
+      logger.e('Failed to search users: $e');
+      throw Exception('Failed to search users: $e');
     }
   }
 

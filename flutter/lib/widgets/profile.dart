@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/search_widget.dart';
 
 enum UserStatus {
   enLigne,
@@ -38,14 +40,10 @@ enum UserStatus {
 
 
 class ProfileWidget extends StatefulWidget {
-  final User? user;
-  final Function(User) onUserUpdated;
+  late User? user;
 
-
-  const ProfileWidget({
-    super.key, 
-    required this.user,
-    required this.onUserUpdated,
+  ProfileWidget({
+    super.key,
   });
 
   @override
@@ -53,6 +51,7 @@ class ProfileWidget extends StatefulWidget {
 }
 
 class _ProfileWidgetState extends State<ProfileWidget> {
+  
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _passwordController;
@@ -65,10 +64,14 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: widget.user!.username);
-    _passwordController = TextEditingController();
-    _passwordConfirmController = TextEditingController();
-    _selectedStatus = UserStatus.fromString(widget.user!.status);
+    widget.user = context.read<UserProvider>().user;
+    if (widget.user != null) {
+      _usernameController = TextEditingController(text: widget.user?.username);
+      _passwordController = TextEditingController();
+      _passwordConfirmController = TextEditingController();
+      _selectedStatus = UserStatus.fromString(widget.user!.status);
+    }
+    
   }
 
   Future<void> _pickImage() async {
@@ -111,7 +114,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       final Map<String, dynamic> updatedUser = {
         'username' : _usernameController.text,
         'status' : _selectedStatus.toDisplayString(),
-        'friends' : widget.user!.friends,
+        'friendIds' : widget.user!.friendIds,
         'password' : _passwordController.text,
       };
       
@@ -135,12 +138,11 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-      ),
-      body: SingleChildScrollView(
+    return  SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -274,10 +276,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                 ),
                 child: const Text('Sauvegarder les modifications'),
               ),
+              
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -287,6 +289,45 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     super.dispose();
   }
 }
+
+
+// Exemple d'utilisation
+class SearchPage extends StatelessWidget {
+  const SearchPage({super.key});
+
+  Future<List<SearchResult>> performSearch(String query) async {
+    // Dans la pratique, appelez votre API ici
+    // final response = await apiClient.search(
+    //   query: query,
+    //   limit: 20,
+    //   // Paramètres de contexte pour améliorer la pertinence
+    //   userLocation: currentLocation,
+    //   userLanguage: deviceLanguage,
+    //   recentInteractions: userRecentActivity,
+    // );
+    // return response.results;
+    return List.generate(10, (index) {
+      return SearchResult(
+        id: index.toString(),
+        name: 'Result $index',
+        relevanceScore: 10.0 - index,
+        photoUrl: "",
+        type: 'friend',
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: RealtimeSearchWidget(
+        onRemoteSearch: performSearch,
+        debounceDuration: const Duration(milliseconds: 150),
+      ),
+    );
+  }
+}
+
 /*
 username, password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
 

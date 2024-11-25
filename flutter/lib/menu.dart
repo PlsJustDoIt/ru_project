@@ -14,7 +14,6 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
-  bool _isConnected = false;
   //system de page menu
   final PageController _pageController = PageController();
   int _currentPage = 0;
@@ -22,9 +21,11 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
   @override
   void initState() {
     super.initState();
-    if (_menus.isEmpty) {
-      _checkLoginStatus();
-    }
+    // if (_menus.isEmpty) {
+    //   _checkLoginStatus();
+    // }
+
+    setMenus(context);
   }
 
   @override
@@ -35,21 +36,17 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
   
 
   //check if the user is connected and set the menus
-  void _checkLoginStatus() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    bool isLoggedIn = await userProvider.isConnected();
+  // void _checkLoginStatus() async {
+  //   final userProvider = Provider.of<UserProvider>(context, listen: false);
+  //   bool isLoggedIn = await userProvider.isConnected();
 
-    if (!isLoggedIn || context.mounted == false) {
-      return;
-    }
+  //   if (!isLoggedIn || context.mounted == false) {
+  //     return;
+  //   }
 
-    setState(() {
-      _isConnected = true;
-    });
-  
-    setMenus(context);
+  //   setMenus(context);
 
-  }
+  // }
 
   //set the menus
   void setMenus(BuildContext context) async {
@@ -72,8 +69,7 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
     super.build(context);
     return Scaffold(
       body: Center(
-        child: _isConnected
-            ? ((_menus.isEmpty)
+        child: ((_menus.isEmpty)
                 ? const Text('Chargement...')
                 : Column(
                     children: [
@@ -81,7 +77,6 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
                       menuList(context),
                     ],
                   ))
-            : const Text('Vous devez être connecté pour voir les menus.'),
       ),
     );
   }
