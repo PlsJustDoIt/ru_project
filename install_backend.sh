@@ -33,3 +33,9 @@ nvm use --lts
 
 cd backend
 npm install
+if [ ! -d "uploads" ]; then
+    mkdir -p uploads/avatar
+    echo "Created uploads directory"
+else
+    echo "uploads directory already exists"
+fi

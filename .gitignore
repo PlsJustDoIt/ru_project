@@ -45,6 +45,7 @@ app.*.map.json
 
 #backend related
 /backend/node_modules/
+uploads
 
 **/.env
 env.sh
