@@ -12,7 +12,7 @@ const TEXT_MIN_LENGTH = 3;
 const TEXT_MAX_LENGTH = 32;
 
 const generateAccessToken = (id: Types.ObjectId) => {
-    return jwt.sign({ id: id }, process.env.JWT_ACCESS_SECRET as jwt.Secret, { expiresIn: '15m' });
+    return jwt.sign({ id: id }, process.env.JWT_ACCESS_SECRET as jwt.Secret, { expiresIn: '1h' });
 };
 
 const generateRefreshToken = (id:Types.ObjectId) => {

@@ -1,12 +1,22 @@
 
-import {CallbackError, Schema, model} from 'mongoose';
+import {CallbackError, Schema, Types, model} from 'mongoose';
 import {genSalt, hash} from 'bcrypt';
+
+interface IUser extends Document {
+    username: string;
+    password: string;
+    status: string;
+    friends: IUser[];
+    avatarUrl: string;
+    _id: Types.ObjectId;
+}
 
 const UserSchema = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     status: { type: String, default: 'Inactif' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    avatarUrl: { type: String, default: 'uploads/avatar/default.png' }
 });
 
 UserSchema.pre('save', async function(next): Promise<void> {
@@ -21,3 +31,4 @@ UserSchema.pre('save', async function(next): Promise<void> {
 });
 
 export default model('User', UserSchema);
+export { IUser };

@@ -1,5 +1,5 @@
 import { Router,Request,Response } from 'express';
-import User from '../models/user.js';
+import User, { IUser } from '../models/user.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 const router = Router();
@@ -60,7 +60,8 @@ router.put('/update', auth, async (req:Request, res:Response) => {
 
         res.send('User updated');
     } catch (err:unknown) {
-        res.status(500).send('Could not update user : '+err);
+        logger.error(`Could not update user : ${err}`);
+        res.status(500).send({ error : `Could not update user : ${err} `});
     }
 
 });
@@ -85,20 +86,58 @@ router.put('/status', auth, async (req:Request, res:Response) => {
 
 router.get('/friends', auth, async (req:Request, res:Response) => {
     try {
-        const user = await User.findById(req.user.id).populate('friends', 'username status');
-        if (user == null) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        res.json(user.friends);
+        const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl id');
+    if (user == null) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+
+        const friends = user.friends.map(friend => ({
+            username: friend.username,
+            status: friend.status,
+            avatarUrl: friend.avatarUrl,
+            id : friend._id
+            
+        }));
+        
+        logger.info('User friends : '+friends);
+        res.json(friends);
     } catch (err:unknown) {
         res.status(500).send('Could not retrieve friends : '+err);
     }
 });
 
-router.post('/add-friend', auth, async (req:Request, res:Response) => {
-    const { friendUsername } = req.body;
+router.get('/search', auth, async (req: Request, res: Response) => {
+
+    const query = req.body.query;
+    if (!query) {
+        return res.status(400).json({ error: 'No query provided' });
+    }
+    const searchItem = new RegExp(query, 'i'); // case-insensitive search
+
     try {
-        const friend = await User.findOne({ username: friendUsername });
+        const foundUsers = await User.find({ 'username': searchItem }).select('id username avatarUrl').limit(6).exec();
+
+        if (foundUsers.length === 0) {
+            return res.status(404).json({ msg: 'No users found' });
+        }
+        const minimisedUsers = foundUsers.map(user => ({
+            username: user.username,
+            avatarUrl: user.avatarUrl,
+            status: user.status,
+            id: user._id
+        }));
+        res.send(minimisedUsers);
+    } catch (err: unknown) {
+        logger.error('Could not search for user: ' + err);
+        res.status(500).send({ "Error": "Could not search for user" });
+    }
+});
+
+router.post('/add-friend', auth, async (req:Request, res:Response) => {
+    const { username } = req.body;
+    try {
+        const friend = await User.findOne({ username: username });
         if (!friend) return res.status(404).json({ msg: 'Friend not found' });
         const user = await User.findById(req.user.id);
         if (user === null) {
@@ -109,6 +148,7 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
         }
         user.friends.push(friend._id);
         await user.save();
+        logger.info("friends list : "+user.friends);
         res.json(user);
     } catch (err:unknown) {
         res.status(500).send('Server error : '+err);
