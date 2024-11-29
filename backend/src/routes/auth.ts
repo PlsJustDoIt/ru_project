@@ -100,7 +100,12 @@ router.post('/login', async (req, res) => {
 
         // Sauvegarder le refresh token
         const refreshTokenInstance = new RefreshToken({ token: refreshToken, userId: user._id, expires: new Date(Date.now() + 7*24*60*60*1000) });
-        await refreshTokenInstance.save();
+        const response = await refreshTokenInstance.save();
+
+        if (!response) {
+            logger.error('Error while saving the refresh token');
+            return res.status(500).json({ error: 'Error while saving the refresh token' });
+        }
 
         logger.info(`Connexion de l'utilisateur ${username}`);
 
@@ -114,14 +119,19 @@ router.post('/login', async (req, res) => {
 router.post('/token',auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
-        const existingToken = await RefreshToken.findOne({ refreshToken });
-        if (!existingToken) return res.status(403).json({ msg: 'Invalid refresh token' });
+        const existingToken = await RefreshToken.findOne({ token:refreshToken });
+        logger.info("existingToken found : "+existingToken);
+        if (!existingToken) {
+            logger.error('Invalid refresh token');
+            return res.status(403).json({ error: 'Invalid refresh token' });
+        }
 
          // Vérifier si le token est expiré (optionnel, mais si tu stockes l'expiration dans la base)
         if (existingToken.expires.getTime() < Date.now()) {
             await RefreshToken.findOneAndDelete({ refreshToken });
             // peut etre refaire un refresh token au lieu de renvoyer erreur ???
-            return res.status(403).json({ msg: 'Refresh token expired' });
+            logger.error('Refresh token expired');
+            return res.status(403).json({ error: 'Refresh token expired' });
         }
 
         // Vérifier si le refresh token est valide
@@ -132,27 +142,30 @@ router.post('/token',auth, async (req, res) => {
 
         // 5. Vérifier si l'ID utilisateur du token correspond à l'ID enregistré avec le refresh token
         if (existingToken.userId.toString() !== userIdFromToken) {
+            logger.error('Refresh token does not belong to the user');
             return res.status(403).json({ error: 'Refresh token does not belong to the user' });
         }
 
         // Générer un nouveau access token
         const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
+
+        const userUsername = await User.findById(userIdFromToken).select('username');
         
-        logger.info(`Nouveau token créé pour l'utilisateur ${req.user} :\n accessToken: ${accessToken}`);
+        logger.info(`Nouveau token créé pour l'utilisateur ${userUsername} :\n accessToken: ${accessToken}`);
 
         res.json({ accessToken });
 
         // });
     } catch (err) {
         logger.error(err);
-        res.status(500).send('Server error: ' + err);
+        res.status(500).json({ error: 'Server error: ' + err });
     }
 });
 
 router.post('/logout',auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
-        await RefreshToken.findOneAndDelete({ refreshToken });
+        await RefreshToken.findOneAndDelete({ token:refreshToken });
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ error: 'problem with the middleware' });

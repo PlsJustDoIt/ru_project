@@ -24,6 +24,7 @@ mongoose.set("strictQuery", false);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+
 if (isProduction) {
   console.log('lancement en production');
 } else {
@@ -39,6 +40,8 @@ if (isProduction) {
   const accessLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'access.log'), { flags: 'a+' });
   //log requests combined format
   app.use(morgan('combined', { stream: accessLogStream }));
+} else {
+  app.use(morgan('dev'));
 }
 
 
