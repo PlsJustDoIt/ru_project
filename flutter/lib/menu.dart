@@ -57,6 +57,10 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
       logger.i('Les menus ne sont pas vides');
     }
     List<Menu> menus = await apiService.getMenus(); // OK
+    if (menus.isEmpty) {
+      logger.i('Les menus sont vides');
+      return;
+    }
     setState(() {
       _menus = menus;
       menusProvider.setMenus(menus);
@@ -162,9 +166,7 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
   //build the widget for the menu plats (map key = String, value = List of dynamic or string)
   Column? menuPlat(BuildContext context, Map<String, dynamic> plats) {
     
-    // ignore: prefer_const_constructors
     Column res = Column(
-      // ignore: prefer_const_literals_to_create_immutables
       children: [],
     );
     plats.forEach((key, value) {
@@ -181,7 +183,6 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
       ));
 
       
-
       if (value is String) { //case string
         res.children.add(Center(
           child: Text("- $value"),
