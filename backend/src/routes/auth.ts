@@ -6,7 +6,6 @@ import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import { error } from 'console';
 const router = express.Router();
 
 const TEXT_MIN_LENGTH = 3;
@@ -43,7 +42,10 @@ router.post('/register', async (req, res) => {
         }
 
         let user = await User.findOne({ username });
-        if (user)  res.status(400).json({ error: 'User already exists' });
+        if (user != null) {
+            logger.error('User already exists');
+            return res.status(400).json({ error: 'User already exists' });
+        }
         user = new User({ username, password });
         await user.save();
         // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
@@ -58,7 +60,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({ accessToken, refreshToken });
     } catch (err) {
         logger.error(err);
-        res.status(500).send('Server error'+err);
+        return res.status(500).send('Server error'+err);
     }
 });
 

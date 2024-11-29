@@ -181,19 +181,49 @@ class ApiService {
 
 
   // Fonction pour récupérer la liste des amis
-  Future<Map<String, dynamic>> getFriends() async {
+  Future<List<User>?> getFriends() async {
     try {
       final Response response = await _dio.get('/users/friends');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        return response.data; // Renvoie les données si tout va bien
+        logger.i(response.data);
+        if (response.data is List) {
+            // final List<dynamic> dataList = response.data as List<dynamic>;
+          logger.e('ton pere le plomeeebier');
+        // Convertit chaque élément en objet User
+        List<User> friends = [for (Map<String,dynamic> friend in response.data) User.fromJson(friend)];
+       
+
+        return friends;
+        }
       }
+
+
       logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return {};
+      return null;
+
     } catch (e) {
       logger.e('Failed to get friends: $e');
-      return {};
+      return null;
+    }
+  }
+
+  Future<bool> removeFriend(String friendId) async {
+    try {
+      final Response response = await _dio.delete('/users/remove-friend', data: {
+        'friendId': friendId,
+      });
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200) {
+        return true; // Renvoie les données si tout va bien
+      }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to remove friend: $e');
+      return false; // Renvoie une exception si quelque chose ne va pas
     }
   }
 

@@ -1,21 +1,28 @@
+import 'package:ru_project/services/logger.dart';
+
 class User {
   String id;
   String username;
   String status; // status : en ligne, au ru, absent
   List<String>? friendIds;
 
-  String? avatarUrl;
+  String avatarUrl;
 
-  User({required this.id, required this.username, required this.status, required this.friendIds, this.avatarUrl});
+  User({required this.id, required this.username, required this.status, this.friendIds, required this.avatarUrl});
 
   factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['_id'],
-      username: json['username'],
-      status: json['status'],
-      avatarUrl: json['avatarUrl'],
-      friendIds: json['friendIds'],
-    );
+    try {
+      return User(
+        id: json['id'] ?? '',
+        username: json['username'] ?? 'ton pere',
+        status: json['status'] ?? '',
+        avatarUrl: json['avatarUrl'] ?? '',
+        friendIds: json['friendIds'] ?? [],
+      );
+    } catch (e) {
+      logger.e(e);
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
