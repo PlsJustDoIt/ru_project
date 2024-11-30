@@ -55,7 +55,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _passwordController;
-  late TextEditingController _passwordConfirmController;
+  late TextEditingController _passwordConfirmController; //TODO add confirm password part
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   late UserStatus _selectedStatus;
@@ -182,25 +182,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         ),
       },
       child: const Text('Changer le mot de passe'),
-    );
-  }
-
-  //TODO garder le truc dans form ?... //TODO to rm?
-  ElevatedButton changeStatus(ApiService apiService, UserProvider userProvider,BuildContext context){
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 50),
-      ),
-      onPressed: () => {
-        logger.i('Change status button pressed'),
-        showDialog(
-          context: context,
-          builder: (context) {
-            return changeThingsDialogs(false,false,true,apiService,userProvider,context);
-          },
-        ),
-      },
-      child: const Text('Changer le status'),
     );
   }
 
