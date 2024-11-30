@@ -353,6 +353,22 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getHoraires({String lieu = "crous"}) async {
+    try {
+      final Response response = await _dio.get('/ginko/info', queryParameters: {
+        'lieu': lieu,
+      });
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data;
+      }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return {};
+    } catch (e) {
+      logger.e('Failed to get profile picture: $e');
+      return {};
+    }
+  }
+
   //update user profile picture (requires user id) //TODO: implement
 
 

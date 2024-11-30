@@ -11,6 +11,7 @@ import 'package:ru_project/widgets/tables.dart';
 import 'package:ru_project/widgets/profile.dart';
 import 'package:ru_project/widgets/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
+import 'package:ru_project/widgets/bus_widget.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -22,7 +23,7 @@ class TabBarWidget extends StatelessWidget {
 
     logger.i('User: ${userProvider.user}');
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -72,6 +73,7 @@ class TabBarWidget extends StatelessWidget {
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
               Tab(icon: Icon(Icons.person), text: 'Profil'),
+              Tab(icon: Icon(Icons.directions_bus), text: 'Bus'),
               Tab(icon: Icon(Icons.bug_report), text: 'Debug'),
               
             ],
@@ -81,10 +83,9 @@ class TabBarWidget extends StatelessWidget {
           children: [
             const CafeteriaLayout(),
             const MenuWidget(),
-  FriendsListSheet(
-   
-  ),
+            FriendsListSheet(),
             ProfileWidget(),
+            const TransportTimeWidget(),
             DebugWidget(),
           ],
         ),
