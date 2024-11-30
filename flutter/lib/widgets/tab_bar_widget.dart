@@ -36,8 +36,8 @@ class TabBarWidget extends StatelessWidget {
               icon: const Icon(Icons.logout),
               color: Colors.white,
               onPressed: () async {
-                userProvider.logout();
                 bool res = await apiService.logout();
+                userProvider.logout();
                 //log out apiservice (test bool)
                 if (!context.mounted) {
                   return;

@@ -302,7 +302,7 @@ class ApiService {
   //update user password (requires user id also requires the old password for verification)
   Future<bool> updatePassword(String password) async {
     try {
-      final Response response = await _dio.put('/users/password', data: {
+      final Response response = await _dio.put('/users/update-password', data: {
         'password': password,
       });
       if (response.statusCode == 200) {
@@ -320,7 +320,7 @@ class ApiService {
   //update user status
   Future<bool> updateStatus(String status) async {
     try {
-      final Response response = await _dio.put('/users/status', data: {
+      final Response response = await _dio.put('/users/update-status', data: {
         'status': status,
       });
       if (response.statusCode == 200) {
@@ -338,7 +338,7 @@ class ApiService {
   //update username (requires user id)
   Future<bool> updateUsername(String username) async {
     try {
-      final Response response = await _dio.put('/users/username', data: {
+      final Response response = await _dio.put('/users/update-username', data: {
         'username': username,
       });
       if (response.statusCode == 200) {

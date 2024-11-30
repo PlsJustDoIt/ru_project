@@ -67,7 +67,7 @@ router.put('/update', auth, async (req: Request, res: Response) => {
 });
 
 // update only username, we need username
-router.put('/username', auth, async (req: Request, res: Response) => {
+router.put('/update-username', auth, async (req: Request, res: Response) => {
     try {
         // test validation username
         let username = req.body.username;
@@ -101,7 +101,7 @@ router.put('/username', auth, async (req: Request, res: Response) => {
 });
 
 // update only password, we need password
-router.put('/password', auth, async (req: Request, res: Response) => {
+router.put('/update-password', auth, async (req: Request, res: Response) => {
     try {
         // test validation password
         let password = req.body.password;
@@ -133,7 +133,7 @@ router.put('/password', auth, async (req: Request, res: Response) => {
 });
 
 // update only status, we need status
-router.put('/status', auth, async (req: Request, res: Response) => {
+router.put('/update-status', auth, async (req: Request, res: Response) => {
     try {
         // test validation status
         const { status } = req.body;
