@@ -31,7 +31,7 @@ if (isProduction) {
         fs.mkdirSync(__dirname, { recursive: true });
     }
 
-    logger.add(new winston.transports.File({ filename: 'server.log', dirname: __dirname }));
-    logger.add(new winston.transports.File({ filename: 'error.log', dirname: __dirname ,level: 'error' }));
+    logger.add(new winston.transports.File({ filename: 'server.log', dirname: __dirname , maxsize: 100000, maxFiles: 1 }));
+    logger.add(new winston.transports.File({ filename: 'error.log', dirname: __dirname ,level: 'error', maxsize: 100000, maxFiles: 1 }));
 }
 export default logger;

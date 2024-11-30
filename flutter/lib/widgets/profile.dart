@@ -47,7 +47,7 @@ class ProfileWidget extends StatefulWidget {
   });
 
   @override
-  _ProfileWidgetState createState() => _ProfileWidgetState();
+  State createState() => _ProfileWidgetState();
 }
 
 class _ProfileWidgetState extends State<ProfileWidget> {

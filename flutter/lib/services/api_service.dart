@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
@@ -22,31 +24,47 @@ class ApiService {
       connectTimeout: Duration(milliseconds: 5000),
       receiveTimeout: Duration(milliseconds: 3000),
     ));
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-
-        onRequest: (options, handler) async {
-          final token = await _secureStorage.getAccessToken();
-
-          // Exclure les requêtes `login` et `register`
-          if (token != null && !options.path.contains('/login') && !options.path.contains('/register')) {
-            options.headers['Authorization'] = 'Bearer $token';
+   _dio.interceptors.add(
+  InterceptorsWrapper(
+    onError: (DioException e, ErrorInterceptorHandler handler) async {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        try {
+          final newToken = await refreshToken();
+          if (newToken != null) {
+            
+            // Mettre à jour le token
+            await _secureStorage.storeAccessToken(newToken);
+            
+            // Cloner la requête originale
+            final requestOptions = e.requestOptions;
+            requestOptions.headers['Authorization'] = 'Bearer $newToken';
+            
+            // Réessayer une seule fois
+            final response = await _dio.fetch(requestOptions);
+            return handler.resolve(response);
+          } else {
+            logger.e('Failed to refresh token');
           }
-
-          return handler.next(options); // Passer au prochain intercepteur ou à la requête
-        },
-
-        onError: (DioException e,ErrorInterceptorHandler handler) async {
-          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-            // If a 401 response is received, refresh the access token
-            await refreshToken();
-
-          }
-
-          return handler.next(e);
-        },
-      ),
-    );
+        } catch (_) {
+          // En cas d'erreur, déconnecter
+          await logout();
+        }
+      }
+      
+      // Pour toutes autres erreurs
+       return handler.next(e);
+    },
+    onRequest: (options, handler) async {
+      final token = await _secureStorage.getAccessToken();
+      if (token != null && 
+          !options.path.contains('/login') && 
+          !options.path.contains('/register')) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+      return handler.next(options);
+    },
+  ),
+);
   }
 
   Future<String?> refreshToken() async {
@@ -61,13 +79,14 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         final String newAccessToken = response.data['accessToken'];
         return newAccessToken;
-
-      } else {
-        // return response.data['msg'];
-        return "problème de connexion";
       }
+      logger.e(response.data['error']);
+
+      throw Exception(response.data['error']);
+
     } catch (e) {
-      throw Exception('Failed to refresh token: $e');
+      logger.e('Failed to refresh token: $e');
+      return null;
     }
 
   }
@@ -181,19 +200,47 @@ class ApiService {
 
 
   // Fonction pour récupérer la liste des amis
-  Future<Map<String, dynamic>> getFriends() async {
+  Future<List<User>?> getFriends() async {
     try {
       final Response response = await _dio.get('/users/friends');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        return response.data; // Renvoie les données si tout va bien
+        logger.i(response.data);
+        if (response.data is List) {
+        // Convertit chaque élément en objet User
+        List<User> friends = [for (Map<String,dynamic> friend in response.data) User.fromJson(friend)];
+       
+
+        return friends;
+        }
       }
+
+
       logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return {};
+      return null;
+
     } catch (e) {
       logger.e('Failed to get friends: $e');
-      return {};
+      return null;
+    }
+  }
+
+  Future<bool> removeFriend(String friendId) async {
+    try {
+      final Response response = await _dio.delete('/users/remove-friend', data: {
+        'friendId': friendId,
+      });
+
+      // Vérifie si la réponse contient des données valides
+      if (response.statusCode == 200) {
+        return true; // Renvoie les données si tout va bien
+      }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to remove friend: $e');
+      return false; // Renvoie une exception si quelque chose ne va pas
     }
   }
 

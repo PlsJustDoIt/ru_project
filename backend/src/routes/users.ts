@@ -170,16 +170,13 @@ router.get('/friends', auth, async (req:Request, res:Response) => {
     try {
         const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl id');
     if (user == null) {
-      return res.status(404).json({ msg: 'User not found' });
+        return res.status(404).json({ msg: 'User not found' });
     }
-
-
         const friends = user.friends.map(friend => ({
             username: friend.username,
             status: friend.status,
             avatarUrl: friend.avatarUrl,
             id : friend._id
-            
         }));
         
         logger.info('User friends : '+friends);
@@ -225,6 +222,9 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (user._id == friend._id) {
+            return res.status(400).json({ error: 'Cannot add yourself' });
+        }
         if (user.friends.includes(friend._id)) {
             return res.status(400).json({ error: 'Already friends' });
         }
@@ -237,13 +237,20 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
     }
 });
 
-router.delete('/remove-friend/:id', auth, async (req:Request, res:Response) => {
+router.delete('/remove-friend', auth, async (req:Request, res:Response) => {
     try {
+        const friendId = req.body.friendId;
+        if (!friendId) {
+            return res.status(400).json({ error: 'No friendId provided' });
+        }
         const user = await User.findById(req.user.id);
         if (user == null) {
             return res.status(404).json({ error: 'User not found' });
         }
-        user.friends = user.friends.filter((friend: { toString: () => string; }) => friend.toString() !== req.params.id);
+        const index = user.friends.findIndex((friend: { toString: () => string; }) => friend.toString() === friendId);
+        if (index !== -1) {
+            user.friends.splice(index, 1);
+        }
         await user.save();
         res.json(user);
     } catch (err:unknown) {

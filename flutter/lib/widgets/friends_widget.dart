@@ -1,38 +1,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:provider/provider.dart';
+import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 
 class FriendsListButton extends StatelessWidget {
-  // Liste exemple d'amis
-  final List<User> friends = [
-    User(
-      id: '1',
-      username: 'Marie Dupont',
-      avatarUrl : 'https://exemple.com/avatar.jpg',
-      status: 'en ligne',
-      friendIds:[],
-    ),
-    User(
-      id: '2',
-      username: 'Jean Martin',
-      avatarUrl: 'https://exemple.com/avatar.jpg',
-      status: 'au ru',
-      friendIds:[],
-    ),
-    User(
-      id: '3',
-      username: 'Sophie Bernard',
-      avatarUrl: 'https://exemple.com/avatar.jpg',
-      status: 'en train de manger',
-      friendIds:[],
-    ),
-  ];
-
-  FriendsListButton({super.key});
+  
+  const FriendsListButton({super.key});
 
   @override
   Widget build(BuildContext context) {
+
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -73,42 +53,79 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
   void initState() {
     super.initState();
     // Appelle la fonction pour charger les amis au lancement du widget
-    _loadFriends();
+     _loadFriends();
   }
 
   Future<void> _loadFriends() async {
-    // Remplace cette partie par ta requête pour récupérer les amis
-    // List<User> fetchedFriends = await fetchFriendsFromApi();
+    ApiService api = Provider.of<ApiService>(context, listen: false);
 
-    List<User> fetchedFriends = [
-      User(
-        id: '1',
-        username: 'Marie Dupont',
-        avatarUrl: 'https://exemple.com/avatar.jpg',
-        status: 'en ligne',
-        friendIds:[],
-      ),
-      User(
-        id: '2',
-        username: 'Jean Martin',
-        avatarUrl: 'https://exemple.com/avatar.jpg',
-        status: 'au ru',
-        friendIds:[],
-      ),
-      User(
-        id: '3',
-        username: 'Sophie Bernard',
-        avatarUrl: 'https://exemple.com/avatar.jpg',
-        status: 'en train de manger',
-        friendIds:[],
-      ),
-    ];
+    // Remplace cette partie par ta requête pour récupérer les amis
+    List<User>? fetchedFriends = await api.getFriends();
+    logger.i('Amis récupérés: $fetchedFriends');
+    if (fetchedFriends == null) {
+      logger.e('Impossible de récupérer les amis');
+      return;
+    }
+
+    // List<User> fetchedFriends = [
+    //   User(
+    //     id: '1',
+    //     username: 'Marie Dupont',
+    //     avatarUrl: 'https://exemple.com/avatar.jpg',
+    //     status: 'en ligne',
+    //     friendIds:[],
+    //   ),
+    //   User(
+    //     id: '2',
+    //     username: 'Jean Martin',
+    //     avatarUrl: 'https://exemple.com/avatar.jpg',
+    //     status: 'au ru',
+    //     friendIds:[],
+    //   ),
+    //   User(
+    //     id: '3',
+    //     username: 'Sophie Bernard',
+    //     avatarUrl: 'https://exemple.com/avatar.jpg',
+    //     status: 'en train de manger',
+    //     friendIds:[],
+    //   ),
+    // ];
 
     // // Mets à jour l'état avec les amis récupérés
     setState(() {
       friends = fetchedFriends;
     });
   }
+
+  void _showDeleteConfirmationDialog(String friendId) {
+    ApiService api = Provider.of<ApiService>(context, listen: false);
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Confirmation'),
+      content: Text('Voulez-vous vraiment supprimer cet utilisateur ?'),
+      actions: [
+        TextButton(
+          child: Text('Annuler'),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: Text('Supprimer',style: TextStyle(color: Colors.white)),
+          onPressed: () {
+            // Logique de suppression
+            api.removeFriend(friendId);
+            
+            setState(() {
+              friends.removeWhere((friend) => friend.id == friendId);
+            });
+            Navigator.of(context).pop();
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +197,24 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
             ),
           ),
 
+          friends.isEmpty
+              ? Expanded(
+                  child:Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('HAHAHAH TA PAS DAMIS'),
+                        SizedBox(height: 16),
+                        Image.asset('assets/images/haha.webp'
+                        ),
+                        
+                      ],
+                    )
+                  ) 
+                )
+              : 
+
           // Liste des amis
           Expanded(
             child: ListView.builder(
@@ -190,8 +225,8 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                   contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   leading: CircleAvatar(
                     radius: 28,
+                     backgroundImage: NetworkImage("assets/images/haha.webp"),
                     child: Text(friend.username[0]),
-                    // backgroundImage: NetworkImage(friend.avatarUrl),
                   ),
                   title: Text(
                     friend.username,
@@ -213,6 +248,25 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                       IconButton(
                         icon: Icon(Icons.more_vert),
                         onPressed: () {
+                          _showDeleteConfirmationDialog(friend.id);
+                          // PopupMenuButton<String>(
+                      //   icon: Icon(Icons.more_vert), // trois petits points
+                      //   onSelected: (value) {
+                      //     if (value == 'delete') {
+                      //       // Logique de suppression d'utilisateur
+                      //       _showDeleteConfirmationDialog();
+                      //     }
+                      //   },
+                      //   itemBuilder: (BuildContext context) => [
+                      //     PopupMenuItem<String>(
+                      //       value: 'delete',
+                      //       child: ListTile(
+                      //         leading: Icon(Icons.delete, color: Colors.red),
+                      //         title: Text('Supprimer'),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // )
                           logger.i('Plus d\'options pour ${friend.username}');
                         },
                       ),

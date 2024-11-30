@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:provider/provider.dart';
+import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 
@@ -13,6 +15,7 @@ class _DebugWidgetState extends State<DebugWidget> {
 
   @override
   Widget build(BuildContext context) {
+    
     logger.d('DebugWidget build');
 
     return Scaffold(
@@ -45,6 +48,7 @@ class _DebugWidgetState extends State<DebugWidget> {
                 Text('Refresh Token:', style: TextStyle(fontWeight: FontWeight.bold)),
                 SelectableText(refreshToken ?? 'No Refresh Token'),
                 Text('isExpired: ${JwtDecoder.isExpired(refreshToken ?? '')}'),
+                ElevatedButton(onPressed: refreshTokent, child: Text('rafraichir le token')),
                 SizedBox(height: 16),
                 Image.asset(
                   "assets/images/jm.jpg",
@@ -55,6 +59,22 @@ class _DebugWidgetState extends State<DebugWidget> {
         },
       ),
     );
+  }
+
+  void refreshTokent() async {
+    final ApiService apiService = Provider.of<ApiService>(context, listen: false);
+    final accessToken = await apiService.refreshToken();
+    if (accessToken == null) {
+      logger.e('Failed to refresh token');
+      return;
+    }
+
+    await _secureStorage.storeAccessToken(accessToken);
+
+    setState(() {
+    });
+    
+    
   }
 
   Future<Map<String, String?>> _fetchTokens() async {
