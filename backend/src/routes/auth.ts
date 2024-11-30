@@ -6,7 +6,6 @@ import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import { error } from 'console';
 const router = express.Router();
 
 const TEXT_MIN_LENGTH = 3;
