@@ -52,11 +52,15 @@ class ProfileWidget extends StatefulWidget {
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   
-  final _formKey = GlobalKey<FormState>();
+  final _formKeyUsername = GlobalKey<FormState>();
+  final _formKeyStatus = GlobalKey<FormState>();
+  final _formKeyPassword = GlobalKey<FormState>();
   late TextEditingController _usernameController;
+  late TextEditingController _oldPasswordController;
   late TextEditingController _passwordController;
   late TextEditingController _passwordConfirmController; //TODO add confirm password part
   File? _imageFile;
+  Image image = Image.asset('assets/images/default-avatar.png');
   final ImagePicker _picker = ImagePicker();
   late UserStatus _selectedStatus;
   bool hasSubmitted = false;
@@ -68,6 +72,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     widget.user = context.read<UserProvider>().user;
     if (widget.user != null) {
       _usernameController = TextEditingController(text: widget.user?.username);
+      _oldPasswordController = TextEditingController();
       _passwordController = TextEditingController();
       _passwordConfirmController = TextEditingController();
       _selectedStatus = UserStatus.fromString(widget.user!.status);
@@ -75,7 +80,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     
   }
 
+  // Fonction pour choisir une image et l'envoyer au serveur via l'API TODO
   Future<void> _pickImage() async {
+    logger.i('Picking image');
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -83,11 +90,34 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         maxWidth: 800,
       );
       if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
-      }
+        logger.i('Image picked: ${pickedFile.path}');
+
+        if (mounted != true) {
+          logger.w('Component is not mounted before updating profile picture');
+          return;
+        }
+        
+        bool isUpdated = await context.read<ApiService>().updateProfilePicture(pickedFile);
+
+        if (mounted != true) {
+          logger.w('Component is not mounted after updating profile picture');
+          return;
+        }
+
+        if (isUpdated) {
+          logger.i('Profile picture updated');
+          setImageFromServer(context);
+          return;
+        }
+        logger.w('Failed to update profile picture');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update profile picture')),
+        );
+        return;
+      } 
+      logger.w('No image selected'); 
     } catch (e) {
+      logger.e('Error picking image: $e');
       if (mounted != true) {
         return;
       }
@@ -95,6 +125,13 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         const SnackBar(content: Text('Failed to pick image')),
       );
     }
+  }
+
+  //set imageFile with network image
+  void setImageFromServer(BuildContext context) {
+    logger.i('Setting image from server not implemented');
+    //default image
+    _imageFile = File('assets/images/default-avatar.png');
   }
 
   @override
@@ -105,6 +142,11 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
     final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    if (_imageFile == null) {
+      setImageFromServer(context);
+    }
+    
     
     return  SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -114,12 +156,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
+                //add error handling TODO all
                 CircleAvatar(
                   radius: 60,
-                  backgroundImage: _imageFile != null
-                      ? FileImage(_imageFile!)
-                      : const AssetImage('assets/images/default-avatar.png')
-                          as ImageProvider,
+                  backgroundImage: const AssetImage('assets/images/default-avatar.png') as ImageProvider,
                 ),
                 FloatingActionButton.small(
                   onPressed: _pickImage,
@@ -141,6 +181,15 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             changeUsernameButton(apiService, userProvider, context),
             const SizedBox(height: 16),
             changePassword(apiService, userProvider, context),
+            const SizedBox(height: 16),
+            //image test affichage
+            const Text('Image test'),
+            if (_imageFile != null)
+              Image.asset(
+                _imageFile!.path,
+                width: 200,
+                height: 200,
+              ),
           ],
         ),
       );
@@ -195,7 +244,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         ),
         body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: isModifyingUsername ? usernameForm(apiService, userProvider, context) : isModifyingPassword ? passwordForm(apiService, userProvider, context) : statusForm(apiService, userProvider, context),
+        child: isModifyingUsername ? usernameForm(apiService, userProvider, context) : isModifyingPassword ? passwordForm(apiService, userProvider, context) : statusFormNoButton(apiService, userProvider, context),
         ),
       ),
     );
@@ -203,7 +252,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   Form usernameForm(ApiService apiService, UserProvider userProvider,BuildContext context){
     return Form(
-      key: _formKey,
+      key: _formKeyUsername,
       autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -253,14 +302,44 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   Form passwordForm (ApiService apiService, UserProvider userProvider,BuildContext context){
     return Form(
-      key: _formKey,
+      key: _formKeyPassword,
       autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Champ de texte pour l'ancien mot de passe
+          TextFormField(
+            controller: _oldPasswordController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            decoration: InputDecoration(
+              labelText: 'Mot de passe actuel',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock),
+            ),
+            validator: (value) {
+              // Validation du mot de passe
+              if (value == null || value.trim().isEmpty) {
+                return 'Veuillez entrer un mot de passe';
+              }
+              if (value.trim().length < 3) {
+                return 'Le mot de passe doit contenir au moins 3 caractères';
+              }
+              if (value.trim().length > 32) {
+                return 'Le mot de passe doit contenir moins de 32 caractères';
+              }
+              // Validation réussie
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
           // Champ de texte pour le mot de passe
           TextFormField(
             controller: _passwordController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
             decoration: InputDecoration(
               labelText: 'Nouveau mot de passe',
               border: OutlineInputBorder(),
@@ -276,6 +355,30 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               }
               if (value.trim().length > 32) {
                 return 'Le mot de passe doit contenir moins de 32 caractères';
+              }
+              // Validation réussie
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          // Champ de texte pour la confirmation du mot de passe
+          TextFormField(
+            controller: _passwordConfirmController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            decoration: InputDecoration(
+              labelText: 'Confirmer le mot de passe',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock),
+            ),
+            validator: (value) {
+              // Validation du mot de passe
+              if (value == null || value.trim().isEmpty) {
+                return 'Veuillez entrer un mot de passe';
+              }
+              if (value.trim() != _passwordController.text) {
+                return 'Les mots de passe ne correspondent pas';
               }
               // Validation réussie
               return null;
@@ -297,54 +400,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     );
   }
 
-  Form statusForm(ApiService apiService, UserProvider userProvider,BuildContext context){
-    return Form(
-      key: _formKey,
-      autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Champ de texte pour le status
-          DropdownButtonFormField<UserStatus>(
-            value: _selectedStatus,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.emoji_emotions),
-            ),
-            items: UserStatus.values.map((UserStatus status) {
-              return DropdownMenuItem<UserStatus>(
-                value: status,
-                child: Text(status.toDisplayString()),
-              );
-            }).toList(),
-            onChanged: (UserStatus? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  _selectedStatus = newValue;
-                });
-              }
-            },
-          ),
-          
-          SizedBox(height: 20),
-          
-          // Bouton de mise à jour
-          ElevatedButton(
-            onPressed: () => comfirmStatus(apiService, userProvider, context,true),
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: Text('Confirmer'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Form statusFormNoButton(ApiService apiService, UserProvider userProvider,BuildContext context){
     return Form(
-      key: _formKey,
+      key: _formKeyStatus,
       autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -381,8 +439,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     setState(() {
       hasSubmitted = true;
     });
-    if (_formKey.currentState!.validate()) {
-      logger.i('username unvalide: ${_usernameController.text}');                      
+    if (!_formKeyUsername.currentState!.validate()) {
+      logger.i('username unvalide: ${_usernameController.text}');    
+      return;                  
     }
     
     bool res;
@@ -425,13 +484,14 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     setState(() {
       hasSubmitted = true;
     });
-    if (_formKey.currentState!.validate()) {
-      logger.i('password unvalide: ${_passwordController.text}');                      
+    if (!_formKeyPassword.currentState!.validate()) {
+      logger.e('error password form'); 
+      return;                
     }
     
     bool res;
     try {
-      res = await apiService.updatePassword(_passwordController.text);
+      res = await apiService.updatePassword(_passwordController.text,_oldPasswordController.text);
     } catch (e) {
       if (context.mounted == false) {
         return;
@@ -463,8 +523,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 
   void comfirmStatus(ApiService apiService, UserProvider userProvider,BuildContext context,bool isDialog) async {
-    if (_formKey.currentState!.validate()) {
-      logger.i('status unvalide: ${_selectedStatus.toDisplayString()}');                      
+    if (!_formKeyStatus.currentState!.validate()) {
+      logger.i('status unvalide: ${_selectedStatus.toDisplayString()}');          
+      return;            
     }
     
     bool res;
@@ -506,6 +567,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     _usernameController.dispose();
     super.dispose();
   }
+
 }
 
 

@@ -2,6 +2,10 @@ import { Router,Request,Response } from 'express';
 import User, { IUser } from '../models/user.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
+import uploadAvatar from '../services/multer.js';
+import bcrypt from 'bcrypt';
+//import path from 'path';
+//import fs from 'fs';
 const router = Router();
 
 router.get('/me', auth, async (req:Request, res:Response) => {
@@ -109,6 +113,14 @@ router.put('/update-password', auth, async (req:Request, res:Response) => {
     try {
         //test validation password
         let password = req.body.password;
+        const oldPassword = req.body.oldPassword;
+
+        if (!oldPassword) {
+            logger.error('Old password field dosn\'t exists');
+            return res.status(400).json({ error: 'Old password dosn\'t exists' });
+        }
+
+
         if (!password) {
             logger.error('Password field dosn\'t exists');
             return res.status(400).json({ error: 'Password dosn\'t exists' });
@@ -122,7 +134,14 @@ router.put('/update-password', auth, async (req:Request, res:Response) => {
         const user = await User.findById(req.user.id);
 
         if (user === null) {
+            logger.error('User not found');
             return res.status(404).json({ error: 'User not found' });
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            logger.error('Incorrect old password');
+            return res.status(400).json({ error: 'Incorrect old password' });
         }
 
         user.password = password;
@@ -164,6 +183,53 @@ router.put('/update-status', auth, async (req:Request, res:Response) => {
         logger.error(`Could not update status : ${err}`);
         res.status(500).send({ error : `Could not update status : ${err} `});
     }
+});
+
+router.post('/update-profile-picture', auth, uploadAvatar.single("avatar") , async (req:Request, res:Response) => { 
+    try {
+
+        // const data = req.body; //FormData
+        // if (!data) {
+        //     logger.error('No data provided');
+        //     return res.status(400).json({ error: 'No data provided' });
+        // }
+        // //save image in ../uploads/avatars/ folder with user id as name
+        // const { file, platform } = data; //file is multipart 
+        // if (!file || !platform) {
+        //     logger.error('No file or platform provided');
+        //     return res.status(400).json({ error: 'No file or platform provided' });
+        // }
+        
+
+        const user = await User.findById(req.user.id);
+
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        //TODO all
+
+        const avatarUrl = req.file.path;
+        user.avatarUrl = avatarUrl;
+        await user.save();
+        
+        
+
+
+        res.send('Profile picture updated');
+
+    } catch (err:unknown) {
+        logger.error('Could not update profile picture : '+err);
+        res.status(500).send('Could not update profile picture : '+err);
+    }
+    
+    //save image path in user.avatarUrl
+  
+
+    res.status(501).send('Not implemented');
 });
 
 router.get('/friends', auth, async (req:Request, res:Response) => {

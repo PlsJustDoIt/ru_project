@@ -1,5 +1,10 @@
+import 'dart:io' as io;
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
+import 'package:image_picker/image_picker.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
@@ -300,10 +305,11 @@ class ApiService {
   }
 
   //update user password (requires user id also requires the old password for verification)
-  Future<bool> updatePassword(String password) async {
+  Future<bool> updatePassword(String password, String oldPassword) async {
     try {
       final Response response = await _dio.put('/users/update-password', data: {
         'password': password,
+        'oldPassword': oldPassword,
       });
       if (response.statusCode == 200) {
         logger.i('Password updated');
@@ -353,8 +359,48 @@ class ApiService {
     }
   }
 
-  //update user profile picture (requires user id) //TODO: implement
+  //update user profile picture
+  Future<bool> updateProfilePicture(XFile pickedFile) async {
+    try {
 
+      var file;
+
+      if (kIsWeb) {
+        // For web
+        var byteData = await pickedFile.readAsBytes();
+        file = MultipartFile.fromBytes(
+          byteData, 
+          filename: pickedFile.name, 
+          contentType: MediaType('image', 'jpeg'));
+      }else{
+        file = await MultipartFile.fromFile(
+          pickedFile.path,
+          filename: pickedFile.name,
+          contentType: MediaType('image', 'jpeg'));
+      }
+
+      final formData = FormData.fromMap({
+        'avatar': file,
+        'platform': kIsWeb ? 'web' : Platform.operatingSystem, // Indique la plateforme
+      });
+
+      //dio multipart request
+      final Response response = await _dio.post('/users/update-profile-picture', data: formData);
+
+      
+      
+      if (response.statusCode == 200) {
+        logger.i('Profile picture updated');
+        return true;
+      } else {
+        logger.e('Failed to update profile picture');
+        return false;
+      }
+    } catch (e) {
+      logger.e('Failed to update profile picture: $e');
+      return false;
+    }
+  }
 
 
 }
