@@ -22,21 +22,19 @@ const storage = multer.diskStorage({
     },
   });
   
-//   // Filtrage des fichiers (facultatif)
-//   const fileFilter = (req, file, cb) => {
-//     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-//     if (allowedMimeTypes.includes(file.mimetype)) {
-//       cb(null, true);
-//     } else {
-//       cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
-//     }
-//   };
-  
   // Middleware multer
   const uploadAvatar = multer({
     storage: storage,
     limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
-    //fileFilter: fileFilter,
+    fileFilter: (req, file, cb) => {
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
+    }
+    
 });
 
 export default uploadAvatar;

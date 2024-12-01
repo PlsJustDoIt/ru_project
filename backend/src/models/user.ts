@@ -2,10 +2,11 @@
 import {CallbackError, Schema, Types, model} from 'mongoose';
 import {genSalt, hash} from 'bcrypt';
 
+type Status = 'en ligne' | 'au ru' | 'absent';
 interface IUser extends Document {
     username: string;
     password: string;
-    status: string;
+    status: Status;
     friends: IUser[];
     avatarUrl: string;
     _id: Types.ObjectId;
@@ -14,7 +15,7 @@ interface IUser extends Document {
 const UserSchema = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    status: { type: String, default: 'Inactif' },
+    status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'Inactif' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     avatarUrl: { type: String, default: 'uploads/avatar/default.png' }
 });
@@ -31,4 +32,4 @@ UserSchema.pre('save', async function(next): Promise<void> {
 });
 
 export default model('User', UserSchema);
-export { IUser };
+export { IUser, Status };

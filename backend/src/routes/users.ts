@@ -13,7 +13,7 @@ router.get('/me', auth, async (req:Request, res:Response) => {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         res.json(user);
     } catch (err:unknown) {
-        res.status(500).send('Could not retrieve user : '+err);
+        res.status(500).json({ error: 'Could not retrieve user : '+err });
     }
 });
 
@@ -64,10 +64,10 @@ router.put('/update', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.send('User updated');
+        res.json({message : 'User updated'});
     } catch (err:unknown) {
         logger.error(`Could not update user : ${err}`);
-        res.status(500).send({ error : `Could not update user : ${err} `});
+        res.status(500).json({ error : `Could not update user : ${err} `});
     }
 
 });
@@ -99,11 +99,11 @@ router.put('/update-username', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.send('Username updated');
+        res.json({ message :'Username updated' });
 
     } catch (err:unknown) {
         logger.error(`Could not update username : ${err}`);
-        res.status(500).send({ error : `Could not update username : ${err} `});
+        res.status(500).json({ error : `Could not update username : ${err} `});
     }
 
 });
@@ -148,24 +148,27 @@ router.put('/update-password', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.send('Password updated');
+        res.json({ message: 'Password updated'});
         
     }
     catch (err:unknown) {
         logger.error(`Could not update password : ${err}`);
-        res.status(500).send({ error : `Could not update password : ${err} `});
+        res.status(500).json({ error : `Could not update password : ${err} `});
     }
 });
 
 //update only status, we need status
-router.put('/update-status', auth, async (req:Request, res:Response) => {
+router.put('/update-status', auth ,async (req:Request, res:Response) => {
     try {
         //test validation status
-        const { status } = req.body;
+        //const { status } = req.body;
+        const status = req.body.status;
+        
         if (!status) {
             logger.error('Status field dosn\'t exists');
             return res.status(400).json({ error: 'Status dosn\'t exists' });
         }
+        
 
         const user = await User.findById(req.user.id);
 
@@ -177,29 +180,16 @@ router.put('/update-status', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.send('Status updated');
+        res.json({ status: user.status });
     }
     catch (err:unknown) {
         logger.error(`Could not update status : ${err}`);
-        res.status(500).send({ error : `Could not update status : ${err} `});
+        res.status(500).json({ error : `Could not update status : ${err} `});
     }
 });
 
 router.post('/update-profile-picture', auth, uploadAvatar.single("avatar") , async (req:Request, res:Response) => { 
     try {
-
-        // const data = req.body; //FormData
-        // if (!data) {
-        //     logger.error('No data provided');
-        //     return res.status(400).json({ error: 'No data provided' });
-        // }
-        // //save image in ../uploads/avatars/ folder with user id as name
-        // const { file, platform } = data; //file is multipart 
-        // if (!file || !platform) {
-        //     logger.error('No file or platform provided');
-        //     return res.status(400).json({ error: 'No file or platform provided' });
-        // }
-        
 
         const user = await User.findById(req.user.id);
 
@@ -212,31 +202,26 @@ router.post('/update-profile-picture', auth, uploadAvatar.single("avatar") , asy
         }
         //TODO all
 
-        const avatarUrl = req.file.path;
+        logger.info(req.file);
+        const avatarUrl = "uploads/avatar/"+req.file.filename;
         user.avatarUrl = avatarUrl;
+
+
         await user.save();
-        
-        
-
-
-        res.send('Profile picture updated');
+                
+        return res.json({ File : req.file });
 
     } catch (err:unknown) {
         logger.error('Could not update profile picture : '+err);
-        res.status(500).send('Could not update profile picture : '+err);
-    }
-    
-    //save image path in user.avatarUrl
-  
-
-    res.status(501).send('Not implemented');
+        return res.status(500).json({ error : 'Could not update profile picture : '+err});
+    }    
 });
 
 router.get('/friends', auth, async (req:Request, res:Response) => {
     try {
         const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl id');
     if (user == null) {
-        return res.status(404).json({ msg: 'User not found' });
+        return res.status(404).json({ error : 'User not found' });
     }
         const friends = user.friends.map(friend => ({
             username: friend.username,
@@ -248,7 +233,7 @@ router.get('/friends', auth, async (req:Request, res:Response) => {
         logger.info('User friends : '+friends);
         res.json(friends);
     } catch (err:unknown) {
-        res.status(500).send('Could not retrieve friends : '+err);
+        res.status(500).json({ error : 'Could not retrieve friends : '+err});
     }
 });
 
@@ -272,10 +257,10 @@ router.get('/search', auth, async (req: Request, res: Response) => {
             status: user.status,
             id: user._id
         }));
-        res.send(minimisedUsers);
+        res.json(minimisedUsers);
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
-        res.status(500).send({ "Error": "Could not search for user" });
+        res.status(500).json({ Error : "Could not search for user" });
     }
 });
 
@@ -299,7 +284,7 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
         logger.info("friends list : "+user.friends);
         res.json(user);
     } catch (err:unknown) {
-        res.status(500).send('Server error : '+err);
+        res.status(500).json({ error : 'Server error : '+err});
     }
 });
 
@@ -320,7 +305,7 @@ router.delete('/remove-friend', auth, async (req:Request, res:Response) => {
         await user.save();
         res.json(user);
     } catch (err:unknown) {
-        res.status(500).send('Server error : '+err);
+        res.status(500).json({ error : 'Server error : '+err});
     }
 });
 

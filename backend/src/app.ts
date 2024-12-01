@@ -5,7 +5,7 @@ import userRoutes from './routes/users.js';
 import ruRoutes from './routes/ru.js';
 import cors from 'cors';
 import fs from 'fs';
-import https from 'https';
+//import https from 'https';
 import path from 'path';
 import morgan from 'morgan';
 import logger from './services/logger.js';
@@ -61,6 +61,7 @@ app.use(cors());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
+app.use('/api/uploads', express.static('uploads'));
 
 const PORT = process.env.PORT || 5000;
 
