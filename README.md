@@ -102,6 +102,7 @@ add a .env file in the backend directory with the following content:
 MONGO_URI="mongodb://ru_project_user:ru_project_password@127.0.0.1:27017/ru_project?authSource=ru_project"
 JWT_ACCESS_SECRET="{your first generated key}"
 JWT_REFRESH_SECRET="{your second generated key}"
+GINKO_API_KEY="{your ginko api key}"
 ```
 
 
@@ -138,7 +139,7 @@ in flutter/lib/config.dart, configure the backend url:
 To run the backend, follow the instructions in the backend directory:
 ```bash
 cd backend
-npx tsx src/app.ts
+npx tsx watch src/app.ts # watch allows you to restart the server when you save a file
 ```
 
 ### Frontend

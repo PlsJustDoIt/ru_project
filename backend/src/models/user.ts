@@ -1,6 +1,5 @@
-
-import {CallbackError, Schema, Types, model} from 'mongoose';
-import {genSalt, hash} from 'bcrypt';
+import { CallbackError, Schema, Types, model } from 'mongoose';
+import { genSalt, hash } from 'bcrypt';
 
 type Status = 'en ligne' | 'au ru' | 'absent';
 interface IUser extends Document {
@@ -17,16 +16,16 @@ const UserSchema = new Schema({
     password: { type: String, required: true },
     status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'Inactif' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    avatarUrl: { type: String, default: 'uploads/avatar/default.png' }
+    avatarUrl: { type: String, default: 'uploads/avatar/default.png' },
 });
 
-UserSchema.pre('save', async function(next): Promise<void> {
+UserSchema.pre('save', async function (next): Promise<void> {
     try {
         if (!this.isModified('password')) return next();
         const salt = await genSalt(10);
         this.password = await hash(this.password, salt);
         next();
-    } catch (error : unknown) {
+    } catch (error: unknown) {
         next(error as CallbackError);
     }
 });

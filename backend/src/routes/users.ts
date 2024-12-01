@@ -1,54 +1,53 @@
-import { Router,Request,Response } from 'express';
+import { Router, Request, Response } from 'express';
 import User, { IUser } from '../models/user.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import uploadAvatar from '../services/multer.js';
 import bcrypt from 'bcrypt';
-//import path from 'path';
-//import fs from 'fs';
+// import path from 'path';
+// import fs from 'fs';
 const router = Router();
 
-router.get('/me', auth, async (req:Request, res:Response) => {
+router.get('/me', auth, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         res.json(user);
-    } catch (err:unknown) {
-        res.status(500).json({ error: 'Could not retrieve user : '+err });
+    } catch (err: unknown) {
+        res.status(500).json({ error: 'Could not retrieve user : ' + err });
     }
 });
 
 const TEXT_MIN_LENGTH = 3;
 const TEXT_MAX_LENGTH = 32;
 
-router.put('/update', auth, async (req:Request, res:Response) => {
-
+router.put('/update', auth, async (req: Request, res: Response) => {
     try {
         let username = req.body.username;
         let password = req.body.password;
 
-        //username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
+        // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
 
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
             return res.status(400).json({ error: 'Username or password dosn\'t exists' });
         }
-                
+
         username = username.trim();
         password = password.trim();
 
-        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
+        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
             return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
-        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
+        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
             return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
-        //check if new username already exists
+        // check if new username already exists
         const testUser = await User.findOne({ username });
-        if (testUser)  res.status(400).json({ error: 'User already exists' });
+        if (testUser) res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
         if (user === null) {
@@ -64,34 +63,33 @@ router.put('/update', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.json({message : 'User updated'});
-    } catch (err:unknown) {
+        res.json({ message: 'User updated' });
+    } catch (err: unknown) {
         logger.error(`Could not update user : ${err}`);
-        res.status(500).json({ error : `Could not update user : ${err} `});
+        res.status(500).json({ error: `Could not update user : ${err} ` });
     }
-
 });
 
-//update only username, we need username
-router.put('/update-username', auth, async (req:Request, res:Response) => {
+// update only username, we need username
+router.put('/update-username', auth, async (req: Request, res: Response) => {
     try {
-        //test validation username
+        // test validation username
         let username = req.body.username;
         if (!username) {
             logger.error('Username field dosn\'t exists');
             return res.status(400).json({ error: 'Username dosn\'t exists' });
         }
         username = username.trim();
-        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH ) {
+        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
             return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
-        
+
         const testUser = await User.findOne({ username });
-        if (testUser)  res.status(400).json({ error: 'User already exists' });
+        if (testUser) res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
-        
+
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -99,19 +97,17 @@ router.put('/update-username', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.json({ message :'Username updated' });
-
-    } catch (err:unknown) {
+        res.json({ message: 'Username updated' });
+    } catch (err: unknown) {
         logger.error(`Could not update username : ${err}`);
-        res.status(500).json({ error : `Could not update username : ${err} `});
+        res.status(500).json({ error: `Could not update username : ${err} ` });
     }
-
 });
 
-//update only password, we need password
-router.put('/update-password', auth, async (req:Request, res:Response) => {
+// update only password, we need password
+router.put('/update-password', auth, async (req: Request, res: Response) => {
     try {
-        //test validation password
+        // test validation password
         let password = req.body.password;
         const oldPassword = req.body.oldPassword;
 
@@ -120,13 +116,12 @@ router.put('/update-password', auth, async (req:Request, res:Response) => {
             return res.status(400).json({ error: 'Old password dosn\'t exists' });
         }
 
-
         if (!password) {
             logger.error('Password field dosn\'t exists');
             return res.status(400).json({ error: 'Password dosn\'t exists' });
         }
         password = password.trim();
-        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH ) {
+        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
             return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
@@ -148,27 +143,24 @@ router.put('/update-password', auth, async (req:Request, res:Response) => {
 
         await user.save();
 
-        res.json({ message: 'Password updated'});
-        
-    }
-    catch (err:unknown) {
+        res.json({ message: 'Password updated' });
+    } catch (err: unknown) {
         logger.error(`Could not update password : ${err}`);
-        res.status(500).json({ error : `Could not update password : ${err} `});
+        res.status(500).json({ error: `Could not update password : ${err} ` });
     }
 });
 
-//update only status, we need status
-router.put('/update-status', auth ,async (req:Request, res:Response) => {
+// update only status, we need status
+router.put('/update-status', auth, async (req: Request, res: Response) => {
     try {
-        //test validation status
-        //const { status } = req.body;
+        // test validation status
+        // const { status } = req.body;
         const status = req.body.status;
-        
+
         if (!status) {
             logger.error('Status field dosn\'t exists');
             return res.status(400).json({ error: 'Status dosn\'t exists' });
         }
-        
 
         const user = await User.findById(req.user.id);
 
@@ -181,16 +173,14 @@ router.put('/update-status', auth ,async (req:Request, res:Response) => {
         await user.save();
 
         res.json({ status: user.status });
-    }
-    catch (err:unknown) {
+    } catch (err: unknown) {
         logger.error(`Could not update status : ${err}`);
-        res.status(500).json({ error : `Could not update status : ${err} `});
+        res.status(500).json({ error: `Could not update status : ${err} ` });
     }
 });
 
-router.post('/update-profile-picture', auth, uploadAvatar.single("avatar") , async (req:Request, res:Response) => { 
+router.post('/update-profile-picture', auth, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
     try {
-
         const user = await User.findById(req.user.id);
 
         if (user === null) {
@@ -200,45 +190,42 @@ router.post('/update-profile-picture', auth, uploadAvatar.single("avatar") , asy
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        //TODO all
+        // TODO all
 
         logger.info(req.file);
-        const avatarUrl = "uploads/avatar/"+req.file.filename;
+        const avatarUrl = 'uploads/avatar/' + req.file.filename;
         user.avatarUrl = avatarUrl;
 
-
         await user.save();
-                
-        return res.json({ File : req.file });
 
-    } catch (err:unknown) {
-        logger.error('Could not update profile picture : '+err);
-        return res.status(500).json({ error : 'Could not update profile picture : '+err});
-    }    
+        return res.json({ File: req.file });
+    } catch (err: unknown) {
+        logger.error('Could not update profile picture : ' + err);
+        return res.status(500).json({ error: 'Could not update profile picture : ' + err });
+    }
 });
 
-router.get('/friends', auth, async (req:Request, res:Response) => {
+router.get('/friends', auth, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl id');
-    if (user == null) {
-        return res.status(404).json({ error : 'User not found' });
-    }
+        if (user == null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         const friends = user.friends.map(friend => ({
             username: friend.username,
             status: friend.status,
             avatarUrl: friend.avatarUrl,
-            id : friend._id
+            id: friend._id,
         }));
-        
-        logger.info('User friends : '+friends);
+
+        logger.info('User friends : ' + friends);
         res.json(friends);
-    } catch (err:unknown) {
-        res.status(500).json({ error : 'Could not retrieve friends : '+err});
+    } catch (err: unknown) {
+        res.status(500).json({ error: 'Could not retrieve friends : ' + err });
     }
 });
 
 router.get('/search', auth, async (req: Request, res: Response) => {
-
     const query = req.body.query;
     if (!query) {
         return res.status(400).json({ error: 'No query provided' });
@@ -246,7 +233,7 @@ router.get('/search', auth, async (req: Request, res: Response) => {
     const searchItem = new RegExp(query, 'i'); // case-insensitive search
 
     try {
-        const foundUsers = await User.find({ 'username': searchItem }).select('id username avatarUrl').limit(6).exec();
+        const foundUsers = await User.find({ username: searchItem }).select('id username avatarUrl').limit(6).exec();
 
         if (foundUsers.length === 0) {
             return res.status(404).json({ msg: 'No users found' });
@@ -255,16 +242,16 @@ router.get('/search', auth, async (req: Request, res: Response) => {
             username: user.username,
             avatarUrl: user.avatarUrl,
             status: user.status,
-            id: user._id
+            id: user._id,
         }));
         res.json(minimisedUsers);
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
-        res.status(500).json({ Error : "Could not search for user" });
+        res.status(500).json({ Error: 'Could not search for user' });
     }
 });
 
-router.post('/add-friend', auth, async (req:Request, res:Response) => {
+router.post('/add-friend', auth, async (req: Request, res: Response) => {
     const { username } = req.body;
     try {
         const friend = await User.findOne({ username: username });
@@ -281,14 +268,14 @@ router.post('/add-friend', auth, async (req:Request, res:Response) => {
         }
         user.friends.push(friend._id);
         await user.save();
-        logger.info("friends list : "+user.friends);
+        logger.info('friends list : ' + user.friends);
         res.json(user);
-    } catch (err:unknown) {
-        res.status(500).json({ error : 'Server error : '+err});
+    } catch (err: unknown) {
+        res.status(500).json({ error: 'Server error : ' + err });
     }
 });
 
-router.delete('/remove-friend', auth, async (req:Request, res:Response) => {
+router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
     try {
         const friendId = req.body.friendId;
         if (!friendId) {
@@ -298,16 +285,15 @@ router.delete('/remove-friend', auth, async (req:Request, res:Response) => {
         if (user == null) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const index = user.friends.findIndex((friend: { toString: () => string; }) => friend.toString() === friendId);
+        const index = user.friends.findIndex((friend: { toString: () => string }) => friend.toString() === friendId);
         if (index !== -1) {
             user.friends.splice(index, 1);
         }
         await user.save();
         res.json(user);
-    } catch (err:unknown) {
-        res.status(500).json({ error : 'Server error : '+err});
+    } catch (err: unknown) {
+        res.status(500).json({ error: 'Server error : ' + err });
     }
 });
-
 
 export default router;

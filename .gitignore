@@ -46,6 +46,6 @@ app.*.map.json
 #backend related
 /backend/node_modules/
 uploads
-
+/backend/dist/
 **/.env
 env.sh
