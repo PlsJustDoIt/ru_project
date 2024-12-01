@@ -37,8 +37,10 @@ if (isProduction) {
     const accessLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'access.log'), { flags: 'a+' });
     // log requests combined format
     app.use(morgan('combined', { stream: accessLogStream }));
+    app.use('/api/uploads', express.static('../uploads'));
 } else {
     app.use(morgan('dev'));
+    app.use('/api/uploads', express.static('uploads'));
 }
 
 if (process.env.MONGO_URI == null) {
@@ -55,7 +57,6 @@ app.use(cors());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
-app.use('/api/uploads', express.static('uploads'));
 app.use('/api/ginko', ginkoRoutes);
 
 const PORT = process.env.PORT || 5000;

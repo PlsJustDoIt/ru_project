@@ -161,7 +161,11 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
     final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    setImage();
+    if (_imageFile == null) {
+
+      setImage();
+
+    }
 
     return  SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
