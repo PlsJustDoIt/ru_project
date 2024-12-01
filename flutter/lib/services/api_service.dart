@@ -1,7 +1,5 @@
-import 'dart:io' as io;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import 'package:image_picker/image_picker.dart';
@@ -60,6 +58,10 @@ class ApiService {
        return handler.next(e);
     },
     onRequest: (options, handler) async {
+      if (options.path.contains('/uploads')) {
+        options.headers['Content-Type'] = 'multipart/form-data';
+        return handler.next(options);
+      }
       final token = await _secureStorage.getAccessToken();
       if (token != null && 
           !options.path.contains('/login') && 
@@ -399,6 +401,21 @@ class ApiService {
     } catch (e) {
       logger.e('Failed to update profile picture: $e');
       return false;
+    }
+  }
+
+  //get user avatar
+  Future<Uint8List> getUserRawAvatar(String avatarUrl) async {
+    try {
+      final Response response = await _dio.get("/$avatarUrl", options: Options(responseType: ResponseType.bytes));
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data;
+      }
+      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      throw Exception('Failed to get avatar');
+    } catch (e) {
+      logger.e('Failed to get avatar: $e');
+      throw Exception('Failed to get avatar: $e');
     }
   }
 

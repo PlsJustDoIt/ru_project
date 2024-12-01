@@ -7,6 +7,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/search_widget.dart';
+import 'package:ru_project/services/cache_service.dart';
 
 enum UserStatus {
   enLigne,
@@ -104,11 +105,14 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           return;
         }
 
+        /*
         if (isUpdated) {
           logger.i('Profile picture updated');
-          setImageFromServer(context);
+          setImage();
           return;
         }
+        */
+
         logger.w('Failed to update profile picture');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to update profile picture')),
@@ -127,11 +131,25 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
   }
 
-  //set imageFile with network image
-  void setImageFromServer(BuildContext context) {
-    logger.i('Setting image from server not implemented');
+  //set imageFile from server TODO
+  Future<void> setImage() async {
+    //logger.i('Setting image from server not implemented');
     //default image
-    _imageFile = File('assets/images/default-avatar.png');
+    final rawImageFile = await context.read<ApiService>().getUserRawAvatar(context.read<UserProvider>().user!.avatarUrl);
+    final resImage = await AvatarCache.cacheAvatar(rawImageFile, 'avatar.jpg');
+
+    if (resImage != null) {
+      logger.i('Image set from server');
+      setState(() {
+        _imageFile = resImage;
+      });
+    } else {
+      logger.w('Failed to set image from server');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to set image from server')),
+      );
+    }
+
   }
 
   @override
@@ -143,11 +161,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
     final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    if (_imageFile == null) {
-      setImageFromServer(context);
-    }
-    
-    
+    setImage();
+
     return  SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -159,7 +174,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                 //add error handling TODO all
                 CircleAvatar(
                   radius: 60,
-                  backgroundImage: const AssetImage('assets/images/default-avatar.png') as ImageProvider,
+                  backgroundImage: _imageFile != null ? FileImage(_imageFile!) : image.image,
                 ),
                 FloatingActionButton.small(
                   onPressed: _pickImage,
@@ -409,16 +424,20 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         children: [
           // Champ de texte pour le status
           DropdownButtonFormField<UserStatus>(
+            
             value: _selectedStatus,
             decoration: const InputDecoration(
               labelText: 'Status',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.emoji_emotions),
+              //focusedBorder: OutlineInputBorder(),
+              focusColor: Colors.blue,
             ),
             items: UserStatus.values.map((UserStatus status) {
               return DropdownMenuItem<UserStatus>(
                 value: status,
                 child: Text(status.toDisplayString()),
+                
               );
             }).toList(),
             onChanged: (UserStatus? newValue) {
@@ -440,7 +459,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       hasSubmitted = true;
     });
     if (!_formKeyUsername.currentState!.validate()) {
-      logger.i('username unvalide: ${_usernameController.text}');    
+      logger.e('username unvalide: ${_usernameController.text}');    
       return;                  
     }
     
@@ -523,9 +542,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 
   void comfirmStatus(ApiService apiService, UserProvider userProvider,BuildContext context,bool isDialog) async {
-    if (!_formKeyStatus.currentState!.validate()) {
-      logger.i('status unvalide: ${_selectedStatus.toDisplayString()}');          
-      return;            
+    if (userProvider.user!.status == _selectedStatus.toDisplayString()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Le status est déjà à jour')));
+      return;
     }
     
     bool res;
