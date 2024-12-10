@@ -14,7 +14,7 @@ interface IUser extends Document {
 const UserSchema = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'Inactif' },
+    status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'absent' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     avatarUrl: { type: String, default: 'uploads/avatar/default.png' },
 });
