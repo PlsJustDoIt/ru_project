@@ -190,7 +190,6 @@ router.post('/update-profile-picture', auth, uploadAvatar.single('avatar'), asyn
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        // TODO all
 
         logger.info(req.file);
         const avatarUrl = 'uploads/avatar/' + req.file.filename;
@@ -198,7 +197,7 @@ router.post('/update-profile-picture', auth, uploadAvatar.single('avatar'), asyn
 
         await user.save();
 
-        return res.json({ File: req.file });
+        return res.json({ File: req.file }); // return the file uploaded
     } catch (err: unknown) {
         logger.error('Could not update profile picture : ' + err);
         return res.status(500).json({ error: 'Could not update profile picture : ' + err });

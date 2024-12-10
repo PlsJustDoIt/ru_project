@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -81,7 +83,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     
   }
 
-  // Fonction pour choisir une image et l'envoyer au serveur via l'API TODO
+  // Fonction pour choisir une image et l'envoyer au serveur via l'API TODO : recupérer l'image du serveur (qui devrait être renvoyée par l'API) et la mettre dans le cache
   Future<void> _pickImage() async {
     logger.i('Picking image');
     try {
@@ -135,7 +137,16 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   Future<void> setImage() async {
     //logger.i('Setting image from server not implemented');
     //default image
-    final rawImageFile = await context.read<ApiService>().getUserRawAvatar(context.read<UserProvider>().user!.avatarUrl);
+    final Uint8List rawImageFile;
+    try {
+      rawImageFile = await context.read<ApiService>().getUserRawAvatar(context.read<UserProvider>().user!.avatarUrl);
+    } catch (e) {
+      logger.e('Failed to get image from server: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to get image from server')),
+      );
+      return;
+    }
     final resImage = await AvatarCache.cacheAvatar(rawImageFile, 'avatar.jpg');
 
     if (resImage != null) {
@@ -573,6 +584,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         
       return;
     }
+
+    userProvider.user!.status = _selectedStatus.toDisplayString();
 
     logger.i('New status: ${_selectedStatus.toDisplayString()}');
 
