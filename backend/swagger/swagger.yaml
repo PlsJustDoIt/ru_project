@@ -1,0 +1,344 @@
+openapi: 3.0.3
+info:
+  title: API Projet Ru
+  description: |
+    API pour l'application Projet Ru
+  version: 0.0.1
+  contact:
+    name: Support Technique
+    email: leomaugeri25@gmail.com
+
+servers:
+  - url: "http://localhost:5000/api"
+    description: Serveur local
+  - url: "http://86.219.194.18:5000/api"
+    description: Serveur en ligne
+
+tags: ## TODO faire ce truc en fonction de comment c'est actuellement dans le code
+  - name: auth
+    description: Opérations d'authentification
+  - name : ginko
+    description: Opérations sur les données de Ginko
+  - name: ru
+    description: Opérations sur les données de RU
+  - name: users
+    description: Opérations sur les utilisateurs
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas: ##ceci a été généré par claude TODO faire ce truc en fonction de comment c'est actuellement dans le code
+    Utilisateur:
+      type: object
+      required:
+        - nom
+        - email
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nom:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+            - admin
+            - utilisateur
+            - moderateur
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ErreurValidation:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+
+paths:
+  ##ceci a été généré par claude TODO faire ce truc en fonction de comment c'est actuellement dans le code
+  /utilisateurs:
+    get:
+      summary: Liste des utilisateurs
+      description: Récupère la liste de tous les utilisateurs
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limite
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Liste des utilisateurs récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  utilisateurs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Utilisateur'
+                  total:
+                    type: integer
+        '401':
+          description: Non autorisé, token invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErreurValidation'
+
+    post:
+      summary: Créer un nouvel utilisateur
+      description: Enregistre un nouvel utilisateur dans le système
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+            examples:
+              utilisateurAdmin:
+                value:
+                  nom: "Jean Dupont"
+                  email: "jean.dupont@exemple.com"
+                  role: "admin"
+      responses:
+        '201':
+          description: Utilisateur créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+        '400':
+          description: Erreur de validation des données
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErreurValidation'
+
+  /utilisateurs/{id}:
+    get:
+      summary: Détails d'un utilisateur
+      description: Récupère les détails d'un utilisateur spécifique
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détails de l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+        '404':
+          description: Utilisateur non trouvé
+
+    put:
+      summary: Mettre à jour un utilisateur
+      description: Met à jour les informations d'un utilisateur existant
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Utilisateur'
+      responses:
+        '200':
+          description: Utilisateur mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Utilisateur'
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErreurValidation'
+
+    delete:
+      summary: Supprimer un utilisateur
+      description: Supprime un utilisateur par son identifiant
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Utilisateur supprimé avec succès
+        '403':
+          description: Opération non autorisée
+  ## TODO auth
+  /auth/register:
+    post:
+      tags: [auth]
+      description: 'Créer un nouvel utilisateur'
+      parameters: []
+      responses:
+        '201':
+          description: OK
+  /auth/login:
+    post:
+      tags: [auth]
+      description: 'Se connecter'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /auth/token:
+    post:
+      tags: [auth]
+      description: 'Récupérer un nouveau token'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /auth/logout:
+    post:
+      tags: [auth]
+      description: 'Se déconnecter'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  ## TODO ginko
+  /ginko/info:
+    get:
+      tags: [ginko]
+      description: 'Récupérer les informations de Ginko'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  ##TODO ru
+  /ru:
+    get:
+      tags: [ru]
+      description: 'Récupérer API doc Ru'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /ru/menus:
+    get:
+      tags: [ru]
+      description: 'Récupérer les repas de RU'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  ##TODO users
+  /users/me:
+    get:
+      tags: [users]
+      description: "Récupérer les informations de l'utilisateur connecté"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/update-username:
+    put:
+      tags: [users]
+      description: "Mettre à jour le nom d'utilisateur"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/update-password:
+    put:
+      tags: [users]
+      description: "Mettre à jour le mot de passe"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/update-status:
+    put:
+      tags: [users]
+      description: "Mettre à jour le statut de l'utilisateur"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/update-profile-picture:
+    put:
+      tags: [users]
+      description: "Mettre à jour la photo de profil"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/friends:
+    get:
+      tags: [users]
+      description: "Récupérer la liste d'amis"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/search:
+    get:
+      tags: [users]
+      description: "Rechercher un utilisateur"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/add-friend:
+    post:
+      tags: [users]
+      description: "Ajouter un ami"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users/remove-friend:
+    delete:
+      tags: [users]
+      description: "Supprimer un ami"
+      parameters: []
+      responses:
+        '200':
+          description: OK
+
+
