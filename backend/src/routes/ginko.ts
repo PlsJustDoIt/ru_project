@@ -4,12 +4,14 @@ import logger from '../services/logger.js';
 import axios, { AxiosResponse } from 'axios';
 import dotenv from 'dotenv';
 import { TempsInfo } from '../interfaces/tempsInfo.js';
-const router = Router();
+import NodeCache from 'node-cache';
 
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
 }
 
+const cache = new NodeCache({ stdTTL: 60 }); // 1 minute
+const router = Router();
 const apiKey = process.env.GINKO_API_KEY;
 if (!apiKey) {
     throw new Error('Ginko API Key not found');
@@ -20,21 +22,26 @@ logger.info('API Key : ' + apiKey);
 
 router.get('/info', auth, async (req: Request, res: Response) => {
     try {
-        const lieu = req.query.lieu;
+        const lieu = req.query.lieu as string;
         if (!lieu || lieu.length === 0) {
             logger.error('Le lieu est vide');
             return res.status(400).json({ error: 'Le lieu est vide' });
         }
+        const cachedData = cache.get(lieu);
+        if (cachedData) {
+            logger.info(`Données récupérées depuis le cache pour le lieu : ${lieu}`);
+            return res.json(cachedData);
+        }
 
         /**
-     * Sends a POST request to the specified API endpoint to get the temperature of a location.
-     *
-     * @constant {AxiosResponse} response - The response from the API call.
-     * @param {string} apiUrl - The base URL of the API.
-     * @param {string} apiKey - The API key for authentication.
-     * @param {string} lieu - The name of the location to get the temperature for.
-     * @returns {Promise<AxiosResponse>} - A promise that resolves to the response from the API.
-     */
+         * Sends a POST request to the specified API endpoint to get the temperature of a location.
+         *
+         * @constant {AxiosResponse} response - The response from the API call.
+         * @param {string} apiUrl - The base URL of the API.
+         * @param {string} apiKey - The API key for authentication.
+         * @param {string} lieu - The name of the location to get the temperature for.
+         * @returns {Promise<AxiosResponse>} - A promise that resolves to the response from the API.
+         */
         const response: AxiosResponse = await axios.post(apiUrl + '/TR/getTempsLieu.do', null, {
             params: {
                 apiKey: apiKey,
@@ -74,6 +81,7 @@ router.get('/info', auth, async (req: Request, res: Response) => {
         };
 
         logger.info('Horaires récupérés : ' + result);
+        cache.set(lieu, result);
         return res.json(result);
     } catch (err: unknown) {
         logger.error('Impossible de récupérer les horaires : ' + err);
