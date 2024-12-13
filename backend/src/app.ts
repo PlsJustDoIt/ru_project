@@ -12,8 +12,13 @@ import morgan from 'morgan';
 import logger from './services/logger.js';
 import { exit } from 'process';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import compression from 'compression';
+import helmet from 'helmet';
 
-if (process.env.NODE_ENV !== 'production') {
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (!isProduction) {
     dotenv.config();
 }
 
@@ -22,18 +27,23 @@ logger.info('MONGO_URI: ' + process.env.MONGO_URI);
 
 mongoose.set('strictQuery', false);
 
-const isProduction = process.env.NODE_ENV === 'production';
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    limit: 15, // Limit each IP to 15 requests per windowMs
+    standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+    // store: ... , // Redis, Memcached, etc. See below.
+});
+
+app.use(helmet());
+app.use(limiter);
+app.use(express.json());
+app.use(cors());
+app.use(compression());
 
 if (isProduction) {
     console.log('lancement en production');
-} else {
-    console.log('lancement en dev');
-}
-
-app.use(express.json());
-app.use(cors());
-
-if (isProduction) {
     // define dirnames
     const __dirname = path.dirname(path.resolve());
     // set up log file stream in logs folder
@@ -42,6 +52,7 @@ if (isProduction) {
     app.use(morgan('combined', { stream: accessLogStream }));
     app.use('/api/uploads', express.static('../uploads'));
 } else {
+    console.log('lancement en dev');
     app.use(morgan('dev'));
     app.use('/api/uploads', express.static('uploads'));
 }
