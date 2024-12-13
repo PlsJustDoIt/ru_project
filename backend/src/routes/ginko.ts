@@ -11,6 +11,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const apiKey = process.env.GINKO_API_KEY;
+if (!apiKey) {
+    throw new Error('Ginko API Key not found');
+}
 const apiUrl = 'https://api.ginko.voyage';
 
 logger.info('API Key : ' + apiKey);

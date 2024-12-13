@@ -179,7 +179,7 @@ router.put('/update-status', auth, async (req: Request, res: Response) => {
     }
 });
 
-router.post('/update-profile-picture', auth, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
+router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id);
 
@@ -197,7 +197,11 @@ router.post('/update-profile-picture', auth, uploadAvatar.single('avatar'), asyn
 
         await user.save();
 
-        return res.json({ File: req.file }); // return the file uploaded
+        // const image = fs.readFileSync(req.file.path);
+
+        res.setHeader('Content-Type', 'image/jpeg'); // Définir le type MIME
+
+        return res.sendFile(req.file.path); // return the file uploaded
     } catch (err: unknown) {
         logger.error('Could not update profile picture : ' + err);
         return res.status(500).json({ error: 'Could not update profile picture : ' + err });

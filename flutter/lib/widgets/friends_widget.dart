@@ -92,6 +92,9 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
     // ];
 
     // // Mets à jour l'état avec les amis récupérés
+    if(!mounted){
+      return;
+    }
     setState(() {
       friends = fetchedFriends;
     });

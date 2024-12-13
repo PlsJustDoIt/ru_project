@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 
@@ -326,20 +328,20 @@ class ApiService {
   }
 
   //update user status
-  Future<bool> updateStatus(String status) async {
+  Future<Map<String, dynamic>> updateStatus(String status) async {
     try {
       final Response response = await _dio.put('/users/update-status', data: {
         'status': status,
       });
       if (response.statusCode == 200) {
         logger.i('Status updated: $status');
-        return true;
+        return {'status': response.data['status'], 'success': true};
       }
       logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return false;
+      return { 'error': response.data['error'], 'success': false};
     } catch (e) {
       logger.e('Failed to update status: $e');
-      return false;
+      return { 'error': e, 'success': false};
     }
   }
 
@@ -402,15 +404,14 @@ class ApiService {
         'avatar': file,
         'platform': kIsWeb ? 'web' : Platform.operatingSystem, // Indique la plateforme
       });
-
       //dio multipart request
-      final Response response = await _dio.post('/users/update-profile-picture', data: formData);
-
-      
+      final Response response = await _dio.put('/users/update-profile-picture', data: formData);
       
       if (response.statusCode == 200) {
         logger.i('Profile picture updated');
+        //return image if successful 
         return true;
+        //return response.data.bodyBytes; problem ici
       } else {
         logger.e('Failed to update profile picture');
         return false;
@@ -421,21 +422,41 @@ class ApiService {
     }
   }
 
-  //get user avatar
-  Future<Uint8List> getUserRawAvatar(String avatarUrl) async {
-    try {
-      final Response response = await _dio.get("/$avatarUrl", options: Options(responseType: ResponseType.bytes));
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data;
-      }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      throw Exception('Failed to get avatar');
-    } catch (e) {
-      logger.e('Failed to get avatar: $e');
-      throw Exception('Failed to get avatar: $e');
-    }
-  }
+// │ 💡 {
+// │ 💡   "File": {
+// │ 💡     "fieldname": "avatar",
+// │ 💡     "originalname": "scaled_OswaldHIM.jpeg",
+// │ 💡     "encoding": "7bit",
+// │ 💡     "mimetype": "image/jpeg",
+// │ 💡     "destination": "/home/m3hm3t/Documents/Autre/projetAppRuLeo/projet/ru_project/backend/uploads/avatar",
+// │ 💡     "filename": "67308da5ea29674684ce1bb7.jpeg",
+// │ 💡     "path": "/home/m3hm3t/Documents/Autre/projetAppRuLeo/projet/ru_project/backend/uploads/avatar/67308da5ea29674684ce1bb7.jpeg",
+// │ 💡     "size": 75728
+// │ 💡   }
+// │ 💡 }
 
+  // //get user avatar
+  // Future<Uint8List> getUserRawAvatar(String avatarUrl) async {
+  //   try {
+  //     logger.i('Getting avatar: $avatarUrl');
+  //     final Response response = await _dio.get("/$avatarUrl", options: Options(responseType: ResponseType.bytes));
+  //     logger.i('Response: ${response.headers}');
+  //     if (response.data != null) {
+  //       return response.data;
+  //     }
+  //     logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+  //     throw Exception('Failed to get avatar');
+  //   } catch (e) {
+  //     logger.e('Failed to get avatar: $e');
+  //     throw Exception('Failed to get avatar: $e');
+  //   }
+  // }
+
+
+  //todo : a voir si ya mieux
+  String getImageNetworkUrl(String avatarUrl) {
+    return '${Config.apiUrl}/$avatarUrl';
+  }
 
 }
 

@@ -11,39 +11,41 @@ import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/search_widget.dart';
 import 'package:ru_project/services/cache_service.dart';
 
-enum UserStatus {
-  enLigne,
-  auRu,
-  absent;
+// enum UserStatus {
+//   enLigne,
+//   auRu,
+//   absent;
 
-  String toDisplayString() {
-    switch (this) {
-      case UserStatus.enLigne:
-        return 'en ligne';
-      case UserStatus.auRu:
-        return 'au ru';
-      case UserStatus.absent:
-        return 'absent';
-    }
-  }
+//   String toDisplayString() {
+//     switch (this) {
+//       case UserStatus.enLigne:
+//         return 'en ligne';
+//       case UserStatus.auRu:
+//         return 'au ru';
+//       case UserStatus.absent:
+//         return 'absent';
+//     }
+//   }
 
-  static UserStatus fromString(String status) {
-    switch (status.toLowerCase()) {
-      case 'en ligne':
-        return UserStatus.enLigne;
-      case 'au ru':
-        return UserStatus.auRu;
-      case 'absent':
-        return UserStatus.absent;
-      default:
-        return UserStatus.absent; // Default value
-    }
-  }
-}
+//   static UserStatus fromString(String status) {
+//     switch (status.toLowerCase()) {
+//       case 'en ligne':
+//         return UserStatus.enLigne;
+//       case 'au ru':
+//         return UserStatus.auRu;
+//       case 'absent':
+//         return UserStatus.absent;
+//       default:
+//         return UserStatus.absent; // Default value
+//     }
+//   }
+// }
 
+bool _isAvatarChanged = false;
 
 class ProfileWidget extends StatefulWidget {
   late User? user;
+  final statusList = ['en ligne', 'au ru', 'absent'];
 
   ProfileWidget({
     super.key,
@@ -62,11 +64,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   late TextEditingController _oldPasswordController;
   late TextEditingController _passwordController;
   late TextEditingController _passwordConfirmController; //TODO add confirm password part
-  File? _imageFile;
-  Image image = Image.asset('assets/images/default-avatar.png');
+  //File? _imageFile;
+  //Image imageDefault = Image.asset('assets/images/default-avatar.png');
   final ImagePicker _picker = ImagePicker();
-  late UserStatus _selectedStatus;
+  late String _selectedStatus;
   bool hasSubmitted = false;
+
   
 
   @override
@@ -78,7 +81,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       _oldPasswordController = TextEditingController();
       _passwordController = TextEditingController();
       _passwordConfirmController = TextEditingController();
-      _selectedStatus = UserStatus.fromString(widget.user!.status);
+      _selectedStatus = widget.user!.status;
     }
     
   }
@@ -92,36 +95,64 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         imageQuality: 80,
         maxWidth: 800,
       );
-      if (pickedFile != null) {
-        logger.i('Image picked: ${pickedFile.path}');
+      if (pickedFile == null) {
+        logger.w('No image selected');
+        return;
+      }
+      logger.i('Image picked: ${pickedFile.path}');
 
-        if (mounted != true) {
-          logger.w('Component is not mounted before updating profile picture');
-          return;
-        }
-        
-        bool isUpdated = await context.read<ApiService>().updateProfilePicture(pickedFile);
+      if (mounted != true) {
+        logger.w('Component is not mounted before updating profile picture');
+        return;
+      }
 
-        if (mounted != true) {
-          logger.w('Component is not mounted after updating profile picture');
-          return;
-        }
+      bool result = await context.read<ApiService>().updateProfilePicture(pickedFile);
 
-        /*
-        if (isUpdated) {
-          logger.i('Profile picture updated');
-          setImage();
-          return;
-        }
-        */
+      if (mounted != true) {
+        logger.w('Component is not mounted after updating profile picture');
+        return;
+      }
 
-        logger.w('Failed to update profile picture');
+      if (result) {
+        setState(() {
+          logger.i("user id = ${widget.user!.id}");
+            _isAvatarChanged = true;
+            widget.user!.avatarUrl = widget.user!.avatarUrl.replaceAll(RegExp(r'\.\w+$'), '.${pickedFile.name.split('.').last}');
+        });
+        logger.i('Profile picture updated');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update profile picture')),
+          const SnackBar(content: Text('Profile picture updated')),
         );
         return;
-      } 
-      logger.w('No image selected'); 
+      }
+
+      // if (rawImageFile != null) {
+      //   final resImage = await AvatarCache.cacheAvatar(rawImageFile, 'avatar.jpg');
+      //   if (mounted != true) {
+      //     logger.w('Component is not mounted after caching image');
+      //     return;
+      //   }
+      //   if (resImage != null) {
+      //     setState(() {
+      //       _imageFile = resImage;
+      //     });
+      //     logger.i('Profile picture updated');
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       const SnackBar(content: Text('Profile picture updated')),
+      //     );
+      //     return;
+      //   } 
+      //   logger.w('Failed to cache image');
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(content: Text('Failed to cache image')),
+      //   );
+      //   return;
+      // }
+
+      logger.w('Failed to update profile picture');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update profile picture')),
+      );
     } catch (e) {
       logger.e('Error picking image: $e');
       if (mounted != true) {
@@ -133,38 +164,44 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
   }
 
-  //set imageFile from server TODO
-  Future<void> setImage() async {
-    //logger.i('Setting image from server not implemented');
-    //default image
-    final Uint8List rawImageFile;
-    try {
-      rawImageFile = await context.read<ApiService>().getUserRawAvatar(context.read<UserProvider>().user!.avatarUrl);
-    } catch (e) {
-      logger.e('Failed to get image from server: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to get image from server')),
-      );
-      return;
-    }
-    final resImage = await AvatarCache.cacheAvatar(rawImageFile, 'avatar.jpg');
 
-    if (resImage != null) {
-      logger.i('Image set from server');
-      setState(() {
-        _imageFile = resImage;
-      });
-    } else {
-      logger.w('Failed to set image from server');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to set image from server')),
-      );
-    }
 
-  }
+  // //set imageFile from server TODO
+  // Future<void> setImage() async {
+  //   //logger.i('Setting image from server not implemented');
+  //   //default image
+  //   final Uint8List rawImageFile;
+  //   try {
+  //     rawImageFile = await context.read<ApiService>().getUserRawAvatar(context.read<UserProvider>().user!.avatarUrl);
+  //   } catch (e) {
+  //     logger.e('Failed to get image from server: $e');
+  //     if (context.mounted == false) {
+  //       return;
+  //     }
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Failed to get image from server')),
+  //     );
+  //     return;
+  //   }
+  //   final resImage = await AvatarCache.cacheAvatar(rawImageFile, 'avatar.jpg');
+
+  //   if (resImage != null) {
+  //     logger.i('Image set from server');
+  //     setState(() {
+  //       _imageFile = resImage;
+  //     });
+  //   } else {
+  //     logger.w('Failed to set image from server in cache (web client?)');
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Failed to set image from server')),
+  //     );
+  //   }
+
+  // }
 
   @override
   Widget build(BuildContext context) {
+    
     if (widget.user == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -172,11 +209,23 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
     final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    if (_imageFile == null) {
 
-      setImage();
-
+    //TODO demander si ca c'est bon
+    String fullUrl;
+    if (widget.user!.avatarUrl.isEmpty) {
+      fullUrl = apiService.getImageNetworkUrl("uploads/avatar/default-avatar.png");
+    }else{
+      fullUrl = apiService.getImageNetworkUrl(widget.user!.avatarUrl);
     }
+
+    Image imageAvatar = Image.network(fullUrl);
+
+    if (_isAvatarChanged) {
+      imageAvatar.image.evict(); 
+      _isAvatarChanged = false;
+    }
+
+    logger.i(widget.user!.avatarUrl);
 
     return  SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -186,10 +235,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                //add error handling TODO all
                 CircleAvatar(
                   radius: 60,
-                  backgroundImage: _imageFile != null ? FileImage(_imageFile!) : image.image,
+                  backgroundImage: imageAvatar.image,
                 ),
                 FloatingActionButton.small(
                   onPressed: _pickImage,
@@ -211,15 +259,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             changeUsernameButton(apiService, userProvider, context),
             const SizedBox(height: 16),
             changePassword(apiService, userProvider, context),
-            const SizedBox(height: 16),
-            //image test affichage
-            const Text('Image test'),
-            if (_imageFile != null)
-              Image.asset(
-                _imageFile!.path,
-                width: 200,
-                height: 200,
-              ),
           ],
         ),
       );
@@ -438,7 +477,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Champ de texte pour le status
-          DropdownButtonFormField<UserStatus>(
+          DropdownButtonFormField<String>(
             
             value: _selectedStatus,
             decoration: const InputDecoration(
@@ -448,14 +487,14 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               //focusedBorder: OutlineInputBorder(),
               focusColor: Colors.blue,
             ),
-            items: UserStatus.values.map((UserStatus status) {
-              return DropdownMenuItem<UserStatus>(
+            items: widget.statusList.map((String status) {
+              return DropdownMenuItem<String>(
                 value: status,
-                child: Text(status.toDisplayString()),
+                child: Text(status),
                 
               );
             }).toList(),
-            onChanged: (UserStatus? newValue) {
+            onChanged: (String? newValue) {
               if (newValue != null) {
                 setState(() {
                   _selectedStatus = newValue;
@@ -478,9 +517,26 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       return;                  
     }
     
-    bool res;
     try {
-      res = await apiService.updateUsername(_usernameController.text);
+      bool success = await apiService.updateUsername(_usernameController.text);
+      if (success) {
+        userProvider.user!.username = _usernameController.text;
+
+        logger.i('New username: ${_usernameController.text}');
+
+        setState(() {
+          hasSubmitted = false;
+        });
+
+        if (context.mounted == false) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Nom d\'utilisateur mis à jour avec succès.')));
+        Navigator.of(context).pop();
+      }
+      throw Exception('Failed to update username');
     } catch (e) {
       if (context.mounted == false) {
         return;
@@ -489,29 +545,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           SnackBar(content: Text('Erreur de mise à jour du nom d\'utilisateur')));
       return;
     }
-    if (context.mounted == false) {
-      return;
-    }
-    if (!res) {
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du nom d\'utilisateur')));
-        
-      return;
-    }
     
-    //setUser TODO se renseigner si il faut faire un get user 
-    userProvider.user!.username = _usernameController.text;
-
-    logger.i('New username: ${_usernameController.text}');
-
-    setState(() {
-      hasSubmitted = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Nom d\'utilisateur mis à jour avec succès.')));
-    Navigator.of(context).pop();
+    
   }
 
   void comfirmPassword(ApiService apiService, UserProvider userProvider,BuildContext context) async {
@@ -523,9 +558,21 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       return;                
     }
     
-    bool res;
     try {
-      res = await apiService.updatePassword(_passwordController.text,_oldPasswordController.text);
+      bool success = await apiService.updatePassword(_passwordController.text,_oldPasswordController.text);
+      if (success) {
+        logger.i('New password: ${_passwordController.text}');
+        setState(() {
+          hasSubmitted = false;
+        });
+        if (context.mounted == false) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Mot de passe mis à jour avec succès.')));
+        Navigator.of(context).pop();
+      }
+      throw Exception('Failed to update password');
     } catch (e) {
       if (context.mounted == false) {
         return;
@@ -534,39 +581,34 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           SnackBar(content: Text('Erreur de mise à jour du mot de passe')));
       return;
     }
-    if (context.mounted == false) {
-      return;
-    }
-    if (!res) {
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du mot de passe')));
-        
-      return;
-    }
-
-    logger.i('New password: ${_passwordController.text}');
-
-    setState(() {
-      hasSubmitted = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mot de passe mis à jour avec succès.')));
-    Navigator.of(context).pop();
   }
 
   void comfirmStatus(ApiService apiService, UserProvider userProvider,BuildContext context,bool isDialog) async {
-    if (userProvider.user!.status == _selectedStatus.toDisplayString()) {
+    if (userProvider.user!.status == _selectedStatus) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Le status est déjà à jour')));
       return;
     }
     
-    bool res;
+    
     try {
-      res = await apiService.updateStatus(_selectedStatus.toDisplayString());
+      var response = await apiService.updateStatus(_selectedStatus);
+      bool success = response['success']; 
+
+      if (!success) {
+        throw Exception(response['error']);
+      }
+
+      userProvider.user!.status = response['status'];
+      
+      if (context.mounted == false) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Status mis à jour avec succès.')));
+
     } catch (e) {
+      logger.e('Error updating status: $e');
       if (context.mounted == false) {
         return;
       }
@@ -574,28 +616,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           SnackBar(content: Text('Erreur de mise à jour du status')));
       return;
     }
-    if (context.mounted == false) {
-      return;
-    }
-    if (!res) {
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du status')));
-        
-      return;
-    }
-
-    userProvider.user!.status = _selectedStatus.toDisplayString();
-
-    logger.i('New status: ${_selectedStatus.toDisplayString()}');
-
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Status mis à jour avec succès.')));
-
-    if(isDialog){
-      Navigator.of(context).pop();
-    }
-
   }
 
 

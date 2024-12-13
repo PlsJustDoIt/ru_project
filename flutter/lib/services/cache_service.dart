@@ -29,10 +29,12 @@ class AvatarCache {
     try {
       // Calculer un hash unique pour identifier les données
       final hash = md5.convert(avatarData).toString();
-
+      
+      // Si l'application est en mode web
       if (kIsWeb) {
-        return null;
+        return null; // Ne pas mettre en cache les avatars en mode web
       }
+
       // Obtenir le répertoire des documents de l'application
       final directory = await getApplicationDocumentsDirectory();
 

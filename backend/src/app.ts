@@ -30,6 +30,9 @@ if (isProduction) {
     console.log('lancement en dev');
 }
 
+app.use(express.json());
+app.use(cors());
+
 if (isProduction) {
     // define dirnames
     const __dirname = path.dirname(path.resolve());
@@ -52,8 +55,6 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB Connected'))
     .catch(err => logger.error('MongoDB connection error:', err));
 
-app.use(express.json());
-app.use(cors());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
