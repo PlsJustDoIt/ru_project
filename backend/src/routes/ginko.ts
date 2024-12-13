@@ -44,7 +44,7 @@ router.get('/info', auth, async (req: Request, res: Response) => {
 
         if (response.status !== 200 && response.data['ok'] == false) {
             logger.error(response.data['msg']);
-            return res.status(400).json(response.data['msg']);
+            return res.status(400).json({ data: response.data['msg'] });
         }
 
         logger.info('nom exact : ' + response.data['objets']['nomExact']);

@@ -35,19 +35,6 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
   }
   
 
-  //check if the user is connected and set the menus
-  // void _checkLoginStatus() async {
-  //   final userProvider = Provider.of<UserProvider>(context, listen: false);
-  //   bool isLoggedIn = await userProvider.isConnected();
-
-  //   if (!isLoggedIn || context.mounted == false) {
-  //     return;
-  //   }
-
-  //   setMenus(context);
-
-  // }
-
   //set the menus
   void setMenus(BuildContext context) async {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
