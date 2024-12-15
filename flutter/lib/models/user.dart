@@ -35,5 +35,10 @@ class User {
     };
   }
 
+  @override
+  String toString() {
+    return 'User{id: $id, username: $username, status: $status, avatarUrl: $avatarUrl, friendIds: $friendIds}';
+  }
+
   
 }

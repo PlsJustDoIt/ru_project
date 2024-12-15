@@ -48,56 +48,53 @@ class FriendsListSheet extends StatefulWidget {
 
 class _FriendsListSheetState extends State<FriendsListSheet> {
   List<User> friends = [];
+  late Future<List<User>?> _friendsFuture;
 
   @override
   void initState() {
     super.initState();
     // Appelle la fonction pour charger les amis au lancement du widget
      _loadFriends();
+
+     _friendsFuture = _loadFriends();
   }
 
-  Future<void> _loadFriends() async {
+  // Future<void> _loadFriends() async {
+  //   ApiService api = Provider.of<ApiService>(context, listen: false);
+
+  //   // Remplace cette partie par ta requête pour récupérer les amis
+  //   List<User>? fetchedFriends = await api.getFriends();
+  //   logger.i('Amis récupérés: $fetchedFriends');
+  //   fetchedFriends?.forEach((element) {
+  //     logger.i(element.toString());
+  //   });
+  //   if (fetchedFriends == null) {
+  //     logger.e('Impossible de récupérer les amis');
+  //     return;
+  //   }
+
+  //   // // Mets à jour l'état avec les amis récupérés
+  //   if(!mounted){
+  //     return;
+  //   }
+  //   setState(() {
+  //     friends = fetchedFriends;
+  //   });
+  // }
+
+  Future<List<User>?> _loadFriends() async {
     ApiService api = Provider.of<ApiService>(context, listen: false);
 
-    // Remplace cette partie par ta requête pour récupérer les amis
+    // Récupérer les amis
     List<User>? fetchedFriends = await api.getFriends();
     logger.i('Amis récupérés: $fetchedFriends');
+    
     if (fetchedFriends == null) {
       logger.e('Impossible de récupérer les amis');
-      return;
+      return [];
     }
 
-    // List<User> fetchedFriends = [
-    //   User(
-    //     id: '1',
-    //     username: 'Marie Dupont',
-    //     avatarUrl: 'https://exemple.com/avatar.jpg',
-    //     status: 'en ligne',
-    //     friendIds:[],
-    //   ),
-    //   User(
-    //     id: '2',
-    //     username: 'Jean Martin',
-    //     avatarUrl: 'https://exemple.com/avatar.jpg',
-    //     status: 'au ru',
-    //     friendIds:[],
-    //   ),
-    //   User(
-    //     id: '3',
-    //     username: 'Sophie Bernard',
-    //     avatarUrl: 'https://exemple.com/avatar.jpg',
-    //     status: 'en train de manger',
-    //     friendIds:[],
-    //   ),
-    // ];
-
-    // // Mets à jour l'état avec les amis récupérés
-    if(!mounted){
-      return;
-    }
-    setState(() {
-      friends = fetchedFriends;
-    });
+    return fetchedFriends;
   }
 
   void _showDeleteConfirmationDialog(String friendId) {
@@ -132,6 +129,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final apiService = Provider.of<ApiService>(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
@@ -200,42 +198,69 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
             ),
           ),
 
-          friends.isEmpty
-              ? Expanded(
-                  child:Padding(
+          Expanded(
+            child: FutureBuilder<List<User>?>(
+              future: _friendsFuture,
+              builder: (context, snapshot) {
+                // Gestion des différents états du Future
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Erreur de chargement des amis'),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _friendsFuture = _loadFriends();
+                            });
+                          }, 
+                          child: Text('Réessayer')
+                        )
+                      ],
+                    ),
+                  );
+                }
+
+                // Récupérer la liste des amis
+                final friends = snapshot.data ?? [];
+
+                // Si pas d'amis
+                if (friends.isEmpty) {
+                  return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text('HAHAHAH TA PAS DAMIS'),
                         SizedBox(height: 16),
-                        Image.asset('assets/images/haha.webp'
-                        ),
-                        
+                        Image.asset('assets/images/haha.webp'),
                       ],
                     )
-                  ) 
-                )
-              : 
+                  );
+                }
 
-          // Liste des amis
-          Expanded(
-            child: ListView.builder(
-              itemCount: friends.length,
-              itemBuilder: (context, index) {
-                final friend = friends[index];
-                return ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  leading: CircleAvatar(
-                    radius: 28,
-                     backgroundImage: NetworkImage("assets/images/haha.webp"),
-                    child: Text(friend.username[0]),
-                  ),
-                  title: Text(
-                    friend.username,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  subtitle: Padding(
+                // Liste des amis
+                return ListView.builder(
+                  itemCount: friends.length,
+                  itemBuilder: (context, index) {
+                    final friend = friends[index];
+                    return ListTile(
+                      // Votre code de ListTile existant
+                      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      leading: CircleAvatar(
+                        radius: 28,
+                        backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
+                      ),
+                      title: Text(
+                        friend.username,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      subtitle: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(friend.status),
                   ),
@@ -278,6 +303,10 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                   onTap: () {
                     logger.i('Profil de ${friend.username} sélectionné');
                   },
+
+                      // ... le reste de votre code de ListTile
+                    );
+                  },
                 );
               },
             ),
@@ -298,7 +327,33 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                   ),
                 ),
                 onPressed: () {
-                  logger.i('Ajouter un nouvel ami');
+                  showDialog(context: context, builder: (context) {
+                    TextEditingController controller = TextEditingController();
+                    return AlertDialog(
+                      title: Text('Ajouter un ami'),
+                      content: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Nom d\'utilisateur',
+                        ),
+                        controller: controller,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('Annuler'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Logique d'ajout d'ami
+                            apiService.addFriend(controller.text);
+                            controller.clear();
+                            Navigator.of(context).pop();
+                          },
+                          child: Text('Ajouter'),
+                        ),
+                      ],
+                    );
+                  });
                 },
                 child: Text(
                   'Ajouter un ami',

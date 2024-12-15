@@ -30,4 +30,9 @@ class Menu {
       "date": date,
     };
   }
+
+  @override
+  String toString() {
+    return 'Menu{plats: $plats, date: $date}';
+  }
 }
