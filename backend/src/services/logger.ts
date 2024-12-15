@@ -2,7 +2,7 @@ import path from 'path';
 import winston from 'winston';
 import fs from 'fs';
 
-const isProduction = process.env.NODE_ENV === 'production';
+import isProduction from '../config.js';
 
 const logger = winston.createLogger({
     level: 'info',

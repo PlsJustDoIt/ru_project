@@ -1,3 +1,4 @@
+import isProduction from './config.js';
 import express from 'express';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
@@ -16,8 +17,6 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import helmet from 'helmet';
 
-const isProduction = process.env.NODE_ENV === 'production';
-
 if (!isProduction) {
     dotenv.config();
 }
@@ -30,10 +29,14 @@ mongoose.set('strictQuery', false);
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    limit: 15, // Limit each IP to 15 requests per windowMs
+    limit: 30, // Limit each IP to 15 requests per windowMs
     standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
     // store: ... , // Redis, Memcached, etc. See below.
+    handler: (req, res) => {
+        logger.error('Too many requests, please try again later.');
+        res.status(429).json({ error: 'Too many requests, please try again later.' });
+    },
 });
 
 app.use(helmet());
