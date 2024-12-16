@@ -16,6 +16,8 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yaml';
 
 if (!isProduction) {
     dotenv.config();
@@ -73,6 +75,23 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
 app.use('/api/ginko', ginkoRoutes);
+
+// app.use((error: any, req: Request, res: Response, next: NextFunction) => {
+//     res.status(500).json({ message: error.message, stack: error.stack, path: req.path });
+// });
+
+// Swagger
+const swaggerFilePath = path.join(path.resolve(), 'swagger.yaml');
+const file = fs.readFileSync(swaggerFilePath, 'utf8');
+const swaggerDocument = YAML.parse(file);
+// swaggerUi.setup(swaggerDocument);
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+app.use('/api-docs', function (req: express.Request & { host?: unknown; swaggerDoc?: swaggerUi.JsonObject }, res: express.Response, next: express.NextFunction) {
+    swaggerDocument.host = req.host;
+    req.swaggerDoc = swaggerDocument;
+    next();
+}, swaggerUi.serveFiles(swaggerDocument), swaggerUi.setup());
 
 const PORT = process.env.PORT || 5000;
 
