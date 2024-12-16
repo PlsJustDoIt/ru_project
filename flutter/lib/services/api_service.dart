@@ -26,8 +26,8 @@ class ApiService {
   ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: Config.apiUrl,
-      connectTimeout: Duration(milliseconds: 5000),
-      receiveTimeout: Duration(milliseconds: 3000),
+       connectTimeout: Duration(seconds: 10),  // Plus généreux
+      receiveTimeout: Duration(seconds: 7),   // Plus long
     ));
    _dio.interceptors.add(
   InterceptorsWrapper(
@@ -55,6 +55,10 @@ class ApiService {
           await logout();
         }
       }
+
+       logger.i('Erreur détaillée : ${e.type}');
+    logger.i('Message : ${e.message}');
+    logger.i('Response : ${e.response?.data}');
       
       // Pour toutes autres erreurs
        return handler.next(e);
@@ -192,7 +196,7 @@ class ApiService {
   Future<bool> addFriend(String friendUsername) async {
     try {
       final Response response = await _dio.post('/users/add-friend', data: {
-        'friendUsername': friendUsername,
+        'username': friendUsername,
       });
 
       // Vérifie si la réponse contient des données valides
@@ -405,7 +409,7 @@ class ApiService {
         'platform': kIsWeb ? 'web' : Platform.operatingSystem, // Indique la plateforme
       });
       //dio multipart request
-      final Response response = await _dio.put('/users/update-profile-picture', data: formData);
+      final Response response = await _dio.put('/users/update-profile-picture', data: formData); // avatarUrl : response.data['avatarUrl']
       
       if (response.statusCode == 200) {
         logger.i('Profile picture updated');

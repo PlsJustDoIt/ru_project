@@ -117,7 +117,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         setState(() {
           logger.i("user id = ${widget.user!.id}");
             _isAvatarChanged = true;
-            widget.user!.avatarUrl = widget.user!.avatarUrl.replaceAll(RegExp(r'\.\w+$'), '.${pickedFile.name.split('.').last}');
+            widget.user!.avatarUrl = widget.user!.avatarUrl;
         });
         logger.i('Profile picture updated');
         ScaffoldMessenger.of(context).showSnackBar(

@@ -5,8 +5,12 @@ import axios, { AxiosResponse } from 'axios';
 import dotenv from 'dotenv';
 import { TempsInfo } from '../interfaces/tempsInfo.js';
 import NodeCache from 'node-cache';
+import fs from 'fs';
+import path from 'path';
 
-if (process.env.NODE_ENV !== 'production') {
+import isProduction from '../config.js';
+
+if (!isProduction) {
     dotenv.config();
 }
 
@@ -22,6 +26,12 @@ logger.info('API Key : ' + apiKey);
 
 router.get('/info', auth, async (req: Request, res: Response) => {
     try {
+        if (!isProduction) {
+            const data = fs.readFileSync(path.join(path.resolve(), 'horaires.json'));
+            const horaires = JSON.parse(data.toString());
+            return res.json(horaires);
+        }
+
         const lieu = req.query.lieu as string;
         if (!lieu || lieu.length === 0) {
             logger.error('Le lieu est vide');
@@ -82,6 +92,9 @@ router.get('/info', auth, async (req: Request, res: Response) => {
 
         logger.info('Horaires récupérés : ' + result);
         cache.set(lieu, result);
+        // save result in horaire.json
+        // const filePath = path.join(path.resolve(), 'horaires.json');
+        // fs.writeFileSync(filePath, JSON.stringify(result, null, 2), 'utf-8');
         return res.json(result);
     } catch (err: unknown) {
         logger.error('Impossible de récupérer les horaires : ' + err);

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import User, { IUser } from '../models/user.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import uploadAvatar from '../services/multer.js';
+import { uploadAvatar, convertAndCompressAvatar } from '../services/multer.js';
 import bcrypt from 'bcrypt';
 // import path from 'path';
 // import fs from 'fs';
@@ -179,7 +179,7 @@ router.put('/update-status', auth, async (req: Request, res: Response) => {
     }
 });
 
-router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
+router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), convertAndCompressAvatar, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id);
 
@@ -201,7 +201,7 @@ router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), async
 
         res.setHeader('Content-Type', 'image/jpeg'); // Définir le type MIME
 
-        return res.sendFile(req.file.path); // return the file uploaded
+        return res.json({ avatarUrl: avatarUrl });
     } catch (err: unknown) {
         logger.error('Could not update profile picture : ' + err);
         return res.status(500).json({ error: 'Could not update profile picture : ' + err });
@@ -263,9 +263,11 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
         }
-        if (user._id == friend._id) {
+
+        if (user._id.equals(friend._id)) {
             return res.status(400).json({ error: 'Cannot add yourself' });
         }
+
         if (user.friends.includes(friend._id)) {
             return res.status(400).json({ error: 'Already friends' });
         }
