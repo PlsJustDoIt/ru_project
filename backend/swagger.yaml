@@ -32,7 +32,7 @@ components:
       bearerFormat: JWT
 
   schemas:
-    User:
+    userAuth:
       type: object
       required:
         - username
@@ -46,7 +46,26 @@ components:
           type: string
           minLength: 3
           maxLength: 32
-    Error:
+    userDB:
+      type: object
+      properties:
+        "_id":
+          type: string
+        "username":
+          type: string
+        "password":
+          type: string
+        "status":
+          type: string
+        "friends":
+          type: array
+          items:
+            type: string
+        "__v":
+          type: integer
+        "avatarUrl":
+          type: string
+    errorResponse:
       type: object
       properties:
         error:
@@ -65,9 +84,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/userAuth'
       responses:
-        '201':
+        '201': 
           description: OK
           content:
             application/json:
@@ -83,14 +102,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
 
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
   /auth/login:
     post:
       tags: [auth]
@@ -101,7 +120,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/userAuth'
       responses:
         '200':
           description: OK
@@ -119,14 +138,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
 
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
                 
   /auth/token:
     post:
@@ -162,19 +181,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '403':
           description: Erreurs liées au refresh token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
   /auth/logout:
     post:
       tags: [auth]
@@ -210,25 +229,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '403':
           description: Erreur de token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '404':
           description: Problème avec le middleware d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
   ## ginko
   /ginko/info:
     get:
@@ -271,25 +290,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '401':
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '403':
           description: Erreur de token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
   ## ru
   /ru:
     get:
@@ -390,19 +409,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '403':
           description: Erreur de token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
   ## users
   /users/me:
     get:
@@ -415,18 +434,22 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/userDB'
         '401' :
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/errorResponse'
   /users/update-username:
     put:
       tags: [users]
@@ -451,14 +474,37 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
         '400':
           description: Erreur de validation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '404':
           description: Utilisateur non trouvé'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/update-password:
     put:
       tags: [users]
@@ -474,23 +520,52 @@ paths:
               type: object
               required:
                 - password
+                - oldPassword
               properties:
                 password:
                   type: string
                   minLength: 3 
                   maxLength: 32
                   description: Nouveau mot de passe
+                oldPassword:
+                  type: string
+                  minLength: 3 
+                  maxLength: 32
+                  description: Ancien mot de passe
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
         '400':
           description: Erreur de validation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '404':
           description: Utilisateur non trouvé'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/update-status:
     put:
       tags: [users]
@@ -513,14 +588,37 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statut:
+                    type: string
         '400':
           description: Erreur de validation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '404':
           description: Utilisateur non trouvé'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/update-profile-picture:
     put:
       tags: [users]
@@ -542,10 +640,25 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl:
+                    type: string
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/friends:
     get:
       tags: [users]
@@ -557,10 +670,33 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    status:
+                      type: string
+                    avatarUrl:
+                      type: string
+                    id: 
+                      type: string
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/search:
     get:
       tags: [users]
@@ -583,10 +719,33 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    status:
+                      type: string
+                    avatarUrl:
+                      type: string
+                    id: 
+                      type: string
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/add-friend:
     post:
       tags: [users]
@@ -609,10 +768,22 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/userDB'
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   /users/remove-friend:
     delete:
       tags: [users]
@@ -635,11 +806,27 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/userDB'
         '400':
           description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
 
 

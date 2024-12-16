@@ -82,18 +82,10 @@ app.use('/api/ginko', ginkoRoutes);
 
 // Swagger
 const swaggerFilePath = path.join(path.resolve(), 'swagger.yaml');
-let file = fs.readFileSync(swaggerFilePath, 'utf8');
-let swaggerDocument = YAML.parse(file);
-// swaggerUi.setup(swaggerDocument);
-// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
-app.use('/api-docs', function (req: express.Request & { host?: unknown; swaggerDoc?: swaggerUi.JsonObject }, res: express.Response, next: express.NextFunction) {
-    file = fs.readFileSync(swaggerFilePath, 'utf8');
-    swaggerDocument = YAML.parse(file);
-    swaggerDocument.host = req.hostname;
-    req.swaggerDoc = swaggerDocument;
-    next();
-}, swaggerUi.serveFiles(swaggerDocument), swaggerUi.setup());
+const file = fs.readFileSync(swaggerFilePath, 'utf8');
+const swaggerDocument = YAML.parse(file);
+swaggerUi.setup(swaggerDocument);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 const PORT = process.env.PORT || 5000;
 
