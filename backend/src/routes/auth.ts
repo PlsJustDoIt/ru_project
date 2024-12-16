@@ -72,6 +72,12 @@ router.post('/login', async (req, res) => {
     let { username, password } = req.body;
 
     try {
+        // test authentification header
+        if (req.headers.authorization && req.headers.authorization.length > 0) {
+            logger.error('User is already connected');
+            return res.status(400).json({ error: 'User is already connected' });
+        }
+
         // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
 
         if (!username || !password) {
@@ -177,7 +183,7 @@ router.post('/logout', auth, async (req, res) => {
             return res.status(404).json({ error: 'problem with the middleware' });
         }
         logger.info(`Déconnexion de l'utilisateur ${user.username}`);
-        res.json({ msg: 'Logged out' });
+        res.json({ message: 'Logged out' });
     } catch (err) {
         logger.error(err);
         res.status(500).json({ error: 'Server error: ' + err });

@@ -42,12 +42,15 @@ components:
           type: string
           minLength: 3
           maxLength: 32
-          example: "utilisateur123"
         password:
           type: string
           minLength: 3
           maxLength: 32
-          example: "toto42"
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
 
 
 paths:
@@ -66,10 +69,28 @@ paths:
       responses:
         '201':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
         '400':
           description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /auth/login:
     post:
       tags: [auth]
@@ -84,10 +105,29 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
         '400':
           description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
   /auth/token:
     post:
       tags: [auth]
@@ -107,16 +147,34 @@ paths:
                 refreshToken:
                   type: string
                   description: Token de rafraîchissement précédemment émis
-                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
         '401':
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
           description: Erreurs liées au refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /auth/logout:
     post:
       tags: [auth]
@@ -136,16 +194,41 @@ paths:
                refreshToken:
                  type: string
                  description: Token de rafraîchissement à invalider
-                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: 
+                  message:
+                    type: string
+                    example: 'Logged out'
         '401':
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Erreur de token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Problème avec le middleware d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   ## ginko
   /ginko/info:
     get:
@@ -165,12 +248,48 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  "nomExact":
+                    type: string
+                  "lignes":
+                    type: object
+                    properties:
+                      "nomLigne":
+                        type: object
+                        properties:
+                          "nomArret":
+                            type: array
+                            items:
+                              type: string
+                          
         '400':
           description: Erreur de requête
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Erreur de token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   ## ru
   /ru:
     get:
@@ -226,14 +345,64 @@ paths:
       tags: [ru]
       summary: Récupérer les menus de RU
       description: 'Récupérer les repas de RU'
+      security:
+        - bearerAuth: []
       parameters: []
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    "Entrées":
+                      type: array
+                      items:
+                        type: string
+                    "Cuisine traditionnelle":
+                      type: array 
+                      items:
+                        type: string
+                    "Menu végétalien":
+                      type: array
+                      items:
+                        type: string
+                    "Pizza":
+                      type: array
+                      items:
+                        type: string
+                    "Cuisine italienne":
+                      type: array
+                      items:
+                        type: string
+                    "Grill":
+                      type: array
+                      items:
+                        type: string
+                    "date":
+                      type: string
+                          
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Erreur de token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   ## users
   /users/me:
     get:
@@ -248,8 +417,16 @@ paths:
           description: OK
         '401' :
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /users/update-username:
     put:
       tags: [users]
@@ -271,7 +448,6 @@ paths:
                   minLength: 3 
                   maxLength: 32
                   description: Nouveau nom d'utilisateur
-                  example: "nouvelutilisateur123"
       responses:
         '200':
           description: OK
@@ -304,7 +480,6 @@ paths:
                   minLength: 3 
                   maxLength: 32
                   description: Nouveau mot de passe
-                  example: "toto84"
       responses:
         '200':
           description: OK
@@ -334,9 +509,7 @@ paths:
               properties:
                 statut:
                   type: string
-                  description: Nouveau statut
-                  example: "au ru"
-                  
+                  description: Nouveau statut de l'utilisateur (doit être 'en ligne', 'au ru' ou 'absent')
       responses:
         '200':
           description: OK
@@ -405,7 +578,6 @@ paths:
                 query:
                   type: string
                   description: Username de l'utilisateur à rechercher
-                  example: "utilisateur123"
               required:
                 - query
       responses:
@@ -432,7 +604,6 @@ paths:
                 username:
                   type: string
                   description: Username de l'utilisateur à ajouter
-                  example: "utilisateur123"
               required:
                 - username
       responses:

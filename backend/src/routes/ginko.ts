@@ -92,9 +92,6 @@ router.get('/info', auth, async (req: Request, res: Response) => {
 
         logger.info('Horaires récupérés : ' + result);
         cache.set(lieu, result);
-        // save result in horaire.json
-        // const filePath = path.join(path.resolve(), 'horaires.json');
-        // fs.writeFileSync(filePath, JSON.stringify(result, null, 2), 'utf-8');
         return res.json(result);
     } catch (err: unknown) {
         logger.error('Impossible de récupérer les horaires : ' + err);
