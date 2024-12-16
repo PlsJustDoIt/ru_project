@@ -7,6 +7,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 export default [
     {
         files: ['**/*.{js,mjs,cjs,ts}'], // Fichiers à inclure
+        ignores: ['dist/**/*'], // Dossiers à exclure
         languageOptions: {
             globals: globals.browser, // Options de langage et globaux
         },
