@@ -75,7 +75,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   @override
   void initState() {
     super.initState();
-    widget.user = context.read<UserProvider>().user;
+    widget.user = context.read<UserProvider>().user; //TODO : à changer
     if (widget.user != null) {
       _usernameController = TextEditingController(text: widget.user?.username);
       _oldPasswordController = TextEditingController();
@@ -201,13 +201,18 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   @override
   Widget build(BuildContext context) {
-    
-    if (widget.user == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
 
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
     final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
+
+
+    if (widget.user == null) { //TODO faire meilleur
+      userProvider.reloadUserFromStorage();
+      setState(() {
+        widget.user = userProvider.user;
+      });
+      return const Center(child: CircularProgressIndicator());
+    }
 
 
     //TODO demander si ca c'est bon
