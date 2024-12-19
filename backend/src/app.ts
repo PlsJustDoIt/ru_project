@@ -41,7 +41,7 @@ const limiter = rateLimit({
     },
 });
 
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(limiter);
 app.use(express.json());
 app.use(cors());
