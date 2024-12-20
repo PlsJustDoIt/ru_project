@@ -4,7 +4,6 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
-import 'package:ru_project/services/user_storage.dart';
 
 class UserProvider with ChangeNotifier {
   User? _user;
@@ -12,16 +11,13 @@ class UserProvider with ChangeNotifier {
   final SecureStorage _secureStorage = SecureStorage();
   final _api = ApiService();
 
-  // Getters
   User? get user => _user;
   List<User> get friends => _friends;
 
-  // Constructor
   UserProvider() {
     _initialize();
   }
 
-  // Initialization method
   Future<void> _initialize() async {
     logger.i('initializing user provider');
     try {
@@ -31,10 +27,9 @@ class UserProvider with ChangeNotifier {
         final User? user = await _api.getUser();
         if (user != null) {
           _user = user;
-          UserStorageService.saveUser(user);
           notifyListeners();
         } else {
-          handleLoginError();
+          reloadUser();
         }
         // await fetchFriends(); cette fonction marche pas
       } else {
@@ -44,7 +39,7 @@ class UserProvider with ChangeNotifier {
         if (user != null) {
           await _handleTokenExpiration();
         } else {
-          //M jsp
+          //todo : savoir quoi faire
         }
       }
     } catch (e) {
@@ -75,37 +70,20 @@ class UserProvider with ChangeNotifier {
 
   void setUser(User user) {
     _user = user;
-    UserStorageService.saveUser(user);
     notifyListeners();
   }
 
-  // Méthode poour recharger un utilisateur depuis l'API
   Future<void> reloadUser() async {
     final User? user = await _api.getUser();
     if (user != null) {
       _user = user;
-      UserStorageService.saveUser(user);
       notifyListeners();
-    } else {
-      handleLoginError();
-    }
-  }
-
-  // Méthode poour recharger un utilisateur depuis l'UserStorage
-  Future<void> reloadUserFromStorage() async {
-    final User? user = await UserStorageService.getUser();
-    if (user != null) {
-      _user = user;
-      notifyListeners();
-    } else {
-      handleLoginError();
     }
   }
 
   // Méthode pour se déconnecter
   void logout() {
     _user = null;
-    UserStorageService.deleteUser();
     _friends = [];
     notifyListeners();
   }

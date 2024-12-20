@@ -75,7 +75,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   @override
   void initState() {
     super.initState();
-    widget.user = context.read<UserProvider>().user; //TODO : à changer
+    widget.user = context.read<UserProvider>().user;
     if (widget.user != null) {
       _usernameController = TextEditingController(text: widget.user?.username);
       _oldPasswordController = TextEditingController();
@@ -121,7 +121,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         });
         logger.i('Profile picture updated');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated')),
+          const SnackBar(content: Text('L\'image de profil a été mise à jour')),
         );
         return;
       }
@@ -201,21 +201,16 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   @override
   Widget build(BuildContext context) {
+    logger.i('Building profile widget');
 
     final ApiService apiService = Provider.of<ApiService>(context, listen: false);
     final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
 
-
-    if (widget.user == null) { //TODO faire meilleur
-      userProvider.reloadUserFromStorage();
-      setState(() {
-        widget.user = userProvider.user;
-      });
+    
+    if (userProvider.user == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-
-    //TODO demander si ca c'est bon
     String fullUrl;
     if (widget.user!.avatarUrl.isEmpty) {
       fullUrl = apiService.getImageNetworkUrl("uploads/avatar/default-avatar.png");
