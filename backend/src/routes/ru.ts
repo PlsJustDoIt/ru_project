@@ -4,8 +4,6 @@ import NodeCache from 'node-cache';
 import xml2js from 'xml2js';
 import fs from 'fs';
 import { Menu, MenuXml } from '../interfaces/menu.js';
-import { format, parse } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import logger from '../services/logger.js';
 
 const router = Router();
@@ -30,14 +28,6 @@ const apiDoc = {
             },
         ],
     },
-};
-
-// Fonction pour convertir la date
-const formatDate = (dateString: string): string => {
-    // Parsing de la date au format 'YYYY-MM-DD'
-    const date = parse(dateString, 'yyyy-MM-dd', new Date());
-    // Formatage de la date au format 'dddd d MMMM yyyy'
-    return format(date, 'eeee d MMMM yyyy', { locale: fr });
 };
 
 function decodeHtmlEntities(text: string) {
@@ -93,7 +83,7 @@ function transformToMenu(menu: MenuXml): Menu {
         'Pizza': extractPlats(html, 'Pizza'),
         'Cuisine italienne': extractPlats(html, 'Cuisine italienne'),
         'Grill': extractPlats(html, 'Grill'),
-        'date': formatDate(date), // On récupère la date du menu
+        'date': date, // On récupère la date du menu
     };
 }
 

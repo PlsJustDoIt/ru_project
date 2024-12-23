@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -10,6 +11,7 @@ import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/search_widget.dart';
 import 'package:ru_project/services/cache_service.dart';
+import 'package:ru_project/widgets/welcome.dart';
 
 // enum UserStatus {
 //   enLigne,
@@ -257,11 +259,80 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           changeUsernameButton(apiService, userProvider, context),
           const SizedBox(height: 16),
           changePassword(apiService, userProvider, context),
+          const SizedBox(height: 16),
+          deleteAccountButton(apiService, userProvider, context),
         ],
       ),
     );
   }
-  //fonction avec des paramètres pour afficher le dialog selon les requis, stateless widget
+
+  // Bouton pour supprimer le compte
+  ElevatedButton deleteAccountButton(
+      ApiService apiService, UserProvider userProvider, BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      onPressed: () => {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Supprimer le compte'),
+              content: const Text(
+                  'Êtes-vous sûr de vouloir supprimer votre compte?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Annuler'),
+                ),
+                TextButton(
+                  onPressed: () => {
+                    deleteAccount(apiService, userProvider, context),
+                  },
+                  child: const Text('Supprimer'),
+                ),
+              ],
+            );
+          },
+        ),
+      },
+      child: const Text('Supprimer le compte'),
+    );
+  }
+
+  void deleteAccount(ApiService apiService, UserProvider userProvider,
+      BuildContext context) async {
+    logger.i('Deleting account');
+    try {
+      bool isSuccess = await apiService.deleteAccount();
+      if (isSuccess) {
+        userProvider.logout();
+        if (context.mounted == false) {
+          return;
+        }
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Compte supprimé avec succès')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const WelcomeWidget()),
+        );
+        return;
+      }
+      throw Exception('Failed to delete account');
+    } catch (e) {
+      logger.e('Error deleting account: $e');
+      if (context.mounted == false) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur de suppression du compte')),
+      );
+      return;
+    }
+  }
 
   // Bouton pour changer le nom d'utilisateur
   ElevatedButton changeUsernameButton(

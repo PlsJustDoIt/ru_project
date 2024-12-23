@@ -429,18 +429,26 @@ class ApiService {
     }
   }
 
-// │ 💡 {
-// │ 💡   "File": {
-// │ 💡     "fieldname": "avatar",
-// │ 💡     "originalname": "scaled_OswaldHIM.jpeg",
-// │ 💡     "encoding": "7bit",
-// │ 💡     "mimetype": "image/jpeg",
-// │ 💡     "destination": "/home/m3hm3t/Documents/Autre/projetAppRuLeo/projet/ru_project/backend/uploads/avatar",
-// │ 💡     "filename": "67308da5ea29674684ce1bb7.jpeg",
-// │ 💡     "path": "/home/m3hm3t/Documents/Autre/projetAppRuLeo/projet/ru_project/backend/uploads/avatar/67308da5ea29674684ce1bb7.jpeg",
-// │ 💡     "size": 75728
-// │ 💡   }
-// │ 💡 }
+  Future<bool> deleteAccount() async {
+    try {
+      // requires refresh token for verification
+      final String? refreshToken = await _secureStorage.getRefreshToken();
+      final Response response =
+          await _dio.delete('/auth/delete-account', data: {
+        'refreshToken': refreshToken,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Account deleted');
+        return true;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to delete account: $e');
+      return false;
+    }
+  }
 
   // //get user avatar
   // Future<Uint8List> getUserRawAvatar(String avatarUrl) async {
@@ -459,7 +467,7 @@ class ApiService {
   //   }
   // }
 
-  //todo : a voir si ya mieux
+  //TODO : a voir si ya mieux
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';
   }

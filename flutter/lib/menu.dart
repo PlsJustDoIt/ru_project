@@ -12,11 +12,67 @@ class MenuWidget extends StatefulWidget {
   State<MenuWidget> createState() => _MenuWidgetState();
 }
 
+/*
+// Fonction pour convertir la date
+const formatDate = (dateString: string): string => {
+    // Parsing de la date au format 'YYYY-MM-DD'
+    const date = parse(dateString, 'yyyy-MM-dd', new Date());
+    // Formatage de la date au format 'dddd d MMMM yyyy'
+    return format(date, 'eeee d MMMM yyyy', { locale: fr });
+};
+ */
+
+String formatDate(String dateString) {
+  DateTime date = DateTime.parse(dateString);
+  Map<int, String> months = {
+    1: 'Janvier',
+    2: 'Février',
+    3: 'Mars',
+    4: 'Avril',
+    5: 'Mai',
+    6: 'Juin',
+    7: 'Juillet',
+    8: 'Août',
+    9: 'Septembre',
+    10: 'Octobre',
+    11: 'Novembre',
+    12: 'Décembre'
+  };
+  Map<int, String> weekdays = {
+    1: 'Lundi',
+    2: 'Mardi',
+    3: 'Mercredi',
+    4: 'Jeudi',
+    5: 'Vendredi',
+    6: 'Samedi',
+    7: 'Dimanche'
+  };
+  return '${weekdays[date.weekday]} ${date.day} ${months[date.month]} ${date.year}';
+}
+
+// TODO : Amélioration posible en choisissant l'index la plus proche de la date actuelle a partir de la date du menu
+int indexCloserDateInMenus(List<Menu> menus) {
+  if (menus.isEmpty) return 0;
+
+  DateTime now = DateTime.now();
+  int index = 0;
+  int minDiff = (DateTime.parse(menus[0].date).difference(now)).inDays.abs();
+
+  for (int i = 1; i < menus.length; i++) {
+    int diff = (DateTime.parse(menus[i].date).difference(now)).inDays.abs();
+    if (diff < minDiff) {
+      minDiff = diff;
+      index = i;
+    }
+  }
+  return index;
+}
+
 class _MenuWidgetState extends State<MenuWidget>
     with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
   //system de page menu
-  final PageController _pageController = PageController();
+  PageController _pageController = PageController();
   int _currentPage = 0;
 
   @override
@@ -51,6 +107,8 @@ class _MenuWidgetState extends State<MenuWidget>
     setState(() {
       _menus = menus;
       menusProvider.setMenus(menus);
+      _currentPage = indexCloserDateInMenus(menus);
+      _pageController = PageController(initialPage: _currentPage);
     });
   }
 
@@ -92,8 +150,7 @@ class _MenuWidgetState extends State<MenuWidget>
         ),
         Expanded(
           child: Center(
-            child: Text(
-                'Menu du ${_menus[_currentPage].date}'), // à voir avec _menus
+            child: Text('Menu du ${formatDate(_menus[_currentPage].date)}'),
           ),
         ),
         IconButton(

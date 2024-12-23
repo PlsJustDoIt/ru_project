@@ -4,8 +4,6 @@ import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import { uploadAvatar, convertAndCompressAvatar } from '../services/multer.js';
 import bcrypt from 'bcrypt';
-// import path from 'path';
-// import fs from 'fs';
 const router = Router();
 
 router.get('/me', auth, async (req: Request, res: Response) => {
@@ -274,7 +272,7 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
         user.friends.push(friend._id);
         await user.save();
         logger.info('friends list : ' + user.friends);
-        res.json({message : 'Friend added', friend: friend});
+        res.json({ message: 'Friend added', friend: friend });
     } catch (err: unknown) {
         res.status(500).json({ error: 'Server error : ' + err });
     }

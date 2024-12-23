@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router, Request, Response } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import User from '../models/user.js';
@@ -6,7 +6,10 @@ import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-const router = express.Router();
+import path from 'path';
+import fs from 'fs';
+import isProduction from '../config.js';
+const router = Router();
 
 const TEXT_MIN_LENGTH = 3;
 const TEXT_MAX_LENGTH = 32;
@@ -187,6 +190,37 @@ router.post('/logout', auth, async (req, res) => {
     } catch (err) {
         logger.error(err);
         res.status(500).json({ error: 'Server error: ' + err });
+    }
+});
+
+// TODO: demander a leo si il faut mettre cette fonction ici dans users.ts ou dans auth.ts
+router.delete('/delete-account', auth, async (req: Request, res: Response) => {
+    const refreshToken = req.body.refreshToken;
+    if (!refreshToken) {
+        return res.status(400).json({ error: 'No refresh token provided' });
+    }
+    try {
+        const user = await User.findById(req.user.id);
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        let dirname = path.resolve();
+        if (isProduction) {
+            dirname = path.join(dirname, 'dist');
+        }
+        if (user.avatarUrl !== 'uploads/avatar/default.png') {
+            fs.unlink(path.join(dirname, user.avatarUrl), (err) => {
+                if (err) {
+                    logger.error('Could not delete avatar : ' + err);
+                }
+            });
+        }
+        await user.deleteOne();
+        await RefreshToken.findOneAndDelete({ token: refreshToken });
+        res.json({ message: 'User deleted' });
+    } catch (err: unknown) {
+        logger.error(err);
+        res.status(500).json({ error: 'Server error : ' + err });
     }
 });
 

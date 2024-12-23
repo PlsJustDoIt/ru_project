@@ -257,7 +257,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   }
 }
 
-//username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
+//username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
 
 // class AuthForm extends StatelessWidget {
 //   @override
