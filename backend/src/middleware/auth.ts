@@ -18,7 +18,6 @@ export default function (req: Request, res: Response, next: NextFunction): void 
     }
     try {
         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as jwt.Secret);
-        logger.info('decoded: ' + JSON.stringify(decoded));
         if (typeof decoded === 'string') { // token expired
             logger.error('Invalid token');
             throw new Error('Invalid token');

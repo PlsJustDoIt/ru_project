@@ -258,7 +258,7 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
     const { username } = req.body;
     try {
         const friend = await User.findOne({ username: username });
-        if (!friend) return res.status(404).json({ msg: 'Friend not found' });
+        if (!friend) return res.status(404).json({ error: 'Friend not found' });
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
@@ -274,7 +274,7 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
         user.friends.push(friend._id);
         await user.save();
         logger.info('friends list : ' + user.friends);
-        res.json(user);
+        res.json({message : 'Friend added', friend: friend});
     } catch (err: unknown) {
         res.status(500).json({ error: 'Server error : ' + err });
     }

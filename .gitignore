@@ -30,7 +30,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 build/
-flutter/lib/config.dart
 
 # Symbolication related
 app.*.symbols

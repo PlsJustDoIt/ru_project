@@ -46,55 +46,58 @@ class FriendsListSheet extends StatefulWidget {
   State createState() => _FriendsListSheetState();
 }
 
-class _FriendsListSheetState extends State<FriendsListSheet> {
-  List<User> friends = [];
-  late Future<List<User>?> _friendsFuture;
+class _FriendsListSheetState extends State<FriendsListSheet> with AutomaticKeepAliveClientMixin {
+  List<User>? friends;
+
+  @override
+  bool get wantKeepAlive => true;  // Important !
 
   @override
   void initState() {
     super.initState();
     // Appelle la fonction pour charger les amis au lancement du widget
      _loadFriends();
-
-     _friendsFuture = _loadFriends();
   }
 
-  // Future<void> _loadFriends() async {
-  //   ApiService api = Provider.of<ApiService>(context, listen: false);
-
-  //   // Remplace cette partie par ta requête pour récupérer les amis
-  //   List<User>? fetchedFriends = await api.getFriends();
-  //   logger.i('Amis récupérés: $fetchedFriends');
-  //   fetchedFriends?.forEach((element) {
-  //     logger.i(element.toString());
-  //   });
-  //   if (fetchedFriends == null) {
-  //     logger.e('Impossible de récupérer les amis');
-  //     return;
-  //   }
-
-  //   // // Mets à jour l'état avec les amis récupérés
-  //   if(!mounted){
-  //     return;
-  //   }
-  //   setState(() {
-  //     friends = fetchedFriends;
-  //   });
-  // }
-
-  Future<List<User>?> _loadFriends() async {
-    ApiService api = Provider.of<ApiService>(context, listen: false);
-
-    // Récupérer les amis
-    List<User>? fetchedFriends = await api.getFriends();
+  Future<void> _loadFriends() async {
+    try {
+      ApiService api = Provider.of<ApiService>(context, listen: false);
+      List<User> fetchedFriends = await api.getFriends();
     logger.i('Amis récupérés: $fetchedFriends');
-    
-    if (fetchedFriends == null) {
-      logger.e('Impossible de récupérer les amis');
-      return [];
+    setState(() {
+      friends = fetchedFriends;
+    });
+   
+    } catch (e) {
+      if (!mounted) return;
+      logger.e('Erreur lors du chargement des amis: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors du chargement des amis: $e')),
+      );
+      setState(() {
+      friends = null;
+      });
     }
+    
 
-    return fetchedFriends;
+    
+  }
+
+    Future<void> addFriend(String friend) async {
+    try {
+      ApiService api = Provider.of<ApiService>(context, listen: false);
+      User? friendAdded = await api.addFriend(friend);
+      if (friendAdded == null) {
+        throw 'peut etre un jour des vrais messages d\'erreurs';
+      } else {
+        setState(() => friends?.add(friendAdded));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
+      );
+    }
   }
 
   void _showDeleteConfirmationDialog(String friendId) {
@@ -117,7 +120,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
             api.removeFriend(friendId);
             
             setState(() {
-              friends.removeWhere((friend) => friend.id == friendId);
+              friends?.removeWhere((friend) => friend.id == friendId);
             });
             Navigator.of(context).pop();
           },
@@ -129,6 +132,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final apiService = Provider.of<ApiService>(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
@@ -159,10 +163,6 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                   'Mes amis',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                IconButton(
-                  icon: Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
               ],
             ),
           ),
@@ -190,7 +190,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '${friends.length} amis',
+                '${friends?.length} amis',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.grey[600],
                 ),
@@ -198,69 +198,51 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
             ),
           ),
 
-          Expanded(
-            child: FutureBuilder<List<User>?>(
-              future: _friendsFuture,
-              builder: (context, snapshot) {
-                // Gestion des différents états du Future
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Erreur de chargement des amis'),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _friendsFuture = _loadFriends();
-                            });
-                          }, 
-                          child: Text('Réessayer')
-                        )
-                      ],
-                    ),
-                  );
-                }
-
-                // Récupérer la liste des amis
-                final friends = snapshot.data ?? [];
-
-                // Si pas d'amis
-                if (friends.isEmpty) {
-                  return Padding(
+          friends == null
+              ?  Center(child: CircularProgressIndicator())
+              : 
+              friends!.isEmpty ? Expanded(
+                  child:Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text('HAHAHAH TA PAS DAMIS'),
                         SizedBox(height: 16),
-                        Image.asset('assets/images/haha.webp'),
+                        Image.asset('assets/images/haha.webp'
+                        ),
                       ],
                     )
-                  );
-                }
+                  ),
+                ) :
+          // Liste des amis
+          Expanded(
+            child: ListView.builder(
+              itemCount: friends?.length,
+              itemBuilder: (context, index) {
+                final friend = friends![index];
+                return GestureDetector(
+                  onHorizontalDragEnd: (DragEndDetails details) {
+                    if (details.primaryVelocity! > 0) {
+                      // User swiped Left
+                      _showDeleteConfirmationDialog(friend.id);
+                    } else if (details.primaryVelocity! < 0) {
+                      // User swiped Right
+                      logger.i('Swipe à droite sur ${friend?.username}');
+                    }
+                  },
 
-                // Liste des amis
-                return ListView.builder(
-                  itemCount: friends.length,
-                  itemBuilder: (context, index) {
-                    final friend = friends[index];
-                    return ListTile(
-                      // Votre code de ListTile existant
-                      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      leading: CircleAvatar(
-                        radius: 28,
-                        backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
-                      ),
-                      title: Text(
-                        friend.username,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      subtitle: Padding(
+                  child: ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  leading: CircleAvatar(
+                    radius: 28,
+                     backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
+                  ),
+                  title: Text(
+                    friend.username,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  subtitle: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(friend.status),
                   ),
@@ -274,28 +256,10 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                         },
                       ),
                       IconButton(
-                        icon: Icon(Icons.more_vert),
+                        color: Colors.red,
+                        icon: Icon(Icons.person_remove_rounded),
                         onPressed: () {
                           _showDeleteConfirmationDialog(friend.id);
-                          // PopupMenuButton<String>(
-                      //   icon: Icon(Icons.more_vert), // trois petits points
-                      //   onSelected: (value) {
-                      //     if (value == 'delete') {
-                      //       // Logique de suppression d'utilisateur
-                      //       _showDeleteConfirmationDialog();
-                      //     }
-                      //   },
-                      //   itemBuilder: (BuildContext context) => [
-                      //     PopupMenuItem<String>(
-                      //       value: 'delete',
-                      //       child: ListTile(
-                      //         leading: Icon(Icons.delete, color: Colors.red),
-                      //         title: Text('Supprimer'),
-                      //       ),
-                      //     ),
-                      //   ],
-                      // )
-                          logger.i('Plus d\'options pour ${friend.username}');
                         },
                       ),
                     ],
@@ -303,11 +267,9 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                   onTap: () {
                     logger.i('Profil de ${friend.username} sélectionné');
                   },
-
-                      // ... le reste de votre code de ListTile
-                    );
-                  },
-                );
+                ),
+              );
+                
               },
             ),
           ),
@@ -344,8 +306,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                         ),
                         ElevatedButton(
                           onPressed: () {
-                            // Logique d'ajout d'ami
-                            apiService.addFriend(controller.text);
+                            addFriend(controller.text);
                             controller.clear();
                             Navigator.of(context).pop();
                           },

@@ -85,7 +85,7 @@ class TabBarWidget extends StatelessWidget {
             const MenuWidget(),
             FriendsListSheet(),
             ProfileWidget(),
-            const TransportTimeWidget(),
+            TransportTimeWidget(),
             DebugWidget(),
           ],
         ),

@@ -193,7 +193,7 @@ class ApiService {
   }
 
   // Fonction pour ajouter un ami
-  Future<bool> addFriend(String friendUsername) async {
+  Future<User?> addFriend(String friendUsername) async {
     try {
       final Response response = await _dio.post('/users/add-friend', data: {
         'username': friendUsername,
@@ -201,19 +201,20 @@ class ApiService {
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200) {
-        return true; // Renvoie les données si tout va bien
-      } 
+        User friend = User.fromJson(response.data['friend']);
+        return friend;
+      }
       logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return false;
+      return null;
     } catch (e) {
       logger.e('Failed to add friend: $e'); 
-      return false; // Renvoie une exception si quelque chose ne va pas
+      return null; // Renvoie une exception si quelque chose ne va pas
     }
   }
 
 
   // Fonction pour récupérer la liste des amis
-  Future<List<User>?> getFriends() async {
+  Future<List<User>> getFriends() async {
     try {
       final Response response = await _dio.get('/users/friends');
 
@@ -224,18 +225,16 @@ class ApiService {
         // Convertit chaque élément en objet User
         List<User> friends = [for (Map<String,dynamic> friend in response.data) User.fromJson(friend)];
        
-
         return friends;
         }
       }
 
-
       logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return null;
+      throw Exception('Invalid response from server : ${response.statusCode} ${response.data['error']}');
 
     } catch (e) {
       logger.e('Failed to get friends: $e');
-      return null;
+      rethrow;
     }
   }
 
