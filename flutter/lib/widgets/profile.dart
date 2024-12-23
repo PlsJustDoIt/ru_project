@@ -56,21 +56,19 @@ class ProfileWidget extends StatefulWidget {
 }
 
 class _ProfileWidgetState extends State<ProfileWidget> {
-  
   final _formKeyUsername = GlobalKey<FormState>();
   final _formKeyStatus = GlobalKey<FormState>();
   final _formKeyPassword = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _oldPasswordController;
   late TextEditingController _passwordController;
-  late TextEditingController _passwordConfirmController; //TODO add confirm password part
+  late TextEditingController
+      _passwordConfirmController; //TODO add confirm password part
   //File? _imageFile;
   //Image imageDefault = Image.asset('assets/images/default-avatar.png');
   final ImagePicker _picker = ImagePicker();
   late String _selectedStatus;
   bool hasSubmitted = false;
-
-  
 
   @override
   void initState() {
@@ -83,7 +81,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       _passwordConfirmController = TextEditingController();
       _selectedStatus = widget.user!.status;
     }
-    
   }
 
   // Fonction pour choisir une image et l'envoyer au serveur via l'API TODO : recupérer l'image du serveur (qui devrait être renvoyée par l'API) et la mettre dans le cache
@@ -106,7 +103,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
 
-      bool result = await context.read<ApiService>().updateProfilePicture(pickedFile);
+      bool result =
+          await context.read<ApiService>().updateProfilePicture(pickedFile);
 
       if (mounted != true) {
         logger.w('Component is not mounted after updating profile picture');
@@ -116,8 +114,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       if (result) {
         setState(() {
           logger.i("user id = ${widget.user!.id}");
-            _isAvatarChanged = true;
-            widget.user!.avatarUrl = widget.user!.avatarUrl;
+          _isAvatarChanged = true;
+          widget.user!.avatarUrl = widget.user!.avatarUrl;
         });
         logger.i('Profile picture updated');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +139,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       //       const SnackBar(content: Text('Profile picture updated')),
       //     );
       //     return;
-      //   } 
+      //   }
       //   logger.w('Failed to cache image');
       //   ScaffoldMessenger.of(context).showSnackBar(
       //     const SnackBar(content: Text('Failed to cache image')),
@@ -163,8 +161,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       );
     }
   }
-
-
 
   // //set imageFile from server TODO
   // Future<void> setImage() async {
@@ -203,80 +199,83 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   Widget build(BuildContext context) {
     logger.i('Building profile widget');
 
-    final ApiService apiService = Provider.of<ApiService>(context, listen: false);
-    final UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
+    final ApiService apiService =
+        Provider.of<ApiService>(context, listen: false);
+    final UserProvider userProvider =
+        Provider.of<UserProvider>(context, listen: false);
 
-    
     if (userProvider.user == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     String fullUrl;
     if (widget.user!.avatarUrl.isEmpty) {
-      fullUrl = apiService.getImageNetworkUrl("uploads/avatar/default-avatar.png");
-    }else{
+      fullUrl =
+          apiService.getImageNetworkUrl("uploads/avatar/default-avatar.png");
+    } else {
       fullUrl = apiService.getImageNetworkUrl(widget.user!.avatarUrl);
     }
 
     Image imageAvatar = Image.network(fullUrl);
 
     if (_isAvatarChanged) {
-      imageAvatar.image.evict(); 
+      imageAvatar.image.evict();
       _isAvatarChanged = false;
     }
 
     logger.i(widget.user!.avatarUrl);
 
-    return  SingleChildScrollView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundImage: imageAvatar.image,
-                ),
-                FloatingActionButton.small(
-                  onPressed: _pickImage,
-                  child: const Icon(Icons.camera_alt),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            Text(
-              "Bonjour, ${widget.user!.username}",
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 60,
+                backgroundImage: imageAvatar.image,
               ),
+              FloatingActionButton.small(
+                onPressed: _pickImage,
+                child: const Icon(Icons.camera_alt),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Text(
+            "Bonjour, ${widget.user!.username}",
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 16),
-            statusFormNoButton(apiService, userProvider, context),
-            const SizedBox(height: 16),
-            changeUsernameButton(apiService, userProvider, context),
-            const SizedBox(height: 16),
-            changePassword(apiService, userProvider, context),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(height: 16),
+          statusFormNoButton(apiService, userProvider, context),
+          const SizedBox(height: 16),
+          changeUsernameButton(apiService, userProvider, context),
+          const SizedBox(height: 16),
+          changePassword(apiService, userProvider, context),
+        ],
+      ),
+    );
   }
   //fonction avec des paramètres pour afficher le dialog selon les requis, stateless widget
 
   // Bouton pour changer le nom d'utilisateur
-  ElevatedButton changeUsernameButton(ApiService apiService, UserProvider userProvider,BuildContext context){
-
+  ElevatedButton changeUsernameButton(
+      ApiService apiService, UserProvider userProvider, BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50),
       ),
-      onPressed: () { 
+      onPressed: () {
         showDialog(
           context: context,
           builder: (context) {
-            return changeThingsDialogs(true,false,false,apiService,userProvider,context);
+            return changeThingsDialogs(
+                true, false, false, apiService, userProvider, context);
           },
         );
       },
@@ -285,7 +284,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 
   // Bouton pour changer le mot de passe
-  ElevatedButton changePassword(ApiService apiService, UserProvider userProvider,BuildContext context){
+  ElevatedButton changePassword(
+      ApiService apiService, UserProvider userProvider, BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50),
@@ -295,7 +295,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         showDialog(
           context: context,
           builder: (context) {
-            return changeThingsDialogs(false,true,false,apiService,userProvider,context);
+            return changeThingsDialogs(
+                false, true, false, apiService, userProvider, context);
           },
         ),
       },
@@ -304,25 +305,43 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 
   //fonction avec des paramètres pour afficher le dialog selon les requis, stateless widget TODO dans une autre classe dans se fichier
-  StatelessWidget changeThingsDialogs(bool isModifyingUsername,bool isModifyingPassword,bool isModifyingStatus, ApiService apiService, UserProvider userProvider,BuildContext context){
+  StatelessWidget changeThingsDialogs(
+      bool isModifyingUsername,
+      bool isModifyingPassword,
+      bool isModifyingStatus,
+      ApiService apiService,
+      UserProvider userProvider,
+      BuildContext context) {
     //temporaire
-    return Dialog(child: Scaffold(
+    return Dialog(
+      child: Scaffold(
         appBar: AppBar(
-          title: Text(isModifyingUsername ? 'Changer le nom d\'utilisateur' : isModifyingPassword ? 'Changer le mot de passe' : 'Changer le status'),
+          title: Text(isModifyingUsername
+              ? 'Changer le nom d\'utilisateur'
+              : isModifyingPassword
+                  ? 'Changer le mot de passe'
+                  : 'Changer le status'),
           automaticallyImplyLeading: true,
         ),
         body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: isModifyingUsername ? usernameForm(apiService, userProvider, context) : isModifyingPassword ? passwordForm(apiService, userProvider, context) : statusFormNoButton(apiService, userProvider, context),
+          padding: const EdgeInsets.all(16.0),
+          child: isModifyingUsername
+              ? usernameForm(apiService, userProvider, context)
+              : isModifyingPassword
+                  ? passwordForm(apiService, userProvider, context)
+                  : statusFormNoButton(apiService, userProvider, context),
         ),
       ),
     );
   }
 
-  Form usernameForm(ApiService apiService, UserProvider userProvider,BuildContext context){
+  Form usernameForm(
+      ApiService apiService, UserProvider userProvider, BuildContext context) {
     return Form(
       key: _formKeyUsername,
-      autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
+      autovalidateMode: hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -353,9 +372,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               return null;
             },
           ),
-          
+
           SizedBox(height: 20),
-          
+
           // Bouton de mise à jour
           ElevatedButton(
             onPressed: () => comfirmUsername(apiService, userProvider, context),
@@ -369,10 +388,13 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     );
   }
 
-  Form passwordForm (ApiService apiService, UserProvider userProvider,BuildContext context){
+  Form passwordForm(
+      ApiService apiService, UserProvider userProvider, BuildContext context) {
     return Form(
       key: _formKeyPassword,
-      autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
+      autovalidateMode: hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -453,9 +475,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               return null;
             },
           ),
-          
+
           SizedBox(height: 20),
-          
+
           // Bouton de mise à jour
           ElevatedButton(
             onPressed: () => comfirmPassword(apiService, userProvider, context),
@@ -469,16 +491,18 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     );
   }
 
-  Form statusFormNoButton(ApiService apiService, UserProvider userProvider,BuildContext context){
+  Form statusFormNoButton(
+      ApiService apiService, UserProvider userProvider, BuildContext context) {
     return Form(
       key: _formKeyStatus,
-      autovalidateMode: hasSubmitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
+      autovalidateMode: hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Champ de texte pour le status
           DropdownButtonFormField<String>(
-            
             value: _selectedStatus,
             decoration: const InputDecoration(
               labelText: 'Status',
@@ -491,7 +515,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               return DropdownMenuItem<String>(
                 value: status,
                 child: Text(status),
-                
               );
             }).toList(),
             onChanged: (String? newValue) {
@@ -500,7 +523,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                   _selectedStatus = newValue;
                 });
               }
-              comfirmStatus(apiService, userProvider, context,false);
+              comfirmStatus(apiService, userProvider, context, false);
             },
           ),
         ],
@@ -508,15 +531,16 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     );
   }
 
-  void comfirmUsername(ApiService apiService, UserProvider userProvider,BuildContext context) async {
+  void comfirmUsername(ApiService apiService, UserProvider userProvider,
+      BuildContext context) async {
     setState(() {
       hasSubmitted = true;
     });
     if (!_formKeyUsername.currentState!.validate()) {
-      logger.e('username unvalide: ${_usernameController.text}');    
-      return;                  
+      logger.e('username unvalide: ${_usernameController.text}');
+      return;
     }
-    
+
     try {
       bool success = await apiService.updateUsername(_usernameController.text);
       if (success) {
@@ -532,8 +556,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           return;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Nom d\'utilisateur mis à jour avec succès.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Nom d\'utilisateur mis à jour avec succès.')));
         Navigator.of(context).pop();
       }
       throw Exception('Failed to update username');
@@ -541,25 +565,25 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du nom d\'utilisateur')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur de mise à jour du nom d\'utilisateur')));
       return;
     }
-    
-    
   }
 
-  void comfirmPassword(ApiService apiService, UserProvider userProvider,BuildContext context) async {
+  void comfirmPassword(ApiService apiService, UserProvider userProvider,
+      BuildContext context) async {
     setState(() {
       hasSubmitted = true;
     });
     if (!_formKeyPassword.currentState!.validate()) {
-      logger.e('error password form'); 
-      return;                
+      logger.e('error password form');
+      return;
     }
-    
+
     try {
-      bool success = await apiService.updatePassword(_passwordController.text,_oldPasswordController.text);
+      bool success = await apiService.updatePassword(
+          _passwordController.text, _oldPasswordController.text);
       if (success) {
         logger.i('New password: ${_passwordController.text}');
         setState(() {
@@ -583,30 +607,29 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
   }
 
-  void comfirmStatus(ApiService apiService, UserProvider userProvider,BuildContext context,bool isDialog) async {
+  void comfirmStatus(ApiService apiService, UserProvider userProvider,
+      BuildContext context, bool isDialog) async {
     if (userProvider.user!.status == _selectedStatus) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Le status est déjà à jour')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Le status est déjà à jour')));
       return;
     }
-    
-    
+
     try {
       var response = await apiService.updateStatus(_selectedStatus);
-      bool success = response['success']; 
+      bool success = response['success'];
 
       if (!success) {
         throw Exception(response['error']);
       }
 
       userProvider.user!.status = response['status'];
-      
+
       if (context.mounted == false) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Status mis à jour avec succès.')));
-
     } catch (e) {
       logger.e('Error updating status: $e');
       if (context.mounted == false) {
@@ -618,15 +641,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
   }
 
-
   @override
   void dispose() {
     _usernameController.dispose();
     super.dispose();
   }
-
 }
-
 
 // Exemple d'utilisation
 class SearchPage extends StatelessWidget {

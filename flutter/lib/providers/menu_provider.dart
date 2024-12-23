@@ -8,20 +8,15 @@ class MenuProvider with ChangeNotifier {
   List<Menu> _menus = [];
   final _secureStorage = SecureStorage();
 
-
   // Getters
   List<Menu> get menus => _menus;
 
-  // Setters  
+  // Setters
   void setMenus(List<Menu> menus) {
     _menus = menus;
     notifyListeners();
   }
 
-
   //constructor
   MenuProvider();
-
-
-
 }

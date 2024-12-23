@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
@@ -8,13 +7,10 @@ import 'dart:convert';
 import 'package:ru_project/services/logger.dart'; // pour utf8
 
 class AvatarCache {
-
-  static Future<void> clearIfCacheTooLarge(Directory avatarDir, int maxFiles) async {
-    final files = avatarDir
-      .listSync()
-      .whereType<File>()
-      .toList()
-    ..sort((a, b) => a.statSync().modified.compareTo(b.statSync().modified));
+  static Future<void> clearIfCacheTooLarge(
+      Directory avatarDir, int maxFiles) async {
+    final files = avatarDir.listSync().whereType<File>().toList()
+      ..sort((a, b) => a.statSync().modified.compareTo(b.statSync().modified));
 
     // Si le nombre de fichiers dépasse la limite
     if (files.length > maxFiles) {
@@ -25,11 +21,12 @@ class AvatarCache {
   }
 
   /// Méthode pour stocker et récupérer un fichier avatar
-  static Future<File?> cacheAvatar(Uint8List avatarData, String fileName) async {
+  static Future<File?> cacheAvatar(
+      Uint8List avatarData, String fileName) async {
     try {
       // Calculer un hash unique pour identifier les données
       final hash = md5.convert(avatarData).toString();
-      
+
       // Si l'application est en mode web
       if (kIsWeb) {
         return null; // Ne pas mettre en cache les avatars en mode web
@@ -41,7 +38,8 @@ class AvatarCache {
       // Créer un sous-dossier spécifique pour les avatars
       final avatarDir = Directory('${directory.path}/avatars');
       if (!await avatarDir.exists()) {
-        await avatarDir.create(recursive: true); // Crée le dossier si nécessaire
+        await avatarDir.create(
+            recursive: true); // Crée le dossier si nécessaire
       } else {
         await clearIfCacheTooLarge(avatarDir, 1);
       }
@@ -57,8 +55,7 @@ class AvatarCache {
 
       // Si non, écrire les données dans le fichier
       return await file.writeAsBytes(avatarData);
-
-    } catch(e) {
+    } catch (e) {
       logger.e('Erreur lors de la mise en cache de l\'avatar: $e');
       return null;
     }

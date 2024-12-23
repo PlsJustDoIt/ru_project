@@ -33,32 +33,31 @@ class TabBarWidget extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
-              color: Colors.white,
-              onPressed: () async {
-                bool res = await apiService.logout();
-                userProvider.logout();
-                //log out apiservice (test bool)
-                if (!context.mounted) {
-                  return;
-                }
-                if (res) {
-                  logger.i('Logout successful');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Déconnexion réussie')));
-                } else {
-                  logger.e('Logout failed');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Déconnexion échouée')));
-                }
+                icon: const Icon(Icons.logout),
+                color: Colors.white,
+                onPressed: () async {
+                  bool res = await apiService.logout();
+                  userProvider.logout();
+                  //log out apiservice (test bool)
+                  if (!context.mounted) {
+                    return;
+                  }
+                  if (res) {
+                    logger.i('Logout successful');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Déconnexion réussie')));
+                  } else {
+                    logger.e('Logout failed');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Déconnexion échouée')));
+                  }
 
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WelcomeWidget()),
-                );
-            }),
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const WelcomeWidget()),
+                  );
+                }),
           ],
           backgroundColor: AppColors.primaryColor,
           bottom: const TabBar(
@@ -75,7 +74,6 @@ class TabBarWidget extends StatelessWidget {
               Tab(icon: Icon(Icons.person), text: 'Profil'),
               Tab(icon: Icon(Icons.directions_bus), text: 'Bus'),
               Tab(icon: Icon(Icons.bug_report), text: 'Debug'),
-              
             ],
           ),
         ),
@@ -93,4 +91,3 @@ class TabBarWidget extends StatelessWidget {
     );
   }
 }
-

@@ -2,7 +2,6 @@ class Menu {
   Map<String, dynamic> plats;
   String date;
 
-
   Menu({
     required this.plats,
     required this.date,
@@ -12,12 +11,13 @@ class Menu {
   factory Menu.fromJson(Map<String, dynamic> json) {
     return Menu(
       plats: {
-        "Entrées" : json["Entrées"] ?? "menu non communiqué",
-        "Cuisine traditionnelle" : json["Cuisine traditionnelle"] ?? "menu non communiqué",
-        "Menu végétalien" : json["Menu végétalien"] ?? "menu non communiqué",
-        "Pizza" : json["Pizza"] ?? "menu non communiqué",
-        "Cuisine italienne" : json["Cuisine italienne"] ?? "menu non communiqué",
-        "Grill" : json["Grill"] ?? "menu non communiqué",
+        "Entrées": json["Entrées"] ?? "menu non communiqué",
+        "Cuisine traditionnelle":
+            json["Cuisine traditionnelle"] ?? "menu non communiqué",
+        "Menu végétalien": json["Menu végétalien"] ?? "menu non communiqué",
+        "Pizza": json["Pizza"] ?? "menu non communiqué",
+        "Cuisine italienne": json["Cuisine italienne"] ?? "menu non communiqué",
+        "Grill": json["Grill"] ?? "menu non communiqué",
       },
       date: json["date"],
     );

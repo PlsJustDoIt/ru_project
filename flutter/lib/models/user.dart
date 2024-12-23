@@ -8,7 +8,12 @@ class User {
 
   String avatarUrl;
 
-  User({required this.id, required this.username, required this.status, this.friendIds, required this.avatarUrl});
+  User(
+      {required this.id,
+      required this.username,
+      required this.status,
+      this.friendIds,
+      required this.avatarUrl});
 
   factory User.fromJson(Map<String, dynamic> json) {
     try {
@@ -39,6 +44,4 @@ class User {
   String toString() {
     return 'User{id: $id, username: $username, status: $status, avatarUrl: $avatarUrl, friendIds: $friendIds}';
   }
-
-  
 }

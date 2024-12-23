@@ -64,7 +64,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   List<SearchResult> _currentResults = [];
   List<SearchResult> _localResults = [];
   bool _isLoading = false;
-  
+
   // Simuler une base de données locale
   final List<SearchResult> _localDb = [
     // Amis récents, favoris, contacts fréquents, etc.
@@ -85,7 +85,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
 
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase().trim();
-    
+
     // 1. Recherche immédiate dans les données locales
     _performLocalSearch(query);
 
@@ -139,7 +139,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
 
     try {
       final remoteResults = await widget.onRemoteSearch(query);
-      
+
       // Fusionner et trier les résultats
       final allResults = [..._localResults, ...remoteResults];
       allResults.sort((a, b) {
@@ -147,15 +147,15 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
         final aExact = a.name.toLowerCase() == query;
         final bExact = b.name.toLowerCase() == query;
         if (aExact != bExact) return aExact ? -1 : 1;
-        
+
         // Puis par score de pertinence
         return b.relevanceScore.compareTo(a.relevanceScore);
       });
 
       // Dédupliquer par ID
       final seen = <String>{};
-      final uniqueResults = allResults.where((result) => 
-        seen.add(result.id)).toList();
+      final uniqueResults =
+          allResults.where((result) => seen.add(result.id)).toList();
 
       // Mettre en cache
       _searchCache.set(query, uniqueResults);

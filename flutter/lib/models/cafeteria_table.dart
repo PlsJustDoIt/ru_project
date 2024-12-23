@@ -14,6 +14,7 @@ class CafeteriaTable {
   });
 }
 
-class Shape { //TODO enum
+class Shape {
+  //TODO enum
   //rectangle, circle
 }

@@ -74,91 +74,94 @@ class _CafeteriaLayoutState extends State<CafeteriaLayout> {
   @override
   Widget build(BuildContext context) {
     return Container(
-        width: double.infinity,
-        height: double.infinity,
-        // padding: const EdgeInsets.symmetric(horizontal: 40),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            var tableSize = constraints.maxWidth * 0.03; // Table size as % of width
-            if (tableSize <=30) {
-              tableSize = 30;
-            }
-            logger.i('Table size: $tableSize');
+      width: double.infinity,
+      height: double.infinity,
+      // padding: const EdgeInsets.symmetric(horizontal: 40),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          var tableSize =
+              constraints.maxWidth * 0.03; // Table size as % of width
+          if (tableSize <= 30) {
+            tableSize = 30;
+          }
+          logger.i('Table size: $tableSize');
 
-            return Stack(
-              children: [
-                // Room border
-                Container(
-                  margin: const EdgeInsets.all(20),
-                  padding: const EdgeInsets.symmetric(horizontal: 100),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.yellow,
-                  ),
+          return Stack(
+            children: [
+              // Room border
+              Container(
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(horizontal: 100),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.yellow,
                 ),
-                
-                // Tables
-                ...tables.map((table) {
-                  // Calculate actual positions based on container size
-                  final xPos = constraints.maxWidth * table.xPercent - (tableSize / 2);
-                  final yPos = constraints.maxHeight * table.yPercent - (tableSize / 2);
+              ),
 
-                  return Positioned(
-                    left: xPos,
-                    top: yPos,
-                    child: GestureDetector(
-                      onTap: () => _handleTableTap(table),
-                      child: Container(
-                        width: tableSize*2.3,
-                        height: tableSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.rectangle,
-                          color: table.isOccupied ? Colors.red : Colors.green,
-                          border: Border.all(color: Colors.black),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${table.id}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+              // Tables
+              ...tables.map((table) {
+                // Calculate actual positions based on container size
+                final xPos =
+                    constraints.maxWidth * table.xPercent - (tableSize / 2);
+                final yPos =
+                    constraints.maxHeight * table.yPercent - (tableSize / 2);
+
+                return Positioned(
+                  left: xPos,
+                  top: yPos,
+                  child: GestureDetector(
+                    onTap: () => _handleTableTap(table),
+                    child: Container(
+                      width: tableSize * 2.3,
+                      height: tableSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.rectangle,
+                        color: table.isOccupied ? Colors.red : Colors.green,
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${table.id}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                  );
-                }),
+                  ),
+                );
+              }),
 
-                // Entrance
-                Positioned(
-                  bottom: 30,
-                  left: constraints.maxWidth * 0.5 - 75, // Center entrance
-                  child: Container(
-                    width: 150,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black),
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Entrée',
-                        style: TextStyle(fontSize: 16),
-                      ),
+              // Entrance
+              Positioned(
+                bottom: 30,
+                left: constraints.maxWidth * 0.5 - 75, // Center entrance
+                child: Container(
+                  width: 150,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Entrée',
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
-      );
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 

@@ -12,9 +12,7 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 
-
 class ApiService {
-
   late final Dio _dio;
   final SecureStorage _secureStorage = SecureStorage();
 
@@ -22,68 +20,67 @@ class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
 
-
   ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: Config.apiUrl,
-       connectTimeout: Duration(seconds: 10),  // Plus généreux
-      receiveTimeout: Duration(seconds: 7),   // Plus long
+      connectTimeout: Duration(seconds: 10), // Plus généreux
+      receiveTimeout: Duration(seconds: 7), // Plus long
     ));
-   _dio.interceptors.add(
-  InterceptorsWrapper(
-    onError: (DioException e, ErrorInterceptorHandler handler) async {
-      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-        try {
-          final newToken = await refreshToken();
-          if (newToken != null) {
-            
-            // Mettre à jour le token
-            await _secureStorage.storeAccessToken(newToken);
-            
-            // Cloner la requête originale
-            final requestOptions = e.requestOptions;
-            requestOptions.headers['Authorization'] = 'Bearer $newToken';
-            
-            // Réessayer une seule fois
-            final response = await _dio.fetch(requestOptions);
-            return handler.resolve(response);
-          } else {
-            logger.e('Failed to refresh token');
-          }
-        } catch (_) {
-          // En cas d'erreur, déconnecter
-          await logout();
-        }
-      }
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (DioException e, ErrorInterceptorHandler handler) async {
+          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+            try {
+              final newToken = await refreshToken();
+              if (newToken != null) {
+                // Mettre à jour le token
+                await _secureStorage.storeAccessToken(newToken);
 
-       logger.i('Erreur détaillée : ${e.type}');
-    logger.i('Message : ${e.message}');
-    logger.i('Response : ${e.response?.data}');
-      
-      // Pour toutes autres erreurs
-       return handler.next(e);
-    },
-    onRequest: (options, handler) async {
-      if (options.path.contains('/uploads')) {
-        options.headers['Content-Type'] = 'multipart/form-data';
-        return handler.next(options);
-      }
-      final token = await _secureStorage.getAccessToken();
-      if (token != null && 
-          !options.path.contains('/login') && 
-          !options.path.contains('/register')) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
-      return handler.next(options);
-    },
-  ),
-);
+                // Cloner la requête originale
+                final requestOptions = e.requestOptions;
+                requestOptions.headers['Authorization'] = 'Bearer $newToken';
+
+                // Réessayer une seule fois
+                final response = await _dio.fetch(requestOptions);
+                return handler.resolve(response);
+              } else {
+                logger.e('Failed to refresh token');
+              }
+            } catch (_) {
+              // En cas d'erreur, déconnecter
+              await logout();
+            }
+          }
+
+          logger.i('Erreur détaillée : ${e.type}');
+          logger.i('Message : ${e.message}');
+          logger.i('Response : ${e.response?.data}');
+
+          // Pour toutes autres erreurs
+          return handler.next(e);
+        },
+        onRequest: (options, handler) async {
+          if (options.path.contains('/uploads')) {
+            options.headers['Content-Type'] = 'multipart/form-data';
+            return handler.next(options);
+          }
+          final token = await _secureStorage.getAccessToken();
+          if (token != null &&
+              !options.path.contains('/login') &&
+              !options.path.contains('/register')) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+      ),
+    );
   }
 
   Future<String?> refreshToken() async {
     try {
       final String? refreshToken = await _secureStorage.getRefreshToken();
-      final Response response = await _dio.post('/auth/token', data: {'refreshToken': refreshToken});
+      final Response response =
+          await _dio.post('/auth/token', data: {'refreshToken': refreshToken});
 
       // if (response.statusCode == 403) {
       //   throw Exception('Invalid refresh token');
@@ -96,15 +93,13 @@ class ApiService {
       logger.e(response.data['error']);
 
       throw Exception(response.data['error']);
-
     } catch (e) {
       logger.e('Failed to refresh token: $e');
       return null;
     }
-
   }
 
-   // Fonction pour login
+  // Fonction pour login
   Future<User> login(String username, String password) async {
     try {
       final Response response = await _dio.post('/auth/login', data: {
@@ -129,7 +124,6 @@ class ApiService {
       throw Exception('$e');
     }
   }
-
 
   // Fonction pour s'inscrire
   Future<User> register(String username, String password) async {
@@ -158,7 +152,6 @@ class ApiService {
     }
   }
 
-
   // Fonction pour récupérer les données utilisateur
   Future<User?> getUser() async {
     try {
@@ -166,7 +159,8 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         return User.fromJson(response.data);
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data?['error']}');
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data?['error']}');
       return null;
     } catch (e) {
       logger.e('Failed to get user data: $e');
@@ -176,7 +170,8 @@ class ApiService {
 
   Future<List<User>> searchUsers(String query) async {
     try {
-      final Response response = await _dio.get('/users/search', queryParameters: {
+      final Response response =
+          await _dio.get('/users/search', queryParameters: {
         'query': query,
       });
 
@@ -204,14 +199,14 @@ class ApiService {
         User friend = User.fromJson(response.data['friend']);
         return friend;
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
       return null;
     } catch (e) {
-      logger.e('Failed to add friend: $e'); 
+      logger.e('Failed to add friend: $e');
       return null; // Renvoie une exception si quelque chose ne va pas
     }
   }
-
 
   // Fonction pour récupérer la liste des amis
   Future<List<User>> getFriends() async {
@@ -222,16 +217,20 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         logger.i(response.data);
         if (response.data is List) {
-        // Convertit chaque élément en objet User
-        List<User> friends = [for (Map<String,dynamic> friend in response.data) User.fromJson(friend)];
-       
-        return friends;
+          // Convertit chaque élément en objet User
+          List<User> friends = [
+            for (Map<String, dynamic> friend in response.data)
+              User.fromJson(friend)
+          ];
+
+          return friends;
         }
       }
 
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      throw Exception('Invalid response from server : ${response.statusCode} ${response.data['error']}');
-
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      throw Exception(
+          'Invalid response from server : ${response.statusCode} ${response.data['error']}');
     } catch (e) {
       logger.e('Failed to get friends: $e');
       rethrow;
@@ -240,7 +239,8 @@ class ApiService {
 
   Future<bool> removeFriend(String friendId) async {
     try {
-      final Response response = await _dio.delete('/users/remove-friend', data: {
+      final Response response =
+          await _dio.delete('/users/remove-friend', data: {
         'friendId': friendId,
       });
 
@@ -248,14 +248,14 @@ class ApiService {
       if (response.statusCode == 200) {
         return true; // Renvoie les données si tout va bien
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
       return false;
     } catch (e) {
       logger.e('Failed to remove friend: $e');
       return false; // Renvoie une exception si quelque chose ne va pas
     }
   }
-
 
   //get menus from the API
   Future<List<Menu>> getMenus() async {
@@ -266,14 +266,13 @@ class ApiService {
         final List<dynamic> rawMenuData = response.data;
         return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
       return [];
-
     } catch (e) {
       logger.e('Failed to get menus: $e');
       return [];
-    }     
-
+    }
   }
 
   Future<bool> logout() async {
@@ -282,10 +281,12 @@ class ApiService {
       if (refreshToken == null) {
         throw Exception('No refresh token found');
       }
-      final Response response = await _dio.post('/auth/logout',data: {refreshToken: refreshToken});
+      final Response response =
+          await _dio.post('/auth/logout', data: {refreshToken: refreshToken});
       await _secureStorage.clearTokens();
       if (response.statusCode != 200) {
-        logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+        logger.e(
+            'Invalid response from server: ${response.statusCode} ${response.data['error']}');
         return false;
       }
       return true;
@@ -303,8 +304,9 @@ class ApiService {
         logger.i('User updated: ${user['username']}');
         return true;
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return false; 
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
     } catch (e) {
       logger.e('Failed to update user: $e');
       return false;
@@ -322,7 +324,8 @@ class ApiService {
         logger.i('Password updated');
         return true;
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
       return false;
     } catch (e) {
       logger.e('Failed to update password: $e');
@@ -340,11 +343,12 @@ class ApiService {
         logger.i('Status updated: $status');
         return {'status': response.data['status'], 'success': true};
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return { 'error': response.data['error'], 'success': false};
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return {'error': response.data['error'], 'success': false};
     } catch (e) {
       logger.e('Failed to update status: $e');
-      return { 'error': e, 'success': false};
+      return {'error': e, 'success': false};
     }
   }
 
@@ -358,7 +362,8 @@ class ApiService {
         logger.i('Username updated: $username');
         return true;
       }
-      logger.e('Invalid response from server in updateUsername(): ${response.statusCode} ${response.data['error']}');
+      logger.e(
+          'Invalid response from server in updateUsername(): ${response.statusCode} ${response.data['error']}');
       return false;
     } catch (e) {
       logger.e('Failed to update username: $e');
@@ -374,14 +379,15 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         return response.data;
       }
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
       return {};
     } catch (e) {
       logger.e('Failed to get profile picture: $e');
       return {};
     }
   }
-  
+
   //update user profile picture
   Future<bool> updateProfilePicture(XFile pickedFile) async {
     try {
@@ -392,27 +398,25 @@ class ApiService {
       if (kIsWeb) {
         // For web
         var byteData = await pickedFile.readAsBytes();
-        file = MultipartFile.fromBytes(
-          byteData, 
-          filename: pickedFile.name, 
-          contentType: MediaType('image', 'jpeg'));
-      }else{
-        file = await MultipartFile.fromFile(
-          pickedFile.path,
-          filename: pickedFile.name,
-          contentType: MediaType('image', 'jpeg'));
+        file = MultipartFile.fromBytes(byteData,
+            filename: pickedFile.name, contentType: MediaType('image', 'jpeg'));
+      } else {
+        file = await MultipartFile.fromFile(pickedFile.path,
+            filename: pickedFile.name, contentType: MediaType('image', 'jpeg'));
       }
 
       final formData = FormData.fromMap({
         'avatar': file,
-        'platform': kIsWeb ? 'web' : Platform.operatingSystem, // Indique la plateforme
+        'platform':
+            kIsWeb ? 'web' : Platform.operatingSystem, // Indique la plateforme
       });
       //dio multipart request
-      final Response response = await _dio.put('/users/update-profile-picture', data: formData); // avatarUrl : response.data['avatarUrl']
-      
+      final Response response = await _dio.put('/users/update-profile-picture',
+          data: formData); // avatarUrl : response.data['avatarUrl']
+
       if (response.statusCode == 200) {
         logger.i('Profile picture updated');
-        //return image if successful 
+        //return image if successful
         return true;
         //return response.data.bodyBytes; problem ici
       } else {
@@ -455,11 +459,8 @@ class ApiService {
   //   }
   // }
 
-
   //todo : a voir si ya mieux
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';
   }
-
 }
-

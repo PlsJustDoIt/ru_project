@@ -7,31 +7,34 @@ import 'package:ru_project/providers/menu_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
+
 void main() {
-  runApp(MultiProvider(providers: [
-      ChangeNotifierProvider(create: (_) => UserProvider()),
-      ChangeNotifierProvider(create: (_) => MenuProvider()),
-      Provider(create: (_) => ApiService()),
-    ],
-    child: const MyApp(),
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => MenuProvider()),
+        Provider(create: (_) => ApiService()),
+      ],
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
 
-  @override 
+  @override
   Widget build(BuildContext context) {
     //TODO : à supprimer un jour
     FlutterSecureStorage storage = const FlutterSecureStorage();
-    UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
-    
+    UserProvider userProvider =
+        Provider.of<UserProvider>(context, listen: false);
+
     return MaterialApp(
-      debugShowCheckedModeBanner: false, 
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: const ColorScheme (
+        colorScheme: const ColorScheme(
           primary: AppColors.primaryColor,
           secondary: Colors.blue,
           surface: Colors.white,
@@ -41,61 +44,60 @@ class MyApp extends StatelessWidget {
           onSurface: Colors.black,
           onError: Colors.white,
           brightness: Brightness.light,
-
         ),
         fontFamily: 'Marianne',
       ),
-      home:FutureBuilder(future: storage.read(key: 'accessToken'), builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.done) {
-
-        if (snapshot.data != null) {
-          return const TabBarWidget();
-        } else {
-          return  const WelcomeWidget();
-        }
-      } else {
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      }
-    }),
+      home: FutureBuilder(
+          future: storage.read(key: 'accessToken'),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              if (snapshot.data != null) {
+                return const TabBarWidget();
+              } else {
+                return const WelcomeWidget();
+              }
+            } else {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+          }),
     );
   }
 }
-
 
 class AuthChecker extends StatelessWidget {
   const AuthChecker({super.key});
 
   @override
-  Widget  build(BuildContext context) {
+  Widget build(BuildContext context) {
     // Appel de la méthode isConnected via le UserProvider
     // bool isConnected = await UserProvider().isConnected();// await UserProvider().isLoggedIn();  // Vérification synchrone
-    // 
+    //
     // // Choisir la page selon l'état de connexion
     // if (isConnected) {
     //   return const TabBarWidget();  // Si connecté, aller à l'écran principal
     // } else {
     //   return WelcomeWidget2();  // Sinon, afficher l'écran de connexion
     // }
-    return FutureBuilder(future: UserProvider().isConnected(), builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.done) {
-
-        if (snapshot.data == true) {
-          return const TabBarWidget();
-        } else {
-          return  const WelcomeWidget();
-        }
-      } else {
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      }
-    });
+    return FutureBuilder(
+        future: UserProvider().isConnected(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            if (snapshot.data == true) {
+              return const TabBarWidget();
+            } else {
+              return const WelcomeWidget();
+            }
+          } else {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+        });
   }
 }
-

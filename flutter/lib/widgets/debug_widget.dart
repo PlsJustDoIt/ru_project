@@ -15,7 +15,6 @@ class _DebugWidgetState extends State<DebugWidget> {
 
   @override
   Widget build(BuildContext context) {
-    
     logger.d('DebugWidget build');
 
     return Scaffold(
@@ -41,14 +40,18 @@ class _DebugWidgetState extends State<DebugWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Access Token:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Access Token:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 SelectableText(accessToken ?? 'No Access Token'),
                 Text('isExpired: ${JwtDecoder.isExpired(accessToken ?? '')}'),
                 SizedBox(height: 16),
-                Text('Refresh Token:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Refresh Token:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 SelectableText(refreshToken ?? 'No Refresh Token'),
                 Text('isExpired: ${JwtDecoder.isExpired(refreshToken ?? '')}'),
-                ElevatedButton(onPressed: refreshTokent, child: Text('rafraichir le token')),
+                ElevatedButton(
+                    onPressed: refreshTokent,
+                    child: Text('rafraichir le token')),
                 SizedBox(height: 16),
                 Image.asset(
                   "assets/images/jm.jpg",
@@ -62,7 +65,8 @@ class _DebugWidgetState extends State<DebugWidget> {
   }
 
   void refreshTokent() async {
-    final ApiService apiService = Provider.of<ApiService>(context, listen: false);
+    final ApiService apiService =
+        Provider.of<ApiService>(context, listen: false);
     final accessToken = await apiService.refreshToken();
     if (accessToken == null) {
       logger.e('Failed to refresh token');
@@ -71,10 +75,7 @@ class _DebugWidgetState extends State<DebugWidget> {
 
     await _secureStorage.storeAccessToken(accessToken);
 
-    setState(() {
-    });
-    
-    
+    setState(() {});
   }
 
   Future<Map<String, String?>> _fetchTokens() async {

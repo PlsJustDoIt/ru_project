@@ -12,7 +12,8 @@ class MenuWidget extends StatefulWidget {
   State<MenuWidget> createState() => _MenuWidgetState();
 }
 
-class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMixin {
+class _MenuWidgetState extends State<MenuWidget>
+    with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
   //system de page menu
   final PageController _pageController = PageController();
@@ -33,13 +34,12 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
     _pageController.dispose();
     super.dispose();
   }
-  
 
   //set the menus
   void setMenus(BuildContext context) async {
     final menusProvider = Provider.of<MenuProvider>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
-    
+
     if (_menus.isNotEmpty) {
       logger.i('Les menus ne sont pas vides');
     }
@@ -60,25 +60,25 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
     super.build(context);
     return Scaffold(
       body: Center(
-        child: ((_menus.isEmpty)
-                ? const Text('Chargement...')
-                : Column(
-                    children: [
-                      menuNavRow(context),
-                      menuList(context),
-                    ],
-                  ))
-      ),
+          child: ((_menus.isEmpty)
+              ? const Text('Chargement...')
+              : Column(
+                  children: [
+                    menuNavRow(context),
+                    menuList(context),
+                  ],
+                ))),
     );
   }
 
-  //build the widget for the menu navigation row 
+  //build the widget for the menu navigation row
   Widget menuNavRow(BuildContext context) {
     const buttonSize = 50.0; //temp
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        IconButton( //left button
+        IconButton(
+          //left button
           icon: const Icon(Icons.arrow_back),
           iconSize: buttonSize,
           onPressed: () {
@@ -92,10 +92,12 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
         ),
         Expanded(
           child: Center(
-            child: Text('Menu du ${_menus[_currentPage].date}'), // à voir avec _menus
+            child: Text(
+                'Menu du ${_menus[_currentPage].date}'), // à voir avec _menus
           ),
         ),
-        IconButton( //right button
+        IconButton(
+          //right button
           icon: const Icon(Icons.arrow_forward),
           iconSize: buttonSize,
           onPressed: () {
@@ -105,76 +107,70 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
                 curve: Curves.easeInOut,
               );
             }
-            
           },
         ),
       ],
     );
   }
-  
+
   //build the widget for the menu list
   Widget menuList(BuildContext context) {
     return Expanded(
-      child: Column(
-        children : [
-          const Text(
-            'Déjeuner',
-            style: TextStyle(
-              fontSize: 20.0,
-              color: Colors.black,
-            ),
+        child: Column(
+      children: [
+        const Text(
+          'Déjeuner',
+          style: TextStyle(
+            fontSize: 20.0,
+            color: Colors.black,
           ),
-          const SizedBox(height: 16.0),
-          Expanded(
+        ),
+        const SizedBox(height: 16.0),
+        Expanded(
             child: PageView.builder(
-              controller: _pageController,
-              itemCount: _menus.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: 1,
-                  itemBuilder: (context, i) {
-                    return menuPlat(context, _menus[index].plats);
-                  }
-                );
-              }
-            )
-          ),
-        ],
-      )
-    );
+                controller: _pageController,
+                itemCount: _menus.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: 1,
+                      itemBuilder: (context, i) {
+                        return menuPlat(context, _menus[index].plats);
+                      });
+                })),
+      ],
+    ));
   }
-  
+
   //build the widget for the menu plats (map key = String, value = List of dynamic or string)
   Column? menuPlat(BuildContext context, Map<String, dynamic> plats) {
-    
     Column res = Column(
       children: [],
     );
     plats.forEach((key, value) {
-    
       //continue if the value is null, not a list or if key is "Entrées"
       //(en gros si le menu est pas communiqué et si c'est une entrée sa dégage)
       if (value == null || value == "menu non communiqué" || key == "Entrées") {
         return;
       }
-    
+
       //center the text
       res.children.add(Center(
         child: Text(key),
       ));
 
-      
-      if (value is String) { //case string
+      if (value is String) {
+        //case string
         res.children.add(Center(
           child: Text("- $value"),
         ));
-      }else{ //case list dynamic
+      } else {
+        //case list dynamic
         String joinedValue = value.map((item) => item.toString()).join('\n- ');
         res.children.add(Center(
           child: Text("- $joinedValue"),
@@ -186,7 +182,7 @@ class _MenuWidgetState extends State<MenuWidget> with AutomaticKeepAliveClientMi
 
     return res;
   }
-  
+
   @override
   bool get wantKeepAlive => true;
 }

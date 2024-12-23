@@ -27,7 +27,6 @@ class _StateWidgetState extends State<StateWidget> {
               _isStateTwo = value;
             });
           },
-          
         ),
       ],
     );

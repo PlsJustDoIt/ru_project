@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 
-class TransportTimeWidget extends StatefulWidget  {
+class TransportTimeWidget extends StatefulWidget {
   const TransportTimeWidget({super.key});
 
   @override
@@ -11,7 +11,6 @@ class TransportTimeWidget extends StatefulWidget  {
 }
 
 class _TransportWidgetState extends State<TransportTimeWidget> {
-
   Stream<Map<String, dynamic>>? _horairesStream;
   bool _isActive = true; // Contrôle pour arrêter le flux
   @override
@@ -29,9 +28,9 @@ class _TransportWidgetState extends State<TransportTimeWidget> {
 
   Stream<Map<String, dynamic>> _createHorairesStream() async* {
     final apiService = Provider.of<ApiService>(context, listen: false);
-    
 
-    while (_isActive) { // S'assurer que le flux continue seulement si actif
+    while (_isActive) {
+      // S'assurer que le flux continue seulement si actif
       try {
         final data = await apiService.getHoraires();
         logger.i('Données reçues : $data');
@@ -40,7 +39,8 @@ class _TransportWidgetState extends State<TransportTimeWidget> {
         yield {'error': 'Erreur : $e'};
       }
 
-      await Future.delayed(Duration(seconds: 10)); // Délai de 1 minute entre les requêtes
+      await Future.delayed(
+          Duration(seconds: 10)); // Délai de 1 minute entre les requêtes
     }
   }
 
@@ -133,9 +133,7 @@ Widget _buildLineSection(String lineNumber, Map<String, dynamic> destinations) {
       ),
       ...destinations.entries.map((destinationEntry) {
         return _buildDestinationRow(
-          destinationEntry.key, 
-          destinationEntry.value
-        );
+            destinationEntry.key, destinationEntry.value);
       }),
       const Divider(height: 16, thickness: 1),
     ],
@@ -162,27 +160,29 @@ Widget _buildDestinationRow(String destination, List<dynamic> times) {
           flex: 1,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
-            children: times.map((time) => Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  time,
-                  style: TextStyle(
-                    color: Colors.blue[800],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            )).toList(),
+            children: times
+                .map((time) => Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[100],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          time,
+                          style: TextStyle(
+                            color: Colors.blue[800],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
         ),
       ],
     ),
   );
-  
 }
