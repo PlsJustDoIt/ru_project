@@ -105,7 +105,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
 
-      bool result =
+      String? avatarUrl =
           await context.read<ApiService>().updateProfilePicture(pickedFile);
 
       if (mounted != true) {
@@ -113,11 +113,16 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
 
-      if (result) {
+      if (avatarUrl == null) {
+        logger.w('Failed to update profile picture');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Echec de la mise à jour de l\'image')),
+        );
+        return;
+      } else {
         setState(() {
-          logger.i("user id = ${widget.user!.id}");
+          widget.user!.avatarUrl = avatarUrl;
           _isAvatarChanged = true;
-          widget.user!.avatarUrl = widget.user!.avatarUrl;
         });
         logger.i('Profile picture updated');
         ScaffoldMessenger.of(context).showSnackBar(

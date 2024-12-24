@@ -389,7 +389,7 @@ class ApiService {
   }
 
   //update user profile picture
-  Future<bool> updateProfilePicture(XFile pickedFile) async {
+  Future<String?> updateProfilePicture(XFile pickedFile) async {
     try {
       //update user profile picture (requires user id) //TODO: implement
 
@@ -417,15 +417,15 @@ class ApiService {
       if (response.statusCode == 200) {
         logger.i('Profile picture updated');
         //return image if successful
-        return true;
+        return response.data['avatarUrl'];
         //return response.data.bodyBytes; problem ici
       } else {
         logger.e('Failed to update profile picture');
-        return false;
+        return null;
       }
     } catch (e) {
       logger.e('Failed to update profile picture: $e');
-      return false;
+      return null;
     }
   }
 
