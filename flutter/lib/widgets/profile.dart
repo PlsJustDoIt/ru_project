@@ -57,6 +57,8 @@ class ProfileWidget extends StatefulWidget {
   State createState() => _ProfileWidgetState();
 }
 
+bool _hasSubmitted = false;
+
 class _ProfileWidgetState extends State<ProfileWidget> {
   final _formKeyUsername = GlobalKey<FormState>();
   final _formKeyStatus = GlobalKey<FormState>();
@@ -70,7 +72,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   //Image imageDefault = Image.asset('assets/images/default-avatar.png');
   final ImagePicker _picker = ImagePicker();
   late String _selectedStatus;
-  bool hasSubmitted = false;
 
   @override
   void initState() {
@@ -380,7 +381,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     );
   }
 
-  //fonction avec des paramètres pour afficher le dialog selon les requis, stateless widget TODO dans une autre classe dans se fichier
+  //fonction avec des paramètres pour afficher le dialog selon les requis, stateless widget
   StatelessWidget changeThingsDialogs(
       bool isModifyingUsername,
       bool isModifyingPassword,
@@ -388,182 +389,29 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       ApiService apiService,
       UserProvider userProvider,
       BuildContext context) {
-    //temporaire
-    return Dialog(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(isModifyingUsername
-              ? 'Changer le nom d\'utilisateur'
-              : isModifyingPassword
-                  ? 'Changer le mot de passe'
-                  : 'Changer le status'),
-          automaticallyImplyLeading: true,
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: isModifyingUsername
-              ? usernameForm(apiService, userProvider, context)
-              : isModifyingPassword
-                  ? passwordForm(apiService, userProvider, context)
-                  : statusFormNoButton(apiService, userProvider, context),
-        ),
-      ),
-    );
-  }
-
-  Form usernameForm(
-      ApiService apiService, UserProvider userProvider, BuildContext context) {
-    return Form(
-      key: _formKeyUsername,
-      autovalidateMode: hasSubmitted
-          ? AutovalidateMode.onUserInteraction
-          : AutovalidateMode.disabled,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Champ de texte pour le nom d'utilisateur
-          TextFormField(
-            controller: _usernameController,
-            decoration: InputDecoration(
-              labelText: 'Nouveau nom d\'utilisateur',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.person),
-            ),
-            validator: (value) {
-              // Validation du nom d'utilisateur
-              if (value == null || value.trim().isEmpty) {
-                return 'Veuillez entrer un nom d\'utilisateur';
-              }
-              if (value.trim().length < 3) {
-                return 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
-              }
-              if (value.trim().length > 32) {
-                return 'Le nom d\'utilisateur doit contenir moins de 32 caractères';
-              }
-              //test si le meme
-              if (value.trim() == userProvider.user!.username) {
-                return 'Le nom d\'utilisateur doit être différent de l\'ancien';
-              }
-              // Validation réussie
-              return null;
-            },
-          ),
-
-          SizedBox(height: 20),
-
-          // Bouton de mise à jour
-          ElevatedButton(
-            onPressed: () => comfirmUsername(apiService, userProvider, context),
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: Text('Confirmer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Form passwordForm(
-      ApiService apiService, UserProvider userProvider, BuildContext context) {
-    return Form(
-      key: _formKeyPassword,
-      autovalidateMode: hasSubmitted
-          ? AutovalidateMode.onUserInteraction
-          : AutovalidateMode.disabled,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Champ de texte pour l'ancien mot de passe
-          TextFormField(
-            controller: _oldPasswordController,
-            obscureText: true,
-            enableSuggestions: false,
-            autocorrect: false,
-            decoration: InputDecoration(
-              labelText: 'Mot de passe actuel',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.lock),
-            ),
-            validator: (value) {
-              // Validation du mot de passe
-              if (value == null || value.trim().isEmpty) {
-                return 'Veuillez entrer un mot de passe';
-              }
-              if (value.trim().length < 3) {
-                return 'Le mot de passe doit contenir au moins 3 caractères';
-              }
-              if (value.trim().length > 32) {
-                return 'Le mot de passe doit contenir moins de 32 caractères';
-              }
-              // Validation réussie
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-          // Champ de texte pour le mot de passe
-          TextFormField(
-            controller: _passwordController,
-            obscureText: true,
-            enableSuggestions: false,
-            autocorrect: false,
-            decoration: InputDecoration(
-              labelText: 'Nouveau mot de passe',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.lock),
-            ),
-            validator: (value) {
-              // Validation du mot de passe
-              if (value == null || value.trim().isEmpty) {
-                return 'Veuillez entrer un mot de passe';
-              }
-              if (value.trim().length < 3) {
-                return 'Le mot de passe doit contenir au moins 3 caractères';
-              }
-              if (value.trim().length > 32) {
-                return 'Le mot de passe doit contenir moins de 32 caractères';
-              }
-              // Validation réussie
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-          // Champ de texte pour la confirmation du mot de passe
-          TextFormField(
-            controller: _passwordConfirmController,
-            obscureText: true,
-            enableSuggestions: false,
-            autocorrect: false,
-            decoration: InputDecoration(
-              labelText: 'Confirmer le mot de passe',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.lock),
-            ),
-            validator: (value) {
-              // Validation du mot de passe
-              if (value == null || value.trim().isEmpty) {
-                return 'Veuillez entrer un mot de passe';
-              }
-              if (value.trim() != _passwordController.text) {
-                return 'Les mots de passe ne correspondent pas';
-              }
-              // Validation réussie
-              return null;
-            },
-          ),
-
-          SizedBox(height: 20),
-
-          // Bouton de mise à jour
-          ElevatedButton(
-            onPressed: () => comfirmPassword(apiService, userProvider, context),
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: Text('Confirmer'),
-          ),
-        ],
-      ),
+    return ProfileDialogs(
+      isModifyingUsername: isModifyingUsername,
+      isModifyingPassword: isModifyingPassword,
+      isModifyingStatus: isModifyingStatus,
+      apiService: apiService,
+      userProvider: userProvider,
+      usernameController: _usernameController,
+      oldPasswordController: _oldPasswordController,
+      passwordController: _passwordController,
+      passwordConfirmController: _passwordConfirmController,
+      selectedStatus: _selectedStatus,
+      statusList: widget.statusList,
+      onStatusChanged: (String newValue) {
+        setState(() {
+          _selectedStatus = newValue;
+        });
+      },
+      formKeyUsername: _formKeyUsername,
+      formKeyPassword: _formKeyPassword,
+      formKeyStatus: _formKeyStatus,
+      onUsernameConfirm: comfirmUsername,
+      onPasswordConfirm: comfirmPassword,
+      onStatusConfirm: comfirmStatus,
     );
   }
 
@@ -571,7 +419,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       ApiService apiService, UserProvider userProvider, BuildContext context) {
     return Form(
       key: _formKeyStatus,
-      autovalidateMode: hasSubmitted
+      autovalidateMode: _hasSubmitted
           ? AutovalidateMode.onUserInteraction
           : AutovalidateMode.disabled,
       child: Column(
@@ -610,7 +458,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   void comfirmUsername(ApiService apiService, UserProvider userProvider,
       BuildContext context) async {
     setState(() {
-      hasSubmitted = true;
+      _hasSubmitted = true;
     });
     if (!_formKeyUsername.currentState!.validate()) {
       logger.e('username unvalide: ${_usernameController.text}');
@@ -625,7 +473,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         logger.i('New username: ${_usernameController.text}');
 
         setState(() {
-          hasSubmitted = false;
+          _hasSubmitted = false;
         });
 
         if (context.mounted == false) {
@@ -635,6 +483,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Nom d\'utilisateur mis à jour avec succès.')));
         Navigator.of(context).pop();
+        return;
       }
       throw Exception('Failed to update username');
     } catch (e) {
@@ -650,7 +499,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   void comfirmPassword(ApiService apiService, UserProvider userProvider,
       BuildContext context) async {
     setState(() {
-      hasSubmitted = true;
+      _hasSubmitted = true;
     });
     if (!_formKeyPassword.currentState!.validate()) {
       logger.e('error password form');
@@ -663,7 +512,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       if (success) {
         logger.i('New password: ${_passwordController.text}');
         setState(() {
-          hasSubmitted = false;
+          _hasSubmitted = false;
         });
         if (context.mounted == false) {
           return;
@@ -671,7 +520,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Mot de passe mis à jour avec succès.')));
         Navigator.of(context).pop();
+        return;
       }
+
       throw Exception('Failed to update password');
     } catch (e) {
       if (context.mounted == false) {
@@ -724,6 +575,251 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   }
 }
 
+//class pour les dialog de changement de username, password et status
+class ProfileDialogs extends StatelessWidget {
+  final bool isModifyingUsername;
+  final bool isModifyingPassword;
+  final bool isModifyingStatus;
+  final ApiService apiService;
+  final UserProvider userProvider;
+  final TextEditingController usernameController;
+  final TextEditingController oldPasswordController;
+  final TextEditingController passwordController;
+  final TextEditingController passwordConfirmController;
+  final String selectedStatus;
+  final List<String> statusList;
+  final Function(String) onStatusChanged;
+  final GlobalKey<FormState> formKeyUsername;
+  final GlobalKey<FormState> formKeyPassword;
+  final GlobalKey<FormState> formKeyStatus;
+  final Function(ApiService, UserProvider, BuildContext) onUsernameConfirm;
+  final Function(ApiService, UserProvider, BuildContext) onPasswordConfirm;
+  final Function(ApiService, UserProvider, BuildContext, bool) onStatusConfirm;
+
+  const ProfileDialogs({
+    super.key,
+    required this.isModifyingUsername,
+    required this.isModifyingPassword,
+    required this.isModifyingStatus,
+    required this.apiService,
+    required this.userProvider,
+    required this.usernameController,
+    required this.oldPasswordController,
+    required this.passwordController,
+    required this.passwordConfirmController,
+    required this.selectedStatus,
+    required this.statusList,
+    required this.onStatusChanged,
+    required this.formKeyUsername,
+    required this.formKeyPassword,
+    required this.formKeyStatus,
+    required this.onUsernameConfirm,
+    required this.onPasswordConfirm,
+    required this.onStatusConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(isModifyingUsername
+              ? 'Changer le nom d\'utilisateur'
+              : isModifyingPassword
+                  ? 'Changer le mot de passe'
+                  : 'Changer le status'),
+          automaticallyImplyLeading: true,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: isModifyingUsername
+              ? _buildUsernameForm(context)
+              : isModifyingPassword
+                  ? _buildPasswordForm(context)
+                  : _buildStatusForm(context),
+        ),
+      ),
+    );
+  }
+
+  Form _buildUsernameForm(BuildContext context) {
+    _hasSubmitted = false;
+
+    return Form(
+      key: formKeyUsername,
+      autovalidateMode: _hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: usernameController,
+            decoration: const InputDecoration(
+              labelText: 'Nouveau nom d\'utilisateur',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Veuillez entrer un nom d\'utilisateur';
+              }
+              if (value.trim().length < 3) {
+                return 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
+              }
+              if (value.trim().length > 32) {
+                return 'Le nom d\'utilisateur doit contenir moins de 32 caractères';
+              }
+              if (value.trim() == userProvider.user!.username) {
+                return 'Le nom d\'utilisateur doit être différent de l\'ancien';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () =>
+                onUsernameConfirm(apiService, userProvider, context),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Form _buildPasswordForm(BuildContext context) {
+    _hasSubmitted = false;
+    return Form(
+      key: formKeyPassword,
+      autovalidateMode: _hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: oldPasswordController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            decoration: const InputDecoration(
+              labelText: 'Mot de passe actuel',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Veuillez entrer un mot de passe';
+              }
+              if (value.trim().length < 3) {
+                return 'Le mot de passe doit contenir au moins 3 caractères';
+              }
+              if (value.trim().length > 32) {
+                return 'Le mot de passe doit contenir moins de 32 caractères';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          TextFormField(
+            controller: passwordController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            decoration: const InputDecoration(
+              labelText: 'Nouveau mot de passe',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Veuillez entrer un mot de passe';
+              }
+              if (value.trim().length < 3) {
+                return 'Le mot de passe doit contenir au moins 3 caractères';
+              }
+              if (value.trim().length > 32) {
+                return 'Le mot de passe doit contenir moins de 32 caractères';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          TextFormField(
+            controller: passwordConfirmController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            decoration: const InputDecoration(
+              labelText: 'Confirmer le mot de passe',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Veuillez entrer un mot de passe';
+              }
+              if (value.trim() != passwordController.text) {
+                return 'Les mots de passe ne correspondent pas';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () =>
+                onPasswordConfirm(apiService, userProvider, context),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Form _buildStatusForm(BuildContext context) {
+    _hasSubmitted = false;
+
+    return Form(
+      key: formKeyStatus,
+      autovalidateMode: _hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DropdownButtonFormField<String>(
+            value: selectedStatus,
+            decoration: const InputDecoration(
+              labelText: 'Status',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.emoji_emotions),
+              focusColor: Colors.blue,
+            ),
+            items: statusList.map((String status) {
+              return DropdownMenuItem<String>(
+                value: status,
+                child: Text(status),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                onStatusChanged(newValue);
+                onStatusConfirm(apiService, userProvider, context, false);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // Exemple d'utilisation
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key});
@@ -760,13 +856,3 @@ class SearchPage extends StatelessWidget {
     );
   }
 }
-
-/*
-username, password : min 3 caractères, max 32 char and not empty and not null and not only spaces 
-
-status : en ligne, au ru, absent //TODO backend
-
-avatar :
- .jpg .jpeg 
- /uploads/avatars/id/avatar.jpg
- */
