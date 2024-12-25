@@ -7,6 +7,8 @@ import 'package:ru_project/providers/menu_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
   runApp(
@@ -32,6 +34,14 @@ class MyApp extends StatelessWidget {
         Provider.of<UserProvider>(context, listen: false);
 
     return MaterialApp(
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        const Locale('fr', 'FR'),
+      ],
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: const ColorScheme(

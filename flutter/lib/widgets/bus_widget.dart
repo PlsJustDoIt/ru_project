@@ -40,7 +40,7 @@ class _TransportWidgetState extends State<TransportTimeWidget> {
       }
 
       await Future.delayed(
-          Duration(seconds: 10)); // Délai de 1 minute entre les requêtes
+          Duration(minutes: 1)); // Délai de 1 minute entre les requêtes
     }
   }
 
