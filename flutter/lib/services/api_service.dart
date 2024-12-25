@@ -353,21 +353,21 @@ class ApiService {
   }
 
   //update username (requires user id)
-  Future<bool> updateUsername(String username) async {
+  Future<Map<String, dynamic>> updateUsername(String username) async {
     try {
       final Response response = await _dio.put('/users/update-username', data: {
         'username': username,
       });
       if (response.statusCode == 200) {
         logger.i('Username updated: $username');
-        return true;
+        return {'username': response.data['username'], 'success': true};
       }
       logger.e(
           'Invalid response from server in updateUsername(): ${response.statusCode} ${response.data['error']}');
-      return false;
+      return {'error': response.data['error'], 'success': false};
     } catch (e) {
       logger.e('Failed to update username: $e');
-      return false;
+      return {'error': '$e', 'success': false};
     }
   }
 
@@ -414,11 +414,8 @@ class ApiService {
       final Response response = await _dio.put('/users/update-profile-picture',
           data: formData); // avatarUrl : response.data['avatarUrl']
 
-      if (response.statusCode == 200) {
-        logger.i('Profile picture updated');
-        //return image if successful
+      if (response.statusCode == 200 && response.data['avatarUrl'] != null) {
         return response.data['avatarUrl'];
-        //return response.data.bodyBytes; problem ici
       } else {
         logger.e('Failed to update profile picture');
         return null;

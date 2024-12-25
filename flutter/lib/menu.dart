@@ -150,6 +150,7 @@ class _MenuWidgetState extends State<MenuWidget>
               child: Center(
                 child: Text(
                   'Menu du ${formatDate(_menus[_currentPage].date)}',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: (screenSize * 0.02).clamp(16.0, 25.0),
                     color: Colors.black,

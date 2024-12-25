@@ -95,7 +95,7 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
 
         await user.save();
 
-        res.json({ message: 'Username updated' });
+        res.json({ username: username });
     } catch (err: unknown) {
         logger.error(`Could not update username : ${err}`);
         res.status(500).json({ error: `Could not update username : ${err} ` });
@@ -194,10 +194,6 @@ router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), conve
         user.avatarUrl = avatarUrl;
 
         await user.save();
-
-        // const image = fs.readFileSync(req.file.path);
-
-        res.setHeader('Content-Type', 'image/jpeg'); // Définir le type MIME
 
         return res.json({ avatarUrl: avatarUrl });
     } catch (err: unknown) {
