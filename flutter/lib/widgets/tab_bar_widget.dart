@@ -12,6 +12,8 @@ import 'package:ru_project/widgets/profile.dart';
 import 'package:ru_project/widgets/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
+import 'package:ru_project/widgets/chat_screen_widget.dart';
+import 'package:ru_project/widgets/chat_page_widget.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -23,7 +25,7 @@ class TabBarWidget extends StatelessWidget {
 
     logger.i('User: ${userProvider.user}');
     return DefaultTabController(
-      length: 6,
+      length: 8,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -71,6 +73,8 @@ class TabBarWidget extends StatelessWidget {
               Tab(icon: Icon(Icons.login), text: 'Carte ru'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
+              Tab(icon: Icon(Icons.settings), text: 'socket test'),
+              Tab(icon: Icon(Icons.messenger), text: 'Chat'),
               Tab(icon: Icon(Icons.person), text: 'Profil'),
               Tab(icon: Icon(Icons.directions_bus), text: 'Bus'),
               Tab(icon: Icon(Icons.bug_report), text: 'Debug'),
@@ -82,6 +86,8 @@ class TabBarWidget extends StatelessWidget {
             const CafeteriaLayout(),
             const MenuWidget(),
             FriendsListSheet(),
+            ChatScreen(),
+            ChatPage(),
             ProfileWidget(),
             TransportTimeWidget(),
             DebugWidget(),
