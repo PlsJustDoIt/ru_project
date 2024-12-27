@@ -193,7 +193,6 @@ router.post('/logout', auth, async (req, res) => {
     }
 });
 
-// TODO: demander a leo si il faut mettre cette fonction ici dans users.ts ou dans auth.ts
 router.delete('/delete-account', auth, async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     if (!refreshToken) {

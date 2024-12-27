@@ -264,6 +264,7 @@ class ApiService {
 
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> rawMenuData = response.data;
+        //logger.i('Menus récupérés : $rawMenuData');
         return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
       }
       logger.e(

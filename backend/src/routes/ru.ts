@@ -2,9 +2,9 @@ import auth from '../middleware/auth.js';
 import { Router, Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import xml2js from 'xml2js';
-import fs from 'fs';
 import { Menu, MenuXml } from '../interfaces/menu.js';
 import logger from '../services/logger.js';
+import fs from 'fs';
 
 const router = Router();
 const ru_lumiere_id = 'r135';
@@ -71,6 +71,19 @@ function extractPlats(html: string, title: string): string[] | 'menu non communi
     return 'menu non communiqué';
 }
 
+/*
+<![CDATA[
+<h2>midi</h2><h4>Structure fermée du Lundi 23 Décembre 2024 au Vendredi 3 Janvier 2025</h4>]]>
+ */
+function extractFermeture(html: string): string | boolean {
+    const regexFermeture = new RegExp('<h4>Structure fermée du (.*?)</h4>', 'i');
+    const fermetureMatch = html.match(regexFermeture);
+    if (fermetureMatch) {
+        return fermetureMatch[1];
+    }
+    return false;
+}
+
 // Fonction pour transformer un objet <menu> en objet Menu
 function transformToMenu(menu: MenuXml): Menu {
     const html = menu._; // Contenu HTML
@@ -84,18 +97,21 @@ function transformToMenu(menu: MenuXml): Menu {
         'Cuisine italienne': extractPlats(html, 'Cuisine italienne'),
         'Grill': extractPlats(html, 'Grill'),
         'date': date, // On récupère la date du menu
+        'Fermeture': extractFermeture(html), // On récupère la date de fermeture si il y en a une
     };
 }
 
 // Fonction pour récupérer les menus de l'API externe
 async function fetchMenusFromExternalAPI() {
     try {
-        // L'URL de l'API qui retourne le document XML des menus
-        // const response:AxiosResponse = await axios.get(api_url);
+        // // L'URL de l'API qui retourne le document XML des menus
+        // const response: AxiosResponse = await axios.get(api_url);
         // if (response.status !== 200) {
-        //   throw new Error('Erreur lors de la récupération des menus');
+        //     throw new Error('Erreur lors de la récupération des menus');
         // }
         // const xmlData = response.data;
+        // // ecrire le contenu du fichier xml dans un fichier menus.xml
+        // fs.writeFileSync('menus.xml', xmlData, 'utf-8');
 
         const xmlData = fs.readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
 
@@ -136,7 +152,7 @@ router.get('/menus', auth, async (req: Request, res: Response) => {
 
         // On met les menus en cache pour 1 heure
         cache.set('menus', menus);
-
+        logger.info(menus);
         res.json(menus);
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);

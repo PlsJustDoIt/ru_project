@@ -30,21 +30,37 @@ String formatDate(String dateString) {
   return formattedDate;
 }
 
-// TODO : Amélioration posible en choisissant l'index la plus proche de la date actuelle a partir de la date du menu
 int indexCloserDateInMenus(List<Menu> menus) {
   if (menus.isEmpty) return 0;
 
   DateTime now = DateTime.now();
   int index = 0;
-  int minDiff = (DateTime.parse(menus[0].date).difference(now)).inDays.abs();
+  int minDiff = -1;
 
-  for (int i = 1; i < menus.length; i++) {
-    int diff = (DateTime.parse(menus[i].date).difference(now)).inDays.abs();
-    if (diff < minDiff) {
+  for (int i = 0; i < menus.length; i++) {
+    DateTime menuDate = DateTime.parse(menus[i].date);
+    int diff = menuDate.difference(now).inDays;
+
+    if (diff >= 0 && (minDiff == -1 || diff < minDiff)) {
       minDiff = diff;
       index = i;
     }
   }
+
+  // cas ou tous les menus sont dans le passé (normallement impossible)
+  if (minDiff == -1) {
+    minDiff = (DateTime.parse(menus[0].date).difference(now)).inDays.abs();
+    index = 0;
+
+    for (int i = 1; i < menus.length; i++) {
+      int diff = (DateTime.parse(menus[i].date).difference(now)).inDays.abs();
+      if (diff < minDiff) {
+        minDiff = diff;
+        index = i;
+      }
+    }
+  }
+
   return index;
 }
 
@@ -198,6 +214,15 @@ class _MenuWidgetState extends State<MenuWidget>
             ),
           ),
           const SizedBox(height: 16.0),
+          // _menus[_currentPage].fermeture is either a string or a bool
+          if (_menus[_currentPage].fermeture is String)
+            Text(
+                'Fermeture :\n- Structure fermée du ${_menus[_currentPage].fermeture}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: (screenSize * 0.015).clamp(15.0, 20.0),
+                  color: Colors.black,
+                )),
           Expanded(
               child: PageView.builder(
                   controller: _pageController,
