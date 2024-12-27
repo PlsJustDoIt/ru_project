@@ -704,18 +704,13 @@ paths:
       description: "Rechercher un utilisateur par nom d'utilisateur"
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                query:
-                  type: string
-                  description: Username de l'utilisateur à rechercher
-              required:
-                - query
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+          description: Nom d'utilisateur à rechercher
       responses:
         '200':
           description: OK
@@ -726,14 +721,20 @@ paths:
                 items:
                   type: object
                   properties:
-                    username:
-                      type: string
-                    status:
-                      type: string
-                    avatarUrl:
-                      type: string
-                    id: 
-                      type: string
+                    user:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                        status:
+                          type: string
+                        avatarUrl:
+                          type: string
+                        id: 
+                          type: string
+                    relevanceScore:
+                      type: number
+                  
         '401' :
           description: Erreur d'authentification
           content:

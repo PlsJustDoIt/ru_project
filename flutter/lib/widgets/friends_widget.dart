@@ -3,6 +3,7 @@ import 'package:ru_project/models/user.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/search_user_widget.dart';
 
 class FriendsListButton extends StatelessWidget {
   const FriendsListButton({super.key});
@@ -92,6 +93,12 @@ class _FriendsListSheetState extends State<FriendsListSheet>
         SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
       );
     }
+  }
+
+  void addFriendFromSearch(User friend) {
+    setState(() {
+      friends?.add(friend);
+    });
   }
 
   void _showDeleteConfirmationDialog(String friendId) {
@@ -316,6 +323,37 @@ class _FriendsListSheetState extends State<FriendsListSheet>
                 },
                 child: Text(
                   'Ajouter un ami',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ),
+          //bouton de d'ajout d'ami via une recherche
+          Padding(
+            padding: EdgeInsets.all(16).copyWith(
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                    return RealtimeSearchWidget(
+                      onRemoteSearch: apiService.searchUsers,
+                      fullUrlGetter: apiService.getImageNetworkUrl,
+                      addFriend: apiService.addFriend,
+                      addFriendToOtherWidget: addFriendFromSearch,
+                    );
+                  }));
+                },
+                child: Text(
+                  'Ajouter un ami via une recherche avancée',
                   style: TextStyle(fontSize: 16),
                 ),
               ),

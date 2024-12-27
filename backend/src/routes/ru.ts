@@ -152,7 +152,6 @@ router.get('/menus', auth, async (req: Request, res: Response) => {
 
         // On met les menus en cache pour 1 heure
         cache.set('menus', menus);
-        logger.info(menus);
         res.json(menus);
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);

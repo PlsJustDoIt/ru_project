@@ -222,31 +222,90 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
     }
 });
 
+// search for users
 router.get('/search', auth, async (req: Request, res: Response) => {
-    const query = req.body.query;
-    if (!query) {
+    const query = req.query.query;
+    if (!query || typeof query !== 'string') {
+        logger.error('No string query provided');
         return res.status(400).json({ error: 'No query provided' });
     }
-    const searchItem = new RegExp(query, 'i'); // case-insensitive search
 
     try {
-        const foundUsers = await User.find({ username: searchItem }).select('id username avatarUrl').limit(6).exec();
+        const searchTerm = query.toLowerCase();
+        const searchItem = new RegExp(query, 'i');
+
+        const foundUsers = await User.find({ username: searchItem })
+            .select('id username avatarUrl status')
+            .limit(10)
+            .exec();
 
         if (foundUsers.length === 0) {
             return res.status(404).json({ msg: 'No users found' });
         }
-        const minimisedUsers = foundUsers.map(user => ({
-            username: user.username,
-            avatarUrl: user.avatarUrl,
-            status: user.status,
-            id: user._id,
-        }));
-        res.json(minimisedUsers);
+
+        const searchResults = foundUsers.map((user) => {
+            const username = user.username.toLowerCase();
+            let relevanceScore = 0;
+
+            // Exact match gets highest score
+            if (username === searchTerm) {
+                relevanceScore = 100;
+            } else if (username.startsWith(searchTerm)) { // Starts with search term
+                relevanceScore = 75;
+            } else if (username.includes(searchTerm)) { // Contains search term
+                relevanceScore = 50;
+            } else { // Calculate distance for partial matches
+                const distance = levenshteinDistance(username, searchTerm);
+                relevanceScore = Math.max(0, 100 - (distance * 10));
+            }
+
+            return {
+                user: {
+                    username: user.username,
+                    avatarUrl: user.avatarUrl,
+                    status: user.status,
+                    id: user._id,
+                },
+                relevanceScore,
+            };
+        }).sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+        res.json(searchResults);
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
         res.status(500).json({ Error: 'Could not search for user' });
     }
 });
+
+// Fonction utilitaire pour calculer la distance de Levenshtein (oui c'est moi qui l'ai faite tkt)
+function levenshteinDistance(str1: string, str2: string): number {
+    const m = str1.length;
+    const n = str2.length;
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) {
+        dp[i][0] = i;
+    }
+    for (let j = 0; j <= n; j++) {
+        dp[0][j] = j;
+    }
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (str1[i - 1] === str2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = Math.min(
+                    dp[i - 1][j - 1] + 1,
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                );
+            }
+        }
+    }
+
+    return dp[m][n];
+}
 
 router.post('/add-friend', auth, async (req: Request, res: Response) => {
     const { username } = req.body;

@@ -168,7 +168,7 @@ class ApiService {
     }
   }
 
-  Future<List<User>> searchUsers(String query) async {
+  Future<List<SearchResult>> searchUsers(String query) async {
     try {
       final Response response =
           await _dio.get('/users/search', queryParameters: {
@@ -176,8 +176,12 @@ class ApiService {
       });
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> rawUserData = response.data;
-        return rawUserData.map((user) => User.fromJson(user)).toList();
+        final List<dynamic> rawSearchResultData = response.data;
+        logger.i('Users found: $rawSearchResultData');
+        // TOUT changer ici
+        return rawSearchResultData
+            .map((result) => SearchResult.fromJson(result))
+            .toList();
       } else {
         throw Exception('Invalid response from server');
       }
@@ -447,23 +451,6 @@ class ApiService {
       return false;
     }
   }
-
-  // //get user avatar
-  // Future<Uint8List> getUserRawAvatar(String avatarUrl) async {
-  //   try {
-  //     logger.i('Getting avatar: $avatarUrl');
-  //     final Response response = await _dio.get("/$avatarUrl", options: Options(responseType: ResponseType.bytes));
-  //     logger.i('Response: ${response.headers}');
-  //     if (response.data != null) {
-  //       return response.data;
-  //     }
-  //     logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
-  //     throw Exception('Failed to get avatar');
-  //   } catch (e) {
-  //     logger.e('Failed to get avatar: $e');
-  //     throw Exception('Failed to get avatar: $e');
-  //   }
-  // }
 
   //TODO : a voir si ya mieux
   String getImageNetworkUrl(String avatarUrl) {
