@@ -14,6 +14,7 @@ import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:ru_project/widgets/chat_screen_widget.dart';
 import 'package:ru_project/widgets/chat_page_widget.dart';
+import 'package:liquid_swipe/liquid_swipe.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -23,7 +24,6 @@ class TabBarWidget extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final apiService = Provider.of<ApiService>(context);
 
-    logger.i('User: ${userProvider.user}');
     return DefaultTabController(
       length: 8,
       child: Scaffold(
@@ -87,7 +87,7 @@ class TabBarWidget extends StatelessWidget {
             const MenuWidget(),
             FriendsListSheet(),
             ChatScreen(),
-            ChatPage(),
+            CircularProgressIndicator(),
             ProfileWidget(),
             TransportTimeWidget(),
             DebugWidget(),

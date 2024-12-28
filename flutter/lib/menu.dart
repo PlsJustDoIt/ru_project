@@ -3,8 +3,6 @@ import 'package:ru_project/models/color.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
-import 'package:ru_project/providers/menu_provider.dart';
-import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart'; // Import UserProvider
 import 'package:intl/intl.dart';
 
@@ -90,7 +88,6 @@ class _MenuWidgetState extends State<MenuWidget>
 
   //set the menus
   void setMenus(BuildContext context) async {
-    final menusProvider = Provider.of<MenuProvider>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
 
     if (_menus.isNotEmpty) {
@@ -103,7 +100,6 @@ class _MenuWidgetState extends State<MenuWidget>
     }
     setState(() {
       _menus = menus;
-      menusProvider.setMenus(menus);
       _currentPage = indexCloserDateInMenus(menus);
       _pageController = PageController(initialPage: _currentPage);
     });
