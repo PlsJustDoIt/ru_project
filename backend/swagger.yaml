@@ -248,6 +248,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/errorResponse'
+  /auth/delete-account :
+    delete:
+      tags: [auth]
+      summary: "Supprimer le compte"
+      description: "Supprimer le compte de l'utilisateur connecté via le token d'authentification"
+      security:
+        - bearerAuth: []
+      requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             required:
+               - refreshToken
+             properties:
+               refreshToken:
+                 type: string
+                 description: Token de rafraîchissement de l'utilisateur
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '401' :
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '500':
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
   ## ginko
   /ginko/info:
     get:
@@ -829,25 +882,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/errorResponse'
-  /auth/delete-account :
-    delete:
-      tags: [auth]
-      summary: "Supprimer le compte"
-      description: "Supprimer le compte de l'utilisateur connecté via le token d'authentification"
+  ## socket
+  /socket/send:
+    post:
+      tags: [socket]
+      summary: Envoyer un message via socket
+      description: "Envoyer un message à un utilisateur spécifique via socket"
       security:
         - bearerAuth: []
       requestBody:
-       required: true
-       content:
-         application/json:
-           schema:
-             type: object
-             required:
-               - refreshToken
-             properties:
-               refreshToken:
-                 type: string
-                 description: Token de rafraîchissement de l'utilisateur
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roomId
+                - message
+              properties:
+                recipientId:
+                  type: string
+                  description: ID de l'utilisateur destinataire
+                message:
+                  type: string
+                  description: Contenu du message
       responses:
         '200':
           description: OK
@@ -858,20 +916,15 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: 'Message envoyé'
         '400':
           description: Erreur de validation
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/errorResponse'
-        '401' :
+        '401':
           description: Erreur d'authentification
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
-          description: Utilisateur non trouvé
           content:
             application/json:
               schema:
@@ -883,3 +936,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/errorResponse'
 
+  /socket/messages:
+    get:
+      tags: [socket]
+      summary: Récupérer les messages
+      description: "Récupérer les messages envoyés à l'utilisateur connecté via le token d'authentification"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: roomId
+          required: true
+          schema:
+            type: string
+          description: identifiant de la room
+          example: "42"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    senderId:
+                      type: string
+                    message:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+        '401':
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '500':
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
