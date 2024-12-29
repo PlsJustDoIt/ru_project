@@ -281,7 +281,7 @@ router.get('/search', auth, async (req: Request, res: Response) => {
     }
 });
 
-// Fonction utilitaire pour calculer la distance de Levenshtein (oui c'est moi qui l'ai faite tkt)
+// Fonction utilitaire pour calculer la distance de Levenshtein
 function levenshteinDistance(str1: string, str2: string): number {
     const m = str1.length;
     const n = str2.length;

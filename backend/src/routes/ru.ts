@@ -2,7 +2,7 @@ import auth from '../middleware/auth.js';
 import { Router, Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import xml2js from 'xml2js';
-import { Menu, MenuXml } from '../interfaces/menu.js';
+import { MenuResponse, MenuXml } from '../interfaces/menu.js';
 import logger from '../services/logger.js';
 import fs from 'fs';
 
@@ -71,33 +71,36 @@ function extractPlats(html: string, title: string): string[] | 'menu non communi
     return 'menu non communiqué';
 }
 
-/*
-<![CDATA[
-<h2>midi</h2><h4>Structure fermée du Lundi 23 Décembre 2024 au Vendredi 3 Janvier 2025</h4>]]>
- */
-function extractFermeture(html: string): string | boolean {
-    const regexFermeture = new RegExp('<h4>Structure fermée du (.*?)</h4>', 'i');
-    const fermetureMatch = html.match(regexFermeture);
-    if (fermetureMatch) {
-        return fermetureMatch[1];
-    }
-    return false;
+function extractFermeture(html: string): string | null {
+    const countH4 = (html.match(/<h4>/g) || []).length;
+    if (countH4 != 1) return null;
+
+    const start = html.indexOf('<h4>');
+    const end = html.indexOf('</h4>', start);
+    return html.substring(start + 4, end);
 }
 
 // Fonction pour transformer un objet <menu> en objet Menu
-function transformToMenu(menu: MenuXml): Menu {
-    const html = menu._; // Contenu HTML
-    const date = menu.$.date; // Date du menu
+function transformToMenu(menu: MenuXml): MenuResponse {
+    const html = menu._;
+    const date = menu.$.date;
+    const fermeture = extractFermeture(html);
+
+    if (fermeture == null) {
+        return {
+            'Entrées': extractPlats(html, 'Entrées'),
+            'Cuisine traditionnelle': extractPlats(html, 'Cuisine traditionnelle'),
+            'Menu végétalien': extractPlats(html, 'Menu végétalien'),
+            'Pizza': extractPlats(html, 'Pizza'),
+            'Cuisine italienne': extractPlats(html, 'Cuisine italienne'),
+            'Grill': extractPlats(html, 'Grill'),
+            'date': date,
+        };
+    }
 
     return {
-        'Entrées': extractPlats(html, 'Entrées'),
-        'Cuisine traditionnelle': extractPlats(html, 'Cuisine traditionnelle'),
-        'Menu végétalien': extractPlats(html, 'Menu végétalien'),
-        'Pizza': extractPlats(html, 'Pizza'),
-        'Cuisine italienne': extractPlats(html, 'Cuisine italienne'),
-        'Grill': extractPlats(html, 'Grill'),
-        'date': date, // On récupère la date du menu
-        'Fermeture': extractFermeture(html), // On récupère la date de fermeture si il y en a une
+        fermeture: fermeture,
+        date: date,
     };
 }
 
@@ -125,7 +128,7 @@ async function fetchMenusFromExternalAPI() {
         const restoR135 = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_lumiere_id);
         const menus = decodeJsonValues(restoR135.menu);
 
-        const transformedMenus: Menu[] = menus.map((menu: MenuXml) => transformToMenu(menu));
+        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
         return transformedMenus;
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
@@ -141,7 +144,7 @@ router.get('/', (req: Request, res: Response) => {
 router.get('/menus', auth, async (req: Request, res: Response) => {
     try {
         // On vérifie si les menus sont en cache
-        const cachedMenus: Menu[] | undefined = cache.get('menus');
+        const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
         if (cachedMenus) {
             logger.info('Les menus sont en cache');
             return res.json(cachedMenus);

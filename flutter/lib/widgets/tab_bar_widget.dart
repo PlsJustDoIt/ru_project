@@ -3,7 +3,7 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/menu.dart';
+import 'package:ru_project/widgets/menu.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/debug_widget.dart';

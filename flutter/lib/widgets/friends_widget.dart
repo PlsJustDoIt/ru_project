@@ -85,7 +85,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
       if (friendAdded == null) {
         throw 'peut etre un jour des vrais messages d\'erreurs';
       } else {
-        setState(() => friends?.add(friendAdded));
+        addFriendToFriendsList(friendAdded);
       }
     } catch (e) {
       if (!mounted) return;
@@ -95,7 +95,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
     }
   }
 
-  void addFriendFromSearch(User friend) {
+  void addFriendToFriendsList(User friend) {
     setState(() {
       friends?.add(friend);
     });
@@ -346,9 +346,9 @@ class _FriendsListSheetState extends State<FriendsListSheet>
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
                     return RealtimeSearchWidget(
                       onRemoteSearch: apiService.searchUsers,
-                      fullUrlGetter: apiService.getImageNetworkUrl,
+                      getImageNetworkUrl: apiService.getImageNetworkUrl,
                       addFriend: apiService.addFriend,
-                      addFriendToOtherWidget: addFriendFromSearch,
+                      addFriendToFriendsList: addFriendToFriendsList,
                     );
                   }));
                 },

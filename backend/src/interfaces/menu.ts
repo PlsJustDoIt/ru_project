@@ -5,9 +5,10 @@ export interface Menu {
     'Pizza': string[] | 'menu non communiqué';
     'Cuisine italienne': string[] | 'menu non communiqué';
     'Grill': string[] | 'menu non communiqué';
-    'Fermeture': string | boolean; // Date de fermeture si il y en a une sinon false
     'date': string;
 }
+
+export type MenuResponse = Menu | { fermeture: string; date: string };
 
 // Type pour les objets <menu> du XML
 export interface MenuXml {

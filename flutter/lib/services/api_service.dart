@@ -11,6 +11,7 @@ import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/models/searchResult.dart';
 
 class ApiService {
   late final Dio _dio;
