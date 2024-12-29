@@ -4,7 +4,7 @@ import 'package:ru_project/services/logger.dart';
 class Menu {
   Map<String, dynamic> plats;
   String date;
-  dynamic fermeture; //string or bool
+  String fermeture; //string
 
   Menu({
     required this.plats,

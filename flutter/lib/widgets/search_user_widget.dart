@@ -3,26 +3,28 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
+import '../models/searchResult.dart';
 
 // Cache manager with LRU (Least Recently Used)
 class SearchCache {
-  final int maxSize;
-  final _cache = <String, List<SearchResult>>{};
+  final int cacheMaxSize;
+  final _cache = <String, List<SearchResult>>{}; //TODO : utiliser LinkedHashMap
 
-  SearchCache({this.maxSize = 100});
+  SearchCache({this.cacheMaxSize = 50});
 
-  List<SearchResult>? get(String query) {
-    final results = _cache[query];
-    if (results != null) {
-      // Move entry to the end (most recently used)
-      _cache.remove(query);
-      _cache[query] = results;
+  List<SearchResult>? getUsersFromCache(String query) {
+    final List<SearchResult>? results = _cache[query];
+    if (results == null) {
+      return null;
     }
+    // Move entry to the end (most recently used)
+    _cache.remove(query);
+    _cache[query] = results;
     return results;
   }
 
-  void set(String query, List<SearchResult> results) {
-    if (_cache.length >= maxSize) {
+  void addUsersToCache(String query, List<SearchResult> results) {
+    if (_cache.length >= cacheMaxSize) {
       _cache.remove(_cache.keys.first); // Remove least recently used
     }
     _cache[query] = results;
@@ -32,17 +34,17 @@ class SearchCache {
 // Realtime search widget
 class RealtimeSearchWidget extends StatefulWidget {
   final Future<List<SearchResult>> Function(String query) onRemoteSearch;
-  final String Function(String avatarUrl) fullUrlGetter;
+  final String Function(String avatarUrl) getImageNetworkUrl;
   final Future<User?> Function(String friendUsername) addFriend;
-  final void Function(User friend) addFriendToOtherWidget;
-  final Duration debounceDuration = const Duration(milliseconds: 150);
+  final void Function(User friend) addFriendToFriendsList;
+  final Duration debounceDuration = const Duration(milliseconds: 250);
 
   const RealtimeSearchWidget(
       {super.key,
       required this.onRemoteSearch,
-      required this.fullUrlGetter,
+      required this.getImageNetworkUrl,
       required this.addFriend,
-      required this.addFriendToOtherWidget});
+      required this.addFriendToFriendsList});
 
   @override
   State<RealtimeSearchWidget> createState() => _RealtimeSearchWidgetState();
@@ -75,7 +77,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase().trim();
+    final String query = _searchController.text.toLowerCase().trim();
     logger.d('Search changed to $query');
 
     // 1. Recherche immédiate dans les données locales
@@ -83,7 +85,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
 
     // 2. Debounce pour la recherche distante
     _debounceTimer?.cancel();
-    if (query.length >= 2) {
+    if (query.length >= 3) {
       _debounceTimer = Timer(widget.debounceDuration, () {
         _performRemoteSearch(query);
       });
@@ -104,7 +106,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     }
 
     // Recherche dans le cache d'abord
-    final cachedResults = _searchCache.get(query);
+    final cachedResults = _searchCache.getUsersFromCache(query);
     if (cachedResults != null) {
       setState(() {
         _currentResults = cachedResults;
@@ -125,21 +127,17 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   }
 
   Future<void> _performRemoteSearch(String query) async {
-    setState(() {
-      _isLoading = true;
-    });
     try {
+      setState(() {
+        //TODO : a voir si c'est bien
+        _isLoading = true;
+      });
+
       final remoteResults = await widget.onRemoteSearch(query);
 
       // Fusionner et trier les résultats
       final allResults = [..._localResults, ...remoteResults];
       allResults.sort((a, b) {
-        // Priorité aux correspondances exactes
-        final aExact = a.user.username.toLowerCase() == query;
-        final bExact = a.user.username.toLowerCase() == query;
-        if (aExact != bExact) return aExact ? -1 : 1;
-
-        // Puis par score de pertinence
         return b.relevanceScore.compareTo(a.relevanceScore);
       });
 
@@ -149,7 +147,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
           allResults.where((result) => seen.add(result.user.id)).toList();
 
       // Mettre en cache
-      _searchCache.set(query, uniqueResults);
+      _searchCache.addUsersToCache(query, uniqueResults);
 
       if (mounted) {
         setState(() {
@@ -170,7 +168,6 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        //return to friends list
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -184,78 +181,81 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
+              //textAlign: TextAlign.center,
+              textAlignVertical: TextAlignVertical.center,
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Rechercher un utilisateur',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.cancel),
+                        iconSize: 30,
+                        onPressed: _searchController.clear,
                       )
-                    : _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: _searchController.clear,
-                          )
-                        : null,
+                    : null,
               ),
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: _currentResults.length,
-              itemBuilder: (context, index) {
-                final result = _currentResults[index];
-                return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: NetworkImage(
-                        widget.fullUrlGetter(result.user.avatarUrl),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : (_currentResults.isEmpty &&
+                        _searchController.text.length >= 3)
+                    ? const Center(
+                        child: Text(
+                            'Aucun résultat')) //TODO : a faire correctement
+                    : ListView.builder(
+                        itemCount: _currentResults.length,
+                        itemBuilder: (context, index) {
+                          final result = _currentResults[index];
+                          return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: NetworkImage(
+                                  widget.getImageNetworkUrl(
+                                      result.user.avatarUrl),
+                                ),
+                                backgroundColor: Colors.grey[200],
+                              ),
+                              title: Text(result.user.username),
+                              subtitle: Text(result.user.status),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            title: const Text('Ajouter un ami'),
+                                            content: const Text(
+                                                'Voulez-vous ajouter cet utilisateur à votre liste d\'amis ?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.of(context).pop(),
+                                                child: const Text('Annuler'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => {
+                                                  addFriend(
+                                                      result.user.username),
+                                                  Navigator.of(context).pop(),
+                                                },
+                                                child: const Text('Ajouter'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ));
+                        },
                       ),
-                      backgroundColor: Colors.grey[200],
-                    ),
-                    title: Text(result.user.username),
-                    subtitle: Text(result.user.status),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) {
-                                return AlertDialog(
-                                  title: const Text('Ajouter un ami'),
-                                  content: const Text(
-                                      'Voulez-vous ajouter cet utilisateur à votre liste d\'amis ?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
-                                      child: const Text('Annuler'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => {
-                                        addFriend(result.user.username),
-                                        Navigator.of(context).pop(),
-                                      },
-                                      child: const Text('Ajouter'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ));
-              },
-            ),
           ),
         ],
       ),
@@ -269,7 +269,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
       if (friendAdded == null) {
         throw 'Utilisateur non trouvé ou Utilisateur déjà ajouté';
       } else {
-        widget.addFriendToOtherWidget(friendAdded);
+        widget.addFriendToFriendsList(friendAdded);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ami ajouté: ${friendAdded.username}')),

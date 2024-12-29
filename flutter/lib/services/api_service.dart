@@ -11,6 +11,7 @@ import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/models/searchResult.dart';
 
 class ApiService {
   late final Dio _dio;
@@ -176,10 +177,9 @@ class ApiService {
       });
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> rawSearchResultData = response.data;
+        final Map<String, dynamic> rawSearchResultData = response.data;
         logger.i('Users found: $rawSearchResultData');
-        // TOUT changer ici
-        return rawSearchResultData
+        return (rawSearchResultData["searchResults"] as List<dynamic>)
             .map((result) => SearchResult.fromJson(result))
             .toList();
       } else {

@@ -214,32 +214,33 @@ class _MenuWidgetState extends State<MenuWidget>
             ),
           ),
           const SizedBox(height: 16.0),
-          // _menus[_currentPage].fermeture is either a string or a bool
-          if (_menus[_currentPage].fermeture is String)
-            Text(
-                'Fermeture :\n- Structure fermée du ${_menus[_currentPage].fermeture}',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: (screenSize * 0.015).clamp(15.0, 20.0),
-                  color: Colors.black,
-                )),
-          Expanded(
-              child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _menus.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    return ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: 1,
-                        itemBuilder: (context, i) {
-                          return menuPlat(context, _menus[index].plats);
+          _menus[_currentPage].fermeture.isNotEmpty
+              ? Expanded(
+                  child: Text(
+                  'Fermeture\n- ${_menus[_currentPage].fermeture}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: (screenSize * 0.015).clamp(15.0, 20.0),
+                    color: Colors.black,
+                  ),
+                ))
+              : Expanded(
+                  child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _menus.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPage = index;
                         });
-                  })),
+                      },
+                      itemBuilder: (context, index) {
+                        return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: 1,
+                            itemBuilder: (context, i) {
+                              return menuPlat(context, _menus[index].plats);
+                            });
+                      })),
         ],
       ),
     ));
