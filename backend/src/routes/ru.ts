@@ -127,8 +127,10 @@ async function fetchMenusFromExternalAPI() {
         const restaurants = result.root.resto;
         const restoR135 = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_lumiere_id);
         const menus = decodeJsonValues(restoR135.menu);
+        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+        const filteredMenus = menus.filter((menu: MenuXml) => menu.$.date >= today);
 
-        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
+        const transformedMenus: MenuResponse[] = filteredMenus.map((menu: MenuXml) => transformToMenu(menu));
         return transformedMenus;
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
