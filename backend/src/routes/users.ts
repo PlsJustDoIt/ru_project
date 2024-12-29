@@ -208,6 +208,7 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
         if (user == null) {
             return res.status(404).json({ error: 'User not found' });
         }
+
         const friends = user.friends.map(friend => ({
             username: friend.username,
             status: friend.status,

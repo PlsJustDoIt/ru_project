@@ -18,8 +18,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void initState() {
-    super.initState();
     connectToServer();
+    super.initState();
   }
 
   @override
@@ -35,10 +35,26 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     socket?.connect();
     socket?.on('receive_message', (data) {
-      logger.i('Message received: $data'); // data is an array
-      setState(() {
-        messages.add(data[0]);
-      });
+      if (data is String) {
+        logger.i('Message received: $data');
+        setState(() {
+          messages.add(data);
+        });
+      }
+
+      if (data is List) {
+        logger.i('Message received: $data'); // data is an array
+        logger.i(data.runtimeType);
+        logger.i(data.length);
+        setState(() {
+          messages.add(data[0]);
+        });
+      }
+      // logger.i('Message received: $data'); // data is an array
+      // logger.i(data.runtimeType);
+      // setState(() {
+      //   messages.add(data[0]);
+      // });
     });
   }
 

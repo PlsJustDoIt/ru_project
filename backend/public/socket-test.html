@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Client</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const socket = io();
+
+            let div = document.getElementById("messages");
+
+            socket.on("connect", () => {
+                console.log("Connected to server:", socket.id);
+            });
+
+            socket.on("receive_message", (data) => {
+                console.log("Message from server:", data);
+                console.log(div);
+                div.innerHTML += `<p>${data}</p>`;
+            });
+
+            socket.on("error", (error) => {
+                div.innerHTML += `<p style="color: red;">${error}</p>`;
+            });
+
+        
+            document.getElementById("sendMessage").addEventListener("click", () => {
+                const message = document.getElementById("inputMessage").value;
+                socket.emit("send_message", message);
+                document.getElementById("inputMessage").value = "";
+            });
+
+            document.getElementById("broadcast").addEventListener("click", () => {
+                const message = document.getElementById("inputMessage").value;
+                socket.emit("broadcast", message);
+                document.getElementById("inputMessage").value = "";
+            });
+
+        });
+        
+    </script>
+</head>
+
+<body>
+    <h1>Socket.IO Client</h1>
+    <input type="text" id="inputMessage" placeholder="Type your message here">
+    <button id="sendMessage">Send</button>
+    <button id="broadcast">Broadcast</button>
+    <div id="messages"></div>
+</body>
+
+</html>

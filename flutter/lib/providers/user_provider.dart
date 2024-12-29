@@ -9,22 +9,21 @@ class UserProvider with ChangeNotifier {
   User? _user;
   List<User> _friends = [];
   final SecureStorage _secureStorage = SecureStorage();
-  final _api = ApiService();
+  late final ApiService api;
 
   User? get user => _user;
   List<User> get friends => _friends;
 
-  UserProvider() {
+  UserProvider({required this.api}) {
     _initialize();
   }
 
   Future<void> _initialize() async {
-    logger.i('initializing user provider');
     try {
       final String? accessToken = await _secureStorage.getAccessToken();
 
       if (accessToken != null && !JwtDecoder.isExpired(accessToken)) {
-        final User? user = await _api.getUser();
+        final User? user = await api.getUser();
         if (user != null) {
           _user = user;
           notifyListeners();
@@ -50,7 +49,7 @@ class UserProvider with ChangeNotifier {
   Future<void> _handleTokenExpiration() async {
     logger.i('handling token expiration');
 
-    final String? newAccessToken = await _api.refreshToken();
+    final String? newAccessToken = await api.refreshToken();
     logger.i('New access token: $newAccessToken');
     if (newAccessToken != null) {
       await _secureStorage.storeAccessToken(newAccessToken);
@@ -74,7 +73,7 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> reloadUser() async {
-    final User? user = await _api.getUser();
+    final User? user = await api.getUser();
     if (user != null) {
       _user = user;
       notifyListeners();

@@ -42,6 +42,18 @@ Run the install_backend.sh script:
 ./install_backend.sh
 ```
 
+### cron job
+
+```bash
+pwd # copy the path
+crontab -e
+```
+add the following line:
+
+```bash
+0 0 * * MON /usr/bin/curl --silent -o {your path to ru_project}/backend/menus.xml 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/menu.xml' &>/dev/null
+```
+
 #### MongoDB
 
 ##### Local installation

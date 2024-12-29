@@ -18,6 +18,8 @@ import compression from 'compression';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yaml';
+import { socketService } from './services/socket.js';
+import socketRoute from './routes/socket.js';
 
 if (!isProduction) {
     dotenv.config();
@@ -75,6 +77,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
 app.use('/api/ginko', ginkoRoutes);
+app.use('/api/socket', socketRoute);
 
 // app.use((error: any, req: Request, res: Response, next: NextFunction) => {
 //     res.status(500).json({ message: error.message, stack: error.stack, path: req.path });
@@ -86,6 +89,9 @@ const file = fs.readFileSync(swaggerFilePath, 'utf8');
 const swaggerDocument = YAML.parse(file);
 swaggerUi.setup(swaggerDocument);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get('/test-socket', (req, res) => {
+    res.sendFile(path.join(path.resolve(), 'public', 'socket-test.html'));
+});
 
 const PORT = process.env.PORT || 5000;
 
@@ -100,4 +106,6 @@ const PORT = process.env.PORT || 5000;
 //   server.listen(PORT, () => logger.info(`Server https running on port ${PORT}`));
 // }
 
-app.listen(PORT, () => logger.info(`Server http running on port ${PORT}`));
+const server = app.listen(PORT, () => logger.info(`Server http running on port ${PORT}`));
+// Attach Socket.IO to the existing server
+socketService.initialize(server);
