@@ -4,7 +4,7 @@ import '../services/logger.dart';
 
 class SearchResult {
   final User user;
-  final double relevanceScore;
+  double relevanceScore;
 
   SearchResult({
     required this.user,

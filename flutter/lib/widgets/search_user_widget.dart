@@ -1,34 +1,127 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 import '../models/searchResult.dart';
 
-// Cache manager with LRU (Least Recently Used)
+class LocalSearchDB {
+  final List<SearchResult> _items = [];
+  final int maxItems;
+
+  LocalSearchDB({this.maxItems = 1000});
+
+  void addItem(SearchResult item) {
+    if (_items.length >= maxItems) {
+      _items.removeAt(0);
+    }
+    if (!_items.any((element) => element.user.id == item.user.id)) {
+      _items.add(item);
+    }
+  }
+
+  void addItems(List<SearchResult> items) {
+    for (var item in items) {
+      addItem(item);
+    }
+  }
+
+  List<SearchResult> search(String query) {
+    if (query.isEmpty) return [];
+
+    return _items.where((item) {
+      final username = item.user.username.toLowerCase();
+      final searchQuery = query.toLowerCase();
+
+      // Score de pertinence amélioré
+      if (username.startsWith(searchQuery)) {
+        item.relevanceScore = 1.0;
+      } else if (username.contains(searchQuery)) {
+        item.relevanceScore = 0.5;
+      } else {
+        return false;
+      }
+
+      return true;
+    }).toList()
+      ..sort((a, b) => b.relevanceScore.compareTo(a.relevanceScore));
+  }
+
+  void clear() => _items.clear();
+  int get size => _items.length;
+}
+
+// Cache de recherche simple
+// class SearchCache {
+//   final int cacheMaxSize;
+//   final _cache = LinkedHashMap<String, List<SearchResult>>();
+
+//   SearchCache({this.cacheMaxSize = 50});
+
+//   List<SearchResult>? getUsersFromCache(String query) {
+//     final results = _cache.remove(query);
+//     if (results != null) {
+//       _cache[query] = results; // Move to end
+//     }
+//     return results;
+//   }
+
+//   void addUsersToCache(String query, List<SearchResult> results) {
+//     if (_cache.length >= cacheMaxSize) {
+//       _cache.remove(_cache.keys.first);
+//     }
+//     _cache[query] = results;
+//   }
+// }
+
+class CacheEntry<T> {
+  final T data;
+  final DateTime timestamp;
+
+  CacheEntry(this.data) : timestamp = DateTime.now();
+}
+
 class SearchCache {
   final int cacheMaxSize;
-  final _cache = <String, List<SearchResult>>{}; //TODO : utiliser LinkedHashMap
+  final Duration timeToLive;
+  final _cache = LinkedHashMap<String, CacheEntry<List<SearchResult>>>();
 
-  SearchCache({this.cacheMaxSize = 50});
+  int _hits = 0;
+  int _misses = 0;
+
+  SearchCache({
+    this.cacheMaxSize = 50,
+    this.timeToLive = const Duration(minutes: 30),
+  });
 
   List<SearchResult>? getUsersFromCache(String query) {
-    final List<SearchResult>? results = _cache[query];
-    if (results == null) {
+    final entry = _cache[query];
+
+    if (entry == null || _isExpired(entry)) {
+      _misses++;
+      _cache.remove(query);
       return null;
     }
-    // Move entry to the end (most recently used)
+
+    _hits++;
     _cache.remove(query);
-    _cache[query] = results;
-    return results;
+    _cache[query] = entry; // Move to end
+    return entry.data;
   }
 
   void addUsersToCache(String query, List<SearchResult> results) {
     if (_cache.length >= cacheMaxSize) {
-      _cache.remove(_cache.keys.first); // Remove least recently used
+      _cache.remove(_cache.keys.first);
     }
-    _cache[query] = results;
+    _cache[query] = CacheEntry(results);
   }
+
+  bool _isExpired(CacheEntry entry) {
+    return DateTime.now().difference(entry.timestamp) > timeToLive;
+  }
+
+  double getHitRate() => _hits / (_hits + _misses);
 }
 
 // Realtime search widget
@@ -59,9 +152,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   Timer? _debounceTimer;
 
   // Simuler une base de données locale
-  final List<SearchResult> _localDb = [
-    // Amis récents, favoris, contacts fréquents, etc.
-  ];
+  final _localDb = LocalSearchDB();
 
   @override
   void initState() {
@@ -115,12 +206,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     }
 
     // Sinon, recherche dans la base locale
-    _localResults = _localDb.where((result) {
-      // Algorithme de recherche locale simple
-      return result.user.username.toLowerCase().contains(query);
-    }).toList()
-      ..sort((a, b) => b.relevanceScore.compareTo(a.relevanceScore));
-
+    _localResults = _localDb.search(query);
     setState(() {
       _currentResults = _localResults;
     });
@@ -148,6 +234,9 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
 
       // Mettre en cache
       _searchCache.addUsersToCache(query, uniqueResults);
+
+      //mettre à dans la base locale
+      _localDb.addItems(uniqueResults);
 
       if (mounted) {
         setState(() {
