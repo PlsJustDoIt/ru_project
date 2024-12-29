@@ -94,8 +94,8 @@ router.get('/info', auth, async (req: Request, res: Response) => {
         cache.set(lieu, result);
         return res.json(result);
     } catch (err: unknown) {
-        logger.error('Impossible de récupérer les horaires : ' + err);
-        res.status(500).json({ error: err });
+        logger.error('Impossible de récupérer les horaires : ', err);
+        return res.status(500).json({ error: err });
     }
 });
 

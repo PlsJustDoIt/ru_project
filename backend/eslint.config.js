@@ -3,6 +3,7 @@ import pluginJs from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin';
 import unusedImports from 'eslint-plugin-unused-imports';
+import noInvalidResJson from './eslint-rules/no-invalid-res-json.js'; // Règle personnalisée
 
 export default [
     {
@@ -29,9 +30,15 @@ export default [
                     argsIgnorePattern: '^_',
                 },
             ],
+            'custom-rules/no-invalid-res-json': 'error',
         },
         plugins: {
             'unused-imports': unusedImports,
+            'custom-rules': {
+                rules: {
+                    'no-invalid-res-json': noInvalidResJson,
+                },
+            },
         },
     },
     pluginJs.configs.recommended, // Configuration recommandée du plugin JavaScript

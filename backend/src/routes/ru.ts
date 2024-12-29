@@ -158,7 +158,7 @@ async function fetchMenusFromExternalAPI() {
 }
 
 router.get('/', (req: Request, res: Response) => {
-    res.send(apiDoc);
+    return res.send(apiDoc);
 },
 );
 
@@ -176,10 +176,10 @@ router.get('/menus', auth, async (req: Request, res: Response) => {
 
         // On met les menus en cache pour 1 heure
         cache.set('menus', menus);
-        res.json(menus);
+        return res.json(menus);
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
-        res.status(500).send('Erreur lors de la récupération des menus');
+        return res.status(500).send('Erreur lors de la récupération des menus');
     }
 },
 );

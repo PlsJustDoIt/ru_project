@@ -39,7 +39,7 @@ const limiter = rateLimit({
     // store: ... , // Redis, Memcached, etc. See below.
     handler: (req, res) => {
         logger.error('Too many requests, please try again later.');
-        res.status(429).json({ error: 'Too many requests, please try again later.' });
+        return res.status(429).json({ error: 'Too many requests, please try again later.' });
     },
 });
 
@@ -90,7 +90,7 @@ const swaggerDocument = YAML.parse(file);
 swaggerUi.setup(swaggerDocument);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get('/test-socket', (req, res) => {
-    res.sendFile(path.join(path.resolve(), 'public', 'socket-test.html'));
+    return res.sendFile(path.join(path.resolve(), 'public', 'socket-test.html'));
 });
 
 const PORT = process.env.PORT || 5000;

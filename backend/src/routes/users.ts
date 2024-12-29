@@ -9,7 +9,7 @@ const router = Router();
 router.get('/me', auth, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
-        return res.json(user);
+        return res.json({ user: user });
     } catch (err: unknown) {
         return res.status(500).json({ error: 'Could not retrieve user : ' + err });
     }
@@ -45,7 +45,7 @@ router.put('/update', auth, async (req: Request, res: Response) => {
 
         // check if new username already exists
         const testUser = await User.findOne({ username });
-        if (testUser) res.status(400).json({ error: 'User already exists' });
+        if (testUser) return res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
         if (user === null) {
@@ -84,7 +84,7 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         }
 
         const testUser = await User.findOne({ username });
-        if (testUser) res.status(400).json({ error: 'User already exists' });
+        if (testUser) return res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
 
@@ -217,7 +217,7 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
         }));
 
         logger.info('User friends : ' + friends);
-        return res.json(friends);
+        return res.json({ friends: friends });
     } catch (err: unknown) {
         return res.status(500).json({ error: 'Could not retrieve friends : ' + err });
     }
@@ -273,8 +273,8 @@ router.get('/search', auth, async (req: Request, res: Response) => {
                 relevanceScore: relevanceScore,
             };
         }).sort((a, b) => b.relevanceScore - a.relevanceScore);
-        console.log({ searchResults: searchResults });
-        return res.json({ searchResults: searchResults });
+        logger.info('Search results : ', searchResults);
+        return res.json({ results: searchResults });
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
         return res.status(500).json({ Error: 'Could not search for user' });
@@ -352,7 +352,7 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
             user.friends.splice(index, 1);
         }
         await user.save();
-        return res.json(user);
+        return res.json({ user: user });
     } catch (err: unknown) {
         return res.status(500).json({ error: 'Server error : ' + err });
     }
