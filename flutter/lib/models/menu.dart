@@ -1,20 +1,25 @@
-import 'package:logger/logger.dart';
-import 'package:ru_project/services/logger.dart';
-
 class Menu {
-  Map<String, dynamic> plats;
+  Map<String, dynamic>? plats; // Optional car peut être null si fermé
   String date;
-  String fermeture; //string
+  String? fermeture; // String pour le message de fermeture
 
   Menu({
-    required this.plats,
+    this.plats,
     required this.date,
-    required this.fermeture,
+    this.fermeture,
   });
 
   // Factory constructor for creating a Menu instance from JSON
   factory Menu.fromJson(Map<String, dynamic> json) {
-    //logger.i('menu from json : $json');
+    // Si on a une fermeture, on crée un menu avec uniquement date et fermeture
+    if (json.containsKey('fermeture')) {
+      return Menu(
+        date: json['date'],
+        fermeture: json['fermeture'],
+      );
+    }
+
+    // Sinon on crée un menu normal avec les plats
     return Menu(
       plats: {
         "Entrées": json["Entrées"] ?? "menu non communiqué",
@@ -26,21 +31,33 @@ class Menu {
         "Grill": json["Grill"] ?? "menu non communiqué",
       },
       date: json["date"],
-      fermeture: json["Fermeture"],
     );
   }
 
   // Method to convert a Menu instance to JSON
   Map<String, dynamic> toJson() {
+    if (fermeture != null) {
+      return {
+        "date": date,
+        "fermeture": fermeture,
+      };
+    }
     return {
       "plats": plats,
       "date": date,
-      "fermeture": fermeture,
     };
   }
 
   @override
   String toString() {
+    if (fermeture != null) {
+      return 'Menu{date: $date, fermeture: $fermeture}';
+    }
     return 'Menu{plats: $plats, date: $date}';
+  }
+
+  // Helper method to check if the menu indicates a closure
+  bool isClosed() {
+    return fermeture != null;
   }
 }

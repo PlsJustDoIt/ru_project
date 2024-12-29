@@ -210,16 +210,26 @@ class _MenuWidgetState extends State<MenuWidget>
             ),
           ),
           const SizedBox(height: 16.0),
-          _menus[_currentPage].fermeture.isNotEmpty
+          _menus[_currentPage].fermeture != null
               ? Expanded(
-                  child: Text(
-                  'Fermeture\n- ${_menus[_currentPage].fermeture}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: (screenSize * 0.015).clamp(15.0, 20.0),
-                    color: Colors.black,
-                  ),
-                ))
+                  child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _menus.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPage = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return Text(
+                          'Fermeture\n- ${_menus[_currentPage].fermeture}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: (screenSize * 0.015).clamp(15.0, 20.0),
+                            color: Colors.black,
+                          ),
+                        );
+                      }))
               : Expanded(
                   child: PageView.builder(
                       controller: _pageController,
@@ -242,8 +252,11 @@ class _MenuWidgetState extends State<MenuWidget>
     ));
   }
 
-  //build the widget for the menu plats (map key = String, value = List of dynamic or string), TODO : faire un option cas ou jour ferie
-  Column? menuPlat(BuildContext context, Map<String, dynamic> plats) {
+  //build the widget for the menu plats (map key = String, value = List of dynamic or string)
+  Column? menuPlat(BuildContext context, Map<String, dynamic>? plats) {
+    if (plats == null) {
+      return null;
+    }
     final fontSize = (screenSize * 0.015).clamp(15.0, 20.0);
     Column res = Column(
       children: [],
