@@ -82,6 +82,24 @@ router.get('/messages', auth, async (req: Request, res: Response) => {
     }
 });
 
+router.get('/chat-room', auth, async (req: Request, res: Response) => {
+    try {
+        const userId = req.user.id;
+        const chatRoom = await Room.findOne({ owner: userId });
+        if (!chatRoom) {
+            return res.status(404).json({ error: 'Chat room not found' });
+        }
+        const messages = await getMessagesByRoomId(chatRoom._id.toString());
+        res.json({ messages: messages });
+    } catch (err) {
+        logger.error('Error in /chat-room:', err);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+        });
+    }
+});
+
 async function getMessagesByRoomId(roomId: string): Promise<IMessage[]> {
     return Message.find({ room: roomId })
         .populate('room')
