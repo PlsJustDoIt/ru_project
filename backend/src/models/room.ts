@@ -1,4 +1,5 @@
 import { Schema, Document, Types, model } from 'mongoose';
+// Assuming you have a User model
 
 interface IRoom extends Document {
     name: string;
@@ -12,5 +13,8 @@ const RoomSchema: Schema = new Schema({
 });
 
 const Room = model<IRoom>('Room', RoomSchema);
+// Room.create({ name: 'chat room', owner: await User.findOne({ username: 'admin' }) })
+//     .then(room => console.log('Default room created:', room))
+//     .catch(err => console.error('Error creating default room:', err));
 
 export default Room;
