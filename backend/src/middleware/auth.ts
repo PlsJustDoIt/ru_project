@@ -13,7 +13,7 @@ export default function (req: Request, res: Response, next: NextFunction): void 
     const token = authHeader && authHeader.split(' ')[1];
     if (token == null || token == undefined) {
         logger.error('No token, authorization denied');
-        res.status(401).json({ error: 'No token, authorization denied' });
+        return res.status(401).json({ error: 'No token, authorization denied' });
         return;
     }
     try {
@@ -26,6 +26,6 @@ export default function (req: Request, res: Response, next: NextFunction): void 
         next();
     } catch (err: unknown) {
         logger.error(err);
-        res.status(403).json({ error: err });
+        return res.status(403).json({ error: err });
     }
 };

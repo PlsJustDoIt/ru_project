@@ -9,9 +9,9 @@ const router = Router();
 router.get('/me', auth, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
-        res.json(user);
+        return res.json({ user: user });
     } catch (err: unknown) {
-        res.status(500).json({ error: 'Could not retrieve user : ' + err });
+        return res.status(500).json({ error: 'Could not retrieve user : ' + err });
     }
 });
 
@@ -45,7 +45,7 @@ router.put('/update', auth, async (req: Request, res: Response) => {
 
         // check if new username already exists
         const testUser = await User.findOne({ username });
-        if (testUser) res.status(400).json({ error: 'User already exists' });
+        if (testUser) return res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
         if (user === null) {
@@ -61,10 +61,10 @@ router.put('/update', auth, async (req: Request, res: Response) => {
 
         await user.save();
 
-        res.json({ message: 'User updated' });
+        return res.json({ message: 'User updated' });
     } catch (err: unknown) {
         logger.error(`Could not update user : ${err}`);
-        res.status(500).json({ error: `Could not update user : ${err} ` });
+        return res.status(500).json({ error: `Could not update user : ${err} ` });
     }
 });
 
@@ -84,7 +84,7 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         }
 
         const testUser = await User.findOne({ username });
-        if (testUser) res.status(400).json({ error: 'User already exists' });
+        if (testUser) return res.status(400).json({ error: 'User already exists' });
 
         const user = await User.findById(req.user.id);
 
@@ -95,10 +95,10 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
 
         await user.save();
 
-        res.json({ username: username });
+        return res.json({ username: username });
     } catch (err: unknown) {
         logger.error(`Could not update username : ${err}`);
-        res.status(500).json({ error: `Could not update username : ${err} ` });
+        return res.status(500).json({ error: `Could not update username : ${err} ` });
     }
 });
 
@@ -141,10 +141,10 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
 
         await user.save();
 
-        res.json({ message: 'Password updated' });
+        return res.json({ message: 'Password updated' });
     } catch (err: unknown) {
         logger.error(`Could not update password : ${err}`);
-        res.status(500).json({ error: `Could not update password : ${err} ` });
+        return res.status(500).json({ error: `Could not update password : ${err} ` });
     }
 });
 
@@ -170,10 +170,10 @@ router.put('/update-status', auth, async (req: Request, res: Response) => {
 
         await user.save();
 
-        res.json({ status: user.status });
+        return res.json({ status: user.status });
     } catch (err: unknown) {
         logger.error(`Could not update status : ${err}`);
-        res.status(500).json({ error: `Could not update status : ${err} ` });
+        return res.status(500).json({ error: `Could not update status : ${err} ` });
     }
 });
 
@@ -217,31 +217,34 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
         }));
 
         logger.info('User friends : ' + friends);
-        res.json(friends);
+        return res.json({ friends: friends });
     } catch (err: unknown) {
-        res.status(500).json({ error: 'Could not retrieve friends : ' + err });
+        return res.status(500).json({ error: 'Could not retrieve friends : ' + err });
     }
 });
 
 // search for users
 router.get('/search', auth, async (req: Request, res: Response) => {
-    const query = req.query.query;
-    if (!query || typeof query !== 'string') {
-        logger.error('No string query provided');
-        return res.status(400).json({ error: 'No query provided' });
-    }
-
     try {
-        const searchTerm = query.toLowerCase();
+        const query = req.query.query;
+        if (!query || typeof query !== 'string' || query.trim().length < 3) {
+            logger.error('No string query provided');
+            return res.status(400).json({ error: 'No query provided' });
+        }
+        if (query.trim().length < 3) {
+            logger.error('Search username must be at least 3 characters');
+            return res.status(400).json({ error: 'Search username must be at least 3 characters' });
+        }
+
+        const searchTerm = query.toLowerCase().trim();
         const searchItem = new RegExp(query, 'i');
 
         const foundUsers = await User.find({ username: searchItem })
             .select('id username avatarUrl status')
-            .limit(10)
-            .exec();
+            .limit(10);
 
         if (foundUsers.length === 0) {
-            return res.status(404).json({ msg: 'No users found' });
+            return res.status(404).json({ error: 'No users found' });
         }
 
         const searchResults = foundUsers.map((user) => {
@@ -267,14 +270,14 @@ router.get('/search', auth, async (req: Request, res: Response) => {
                     status: user.status,
                     id: user._id,
                 },
-                relevanceScore,
+                relevanceScore: relevanceScore,
             };
         }).sort((a, b) => b.relevanceScore - a.relevanceScore);
-
-        res.json(searchResults);
+        logger.info('Search results : ', searchResults);
+        return res.json({ results: searchResults });
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
-        res.status(500).json({ Error: 'Could not search for user' });
+        return res.status(500).json({ Error: 'Could not search for user' });
     }
 });
 
@@ -328,9 +331,9 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
         user.friends.push(friend._id);
         await user.save();
         logger.info('friends list : ' + user.friends);
-        res.json({ message: 'Friend added', friend: friend });
+        return res.json({ message: 'Friend added', friend: friend });
     } catch (err: unknown) {
-        res.status(500).json({ error: 'Server error : ' + err });
+        return res.status(500).json({ error: 'Server error : ' + err });
     }
 });
 
@@ -349,9 +352,9 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
             user.friends.splice(index, 1);
         }
         await user.save();
-        res.json(user);
+        return res.json({ user: user });
     } catch (err: unknown) {
-        res.status(500).json({ error: 'Server error : ' + err });
+        return res.status(500).json({ error: 'Server error : ' + err });
     }
 });
 

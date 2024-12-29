@@ -55,10 +55,10 @@ router.post('/send', auth, async (req: Request, res: Response) => {
 
         socketService.emitToRoom(roomId, 'receive_message', message);
 
-        res.status(201).json(message);
+        return res.status(201).json(message);
     } catch (err) {
         logger.error('Error in /send:', err);
-        res.status(500).json({
+        return res.status(500).json({
             error: 'Internal server error',
             message: err instanceof Error ? err.message : 'Unknown error',
         });
@@ -72,10 +72,10 @@ router.get('/messages', auth, async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Invalid room ID' });
         }
         const messages = await getMessagesByRoomId(roomId);
-        res.json(messages);
+        return res.json(messages);
     } catch (err) {
         logger.error('Error in /messages:', err);
-        res.status(500).json({
+        return res.status(500).json({
             error: 'Internal server error',
             message: err instanceof Error ? err.message : 'Unknown error',
         });

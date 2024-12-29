@@ -157,7 +157,7 @@ class ApiService {
     try {
       final Response response = await _dio.get('/users/me');
       if (response.statusCode == 200 && response.data != null) {
-        return User.fromJson(response.data);
+        return User.fromJson(response.data['user']);
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data?['error']}');
@@ -176,10 +176,10 @@ class ApiService {
       });
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> rawSearchResultData = response.data;
+        final Map<String, dynamic> rawSearchResultData = response.data;
         logger.i('Users found: $rawSearchResultData');
         // TOUT changer ici
-        return rawSearchResultData
+        return (rawSearchResultData['results'] as List)
             .map((result) => SearchResult.fromJson(result))
             .toList();
       } else {
@@ -219,16 +219,12 @@ class ApiService {
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        logger.i(response.data);
-        if (response.data is List) {
-          // Convertit chaque élément en objet User
-          List<User> friends = [
-            for (Map<String, dynamic> friend in response.data)
-              User.fromJson(friend)
-          ];
+        List<User> friends = [
+          for (Map<String, dynamic> friend in response.data['friends'])
+            User.fromJson(friend)
+        ];
 
-          return friends;
-        }
+        return friends;
       }
 
       logger.e(

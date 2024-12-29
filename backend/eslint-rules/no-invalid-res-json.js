@@ -5,7 +5,7 @@ export default {
             description: 'Ensure res.json receives a JSON-compatible object',
             category: 'Possible Errors',
         },
-        schema: [], // Pas de configuration
+        schema: [],
     },
     create(context) {
         return {
@@ -17,13 +17,17 @@ export default {
                     && callee.property.name === 'json'
                 ) {
                     const [arg] = node.arguments;
+
+                    // Autoriser les objets, tableaux et identifiants (variables)
                     if (
                         arg
-                        && (arg.type !== 'ObjectExpression')
+                        && arg.type !== 'ObjectExpression' // Objet littéral
+                        && arg.type !== 'ArrayExpression' // Tableau littéral
+                        && arg.type !== 'Identifier' // Variable
                     ) {
                         context.report({
-                            node,
-                            message: 'res.json should only be used with JSON-compatible objects.',
+                            node: arg,
+                            message: 'res.json should only be used with JSON-compatible objects or variables.',
                         });
                     }
                 }
