@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
         // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
-            res.status(400).json({ error: 'Username or password dosn\'t exists' });
+            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
         }
 
         username = username.trim();
@@ -63,7 +63,7 @@ router.post('/register', async (req, res) => {
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
         await refreshTokenInstance.save();
         logger.info(`Engistrement de l'utilisateur ${username}`);
-        res.status(201).json({ accessToken,
+        return res.status(201).json({ accessToken,
             refreshToken });
     } catch (err) {
         logger.error(err);
@@ -123,11 +123,11 @@ router.post('/login', async (req, res) => {
 
         logger.info(`Connexion de l'utilisateur ${username}`);
 
-        res.json({ accessToken,
+        return res.json({ accessToken,
             refreshToken });
     } catch (err) {
         logger.error(err);
-        res.status(500).send('Server error ' + err);
+        return res.status(500).send('Server error ' + err);
     }
 });
 
@@ -168,12 +168,12 @@ router.post('/token', auth, async (req, res) => {
 
         logger.info(`Nouveau token créé pour l'utilisateur ${userUsername} :\n accessToken: ${accessToken}`);
 
-        res.json({ accessToken });
+        return res.json({ accessToken });
 
         // });
     } catch (err) {
         logger.error(err);
-        res.status(500).json({ error: 'Server error: ' + err });
+        return res.status(500).json({ error: 'Server error: ' + err });
     }
 });
 
@@ -186,10 +186,10 @@ router.post('/logout', auth, async (req, res) => {
             return res.status(404).json({ error: 'problem with the middleware' });
         }
         logger.info(`Déconnexion de l'utilisateur ${user.username}`);
-        res.json({ message: 'Logged out' });
+        return res.json({ message: 'Logged out' });
     } catch (err) {
         logger.error(err);
-        res.status(500).json({ error: 'Server error: ' + err });
+        return res.status(500).json({ error: 'Server error: ' + err });
     }
 });
 
@@ -216,10 +216,10 @@ router.delete('/delete-account', auth, async (req: Request, res: Response) => {
         }
         await user.deleteOne();
         await RefreshToken.findOneAndDelete({ token: refreshToken });
-        res.json({ message: 'User deleted' });
+        return res.json({ message: 'User deleted' });
     } catch (err: unknown) {
         logger.error(err);
-        res.status(500).json({ error: 'Server error : ' + err });
+        return res.status(500).json({ error: 'Server error : ' + err });
     }
 });
 
