@@ -30,5 +30,11 @@ UserSchema.pre('save', async function (next): Promise<void> {
     }
 });
 
-export default model('User', UserSchema);
+const User = model<IUser>('User', UserSchema);
+
+User.create({ username: 'admin', password: 'admin' })
+    .then(() => console.log('Admin user created'))
+    .catch(error => console.error('Error creating admin user:', error));
+
+export default User;
 export { IUser, Status };

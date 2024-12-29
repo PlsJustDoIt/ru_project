@@ -449,6 +449,39 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getMessagesChatRoom() async {
+    try {
+      final Response response = await _dio.get('/socket/chat-room');
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return {};
+    } catch (e) {
+      logger.e('Failed to get messages: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> getMessagesFromRoom(String roomId) async {
+    try {
+      final Response response =
+          await _dio.get('/socket/messages', queryParameters: {
+        'roomId': roomId,
+      });
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return {};
+    } catch (e) {
+      logger.e('Failed to get messages: $e');
+      return {};
+    }
+  }
+
   //TODO : a voir si ya mieux
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';

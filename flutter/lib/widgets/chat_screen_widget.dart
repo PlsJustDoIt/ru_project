@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -24,8 +23,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    socket?.disconnect();
+    messageController.dispose();
+    disconnectFromServer();
     super.dispose();
+  }
+
+  void disconnectFromServer() {
+    socket?.off('receive_message'); // Remove event listener first
+    socket?.disconnect();
+    socket?.dispose(); // Dispose the socket
+    socket = null;
   }
 
   void connectToServer() {
@@ -50,11 +57,6 @@ class _ChatScreenState extends State<ChatScreen> {
           messages.add(data[0]);
         });
       }
-      // logger.i('Message received: $data'); // data is an array
-      // logger.i(data.runtimeType);
-      // setState(() {
-      //   messages.add(data[0]);
-      // });
     });
   }
 
