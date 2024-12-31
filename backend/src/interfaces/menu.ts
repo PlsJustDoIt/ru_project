@@ -7,6 +7,7 @@ export interface Menu {
     'Grill': string[] | 'menu non communiqué';
     'date': string;
 }
+export type MenuResponse = Menu | { fermeture: string; date: string };
 
 export type MenuResponse = Menu | { fermeture: string; date: string };
 

@@ -18,10 +18,10 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     try {
       return User(
-        id: json['id'] ?? '',
+        id: json['_id'] ?? '',
         username: json['username'] ?? 'ton pere',
         status: json['status'] ?? 'status non défini',
-        avatarUrl: json['avatarUrl'] ?? '',
+        avatarUrl: json['avatarUrl'] ?? 'uploads/avatar/default-avatar.png',
         friendIds: json['friendIds'] ?? [],
       );
     } catch (e) {
@@ -32,7 +32,7 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      '_id': id,
       'username': username,
       'status': status,
       'avatarUrl': avatarUrl,
