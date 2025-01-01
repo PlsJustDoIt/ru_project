@@ -239,7 +239,7 @@ router.get('/search', auth, async (req: Request, res: Response) => {
         const searchTerm = query.toLowerCase().trim();
         const searchItem = new RegExp(query, 'i');
 
-        const foundUsers = await User.find({ username: searchItem })
+        const foundUsers = await User.find({ username: searchItem, _id: { $ne: req.user._id } })
             .select('id username avatarUrl status')
             .limit(10);
 

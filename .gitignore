@@ -48,3 +48,5 @@ uploads
 /backend/dist/
 **/.env
 env.sh
+backend/menus.xml
+backend/menus_old.xml

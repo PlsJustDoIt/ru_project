@@ -85,7 +85,7 @@ class CacheEntry<T> {
 class SearchCache {
   final int cacheMaxSize;
   final Duration timeToLive;
-  final _cache = LinkedHashMap<String, CacheEntry<List<SearchResult>>>();
+  final _cache = <String, CacheEntry<List<SearchResult>>>{};
 
   int _hits = 0;
   int _misses = 0;
@@ -157,7 +157,6 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
   }
 
   @override
@@ -284,6 +283,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
                       )
                     : null,
               ),
+              onChanged: (_) => _onSearchChanged(),
             ),
           ),
           Expanded(
