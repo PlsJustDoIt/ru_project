@@ -84,7 +84,7 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         }
 
         const testUser = await User.findOne({ username });
-        if (testUser) return res.status(400).json({ error: 'User already exists' });
+        if (testUser) return res.status(400).json({ error: 'Username already exists' });
 
         const user = await User.findById(req.user.id);
 
@@ -111,30 +111,30 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
 
         if (!oldPassword) {
             logger.error('Old password field dosn\'t exists');
-            return res.status(400).json({ error: 'Old password dosn\'t exists' });
+            return res.status(400).json({ error: 'Old password dosn\'t exists', errorField: 'oldPassword' });
         }
 
         if (!password) {
             logger.error('Password field dosn\'t exists');
-            return res.status(400).json({ error: 'Password dosn\'t exists' });
+            return res.status(400).json({ error: 'Password dosn\'t exists', errorField: 'password' });
         }
         password = password.trim();
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'password' });
         }
 
         const user = await User.findById(req.user.id);
 
         if (user === null) {
             logger.error('User not found');
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User not found', errorField: 'oldPassword' });
         }
 
         const isMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isMatch) {
             logger.error('Incorrect old password');
-            return res.status(400).json({ error: 'Incorrect old password' });
+            return res.status(400).json({ error: 'Incorrect old password', errorField: 'oldPassword' });
         }
 
         user.password = password;
@@ -144,7 +144,7 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
         return res.json({ message: 'Password updated' });
     } catch (err: unknown) {
         logger.error(`Could not update password : ${err}`);
-        return res.status(500).json({ error: `Could not update password : ${err} ` });
+        return res.status(500).json({ error: `Could not update password : ${err} `, errorField: 'password' });
     }
 });
 

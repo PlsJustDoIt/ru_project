@@ -6,7 +6,7 @@ interface IUser extends Document {
     username: string;
     password: string;
     status: Status;
-    friends: IUser[];
+    friends: Types.ObjectId[];
     avatarUrl: string;
     _id: Types.ObjectId;
 }

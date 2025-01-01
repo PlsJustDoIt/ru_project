@@ -18,8 +18,8 @@ class ProfileWidget extends StatefulWidget {
   State createState() => _ProfileWidgetState();
 }
 
-bool _hasSubmitted = false;
 bool _isAvatarChanged = false;
+final Map<String, String> _apiErrors = {};
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   late final ApiService _apiService;
@@ -296,9 +296,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   Form statusFormNoButton(BuildContext context) {
     return Form(
       key: _formKeyStatus,
-      autovalidateMode: _hasSubmitted
-          ? AutovalidateMode.onUserInteraction
-          : AutovalidateMode.disabled,
+      autovalidateMode: AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -441,6 +439,7 @@ class UsernameForm extends StatefulWidget {
 class _UsernameFormState extends State<UsernameForm> {
   late TextEditingController _usernameController;
   final _formKeyUsername = GlobalKey<FormState>();
+  bool _hasSubmitted = false;
 
   @override
   void initState() {
@@ -457,8 +456,6 @@ class _UsernameFormState extends State<UsernameForm> {
 
   @override
   Widget build(BuildContext context) {
-    _hasSubmitted = false;
-
     return Form(
       key: _formKeyUsername,
       autovalidateMode: _hasSubmitted
@@ -475,6 +472,9 @@ class _UsernameFormState extends State<UsernameForm> {
               prefixIcon: Icon(Icons.person),
             ),
             validator: (value) {
+              if (_apiErrors.containsKey('username')) {
+                return _apiErrors['username'];
+              }
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un nom d\'utilisateur';
               }
@@ -504,6 +504,7 @@ class _UsernameFormState extends State<UsernameForm> {
   }
 
   void confirmUsername(BuildContext context) async {
+    _apiErrors.clear();
     if (_formKeyUsername.currentState?.validate() == false) {
       return;
     }
@@ -522,6 +523,13 @@ class _UsernameFormState extends State<UsernameForm> {
         Navigator.of(context).pop();
         return;
       }
+
+      setState(() {
+        _apiErrors.clear();
+        _apiErrors['username'] = response["error"];
+        _formKeyUsername.currentState?.validate();
+        _hasSubmitted = true;
+      });
 
       throw Exception('Failed to update username');
     } catch (e) {
@@ -545,7 +553,7 @@ class PasswordForm extends StatefulWidget {
   final TextEditingController _passwordConfirmController =
       TextEditingController();
   final _formKeyPassword = GlobalKey<FormState>();
-  final Future<bool> Function(String, String) updatePassword;
+  final Future<Map<String, dynamic>> Function(String, String) updatePassword;
 
   @override
   State<PasswordForm> createState() => _PasswordFormState();
@@ -555,6 +563,7 @@ class _PasswordFormState extends State<PasswordForm> {
   late TextEditingController _oldPasswordController;
   late TextEditingController _passwordController;
   late TextEditingController _passwordConfirmController;
+  bool _hasSubmitted = false;
 
   @override
   void initState() {
@@ -574,8 +583,6 @@ class _PasswordFormState extends State<PasswordForm> {
 
   @override
   Widget build(BuildContext context) {
-    _hasSubmitted = false;
-
     return Form(
       key: widget._formKeyPassword,
       autovalidateMode: _hasSubmitted
@@ -595,6 +602,9 @@ class _PasswordFormState extends State<PasswordForm> {
               prefixIcon: Icon(Icons.lock),
             ),
             validator: (value) {
+              if (_apiErrors.containsKey('oldPassword')) {
+                return _apiErrors['oldPassword'];
+              }
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un mot de passe';
               }
@@ -619,6 +629,9 @@ class _PasswordFormState extends State<PasswordForm> {
               prefixIcon: Icon(Icons.lock),
             ),
             validator: (value) {
+              if (_apiErrors.containsKey('password')) {
+                return _apiErrors['password'];
+              }
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un mot de passe';
               }
@@ -666,14 +679,15 @@ class _PasswordFormState extends State<PasswordForm> {
   }
 
   void confirmPassword(BuildContext context) async {
+    _apiErrors.clear();
     if (widget._formKeyPassword.currentState?.validate() == false) {
       return;
     }
 
     try {
-      bool success = await widget.updatePassword(
+      Map<String, dynamic> response = await widget.updatePassword(
           widget._passwordController.text, widget._oldPasswordController.text);
-      if (success) {
+      if (response["success"]) {
         if (context.mounted == false) {
           return;
         }
@@ -683,6 +697,12 @@ class _PasswordFormState extends State<PasswordForm> {
         return;
       }
 
+      setState(() {
+        _apiErrors.clear();
+        _apiErrors[response["errorField"]] = response["error"];
+        widget._formKeyPassword.currentState?.validate();
+        _hasSubmitted = true;
+      });
       throw Exception('Failed to update password');
     } catch (e) {
       if (context.mounted == false) {
