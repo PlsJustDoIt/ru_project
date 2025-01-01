@@ -239,8 +239,10 @@ router.get('/search', auth, async (req: Request, res: Response) => {
         const searchTerm = query.toLowerCase().trim();
         const searchItem = new RegExp(query, 'i');
 
-        const foundUsers = await User.find({ username: searchItem, _id: { $ne: req.user._id } })
-            .select('id username avatarUrl status')
+        const user = await User.findById(req.user.id); // pk sa marche pas directement avec req.user.id ??
+
+        const foundUsers = await User.find({ username: searchItem, _id: { $ne: user?._id } })
+            .select('id username avatarUrl')
             .limit(10);
 
         if (foundUsers.length === 0) {
@@ -267,13 +269,12 @@ router.get('/search', auth, async (req: Request, res: Response) => {
                 user: {
                     username: user.username,
                     avatarUrl: user.avatarUrl,
-                    status: user.status,
+                    status: 'status non défini',
                     id: user._id,
                 },
                 relevanceScore: relevanceScore,
             };
         }).sort((a, b) => b.relevanceScore - a.relevanceScore);
-        logger.info('Search results : ', searchResults);
         return res.json({ results: searchResults });
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
