@@ -307,7 +307,6 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
                                 backgroundColor: Colors.grey[200],
                               ),
                               title: Text(result.user.username),
-                              subtitle: Text(result.user.status),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

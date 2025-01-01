@@ -239,7 +239,11 @@ router.get('/search', auth, async (req: Request, res: Response) => {
         const searchTerm = query.toLowerCase().trim();
         const searchItem = new RegExp(query, 'i');
 
-        const user = await User.findById(req.user.id); // pk sa marche pas directement avec req.user.id ??
+        const user = await User.findById(req.user.id);
+
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
 
         const foundUsers = await User.find({ username: searchItem, _id: { $ne: user?._id } })
             .select('id username avatarUrl')
@@ -269,7 +273,6 @@ router.get('/search', auth, async (req: Request, res: Response) => {
                 user: {
                     username: user.username,
                     avatarUrl: user.avatarUrl,
-                    status: 'status non défini',
                     id: user._id,
                 },
                 relevanceScore: relevanceScore,

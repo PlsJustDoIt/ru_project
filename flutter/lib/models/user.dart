@@ -20,7 +20,7 @@ class User {
       return User(
         id: json['id'] ?? '',
         username: json['username'] ?? 'ton pere',
-        status: json['status'] ?? 'status non défini',
+        status: json['status'] ?? 'absent',
         avatarUrl: json['avatarUrl'] ?? '',
         friendIds: json['friendIds'] ?? [],
       );
