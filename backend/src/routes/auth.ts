@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
         // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
+            return res.status(400).json({ error: 'Username or password dosn\'t exists', errorField: 'username' });
         }
 
         username = username.trim();
@@ -36,18 +36,18 @@ router.post('/register', async (req, res) => {
 
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'username' });
         }
 
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'password' });
         }
 
         let user = await User.findOne({ username });
         if (user != null) {
             logger.error('User already exists');
-            return res.status(400).json({ error: 'User already exists' });
+            return res.status(400).json({ error: 'User already exists', errorField: 'username' });
         }
         user = new User({ username,
             password });
@@ -67,7 +67,7 @@ router.post('/register', async (req, res) => {
             refreshToken });
     } catch (err) {
         logger.error(err);
-        return res.status(500).send('Server error' + err);
+        return res.status(500).json({ error: 'Server error ' + err, errorField: 'username' });
     }
 });
 
@@ -78,14 +78,14 @@ router.post('/login', async (req, res) => {
         // test authentification header
         if (req.headers.authorization && req.headers.authorization.length > 0) {
             logger.error('User is already connected');
-            return res.status(400).json({ error: 'User is already connected' });
+            return res.status(400).json({ error: 'User is already connected', errorField: 'username' });
         }
 
         // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
 
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
+            return res.status(400).json({ error: 'Username or password dosn\'t exists', errorField: 'username' });
         }
 
         username = username.trim();
@@ -93,18 +93,18 @@ router.post('/login', async (req, res) => {
 
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'username' });
         }
 
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'password' });
         }
 
         const user = await User.findOne({ username });
-        if (!user) return res.status(400).json({ error: 'This user does not exists' });
+        if (!user) return res.status(400).json({ error: 'This user does not exists', errorField: 'username' });
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ error: 'Incorrect password' });
+        if (!isMatch) return res.status(400).json({ error: 'Incorrect password', errorField: 'password' });
         // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
         // Générer les tokens
         const accessToken = generateAccessToken(user._id);
@@ -118,16 +118,15 @@ router.post('/login', async (req, res) => {
 
         if (!response) {
             logger.error('Error while saving the refresh token');
-            return res.status(500).json({ error: 'Error while saving the refresh token' });
+            return res.status(500).json({ error: 'Error while saving the refresh token', errorField: 'username' });
         }
 
         logger.info(`Connexion de l'utilisateur ${username}`);
 
-        return res.json({ accessToken,
-            refreshToken });
+        return res.json({ accessToken, refreshToken });
     } catch (err) {
         logger.error(err);
-        return res.status(500).send('Server error ' + err);
+        return res.status(500).json({ error: 'Server error ' + err, errorField: 'username' });
     }
 });
 

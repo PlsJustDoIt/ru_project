@@ -101,12 +101,17 @@ class ApiService {
   }
 
   // Fonction pour login
-  Future<User> login(String username, String password) async {
+  Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final Response response = await _dio.post('/auth/login', data: {
         'username': username,
         'password': password,
-      });
+      }, options: Options(
+        validateStatus: (status) {
+          return status != null &&
+              (status >= 200 && status < 300 || status == 400 || status == 401);
+        },
+      ));
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data['error'] == null) {
         final String accessToken = response.data['accessToken'];
@@ -115,24 +120,38 @@ class ApiService {
         await _secureStorage.storeTokens(accessToken, refreshToken);
         final User? user = await getUser();
         if (user != null) {
-          return user;
+          return {'user': user, 'success': true};
         }
-        throw Exception('Failed to get user');
+        return {
+          'error': 'Failed to get user',
+          'success': false,
+          'errorField': 'username'
+        };
       }
-      throw Exception('${response.statusCode} ${response.data['error']}');
+      return {
+        'error': response.data['error'],
+        'success': false,
+        'errorField': response.data['errorField']
+      };
     } catch (e) {
       logger.e('Failed to login: $e');
-      throw Exception('$e');
+      return {'error': '$e', 'success': false, 'errorField': 'username'};
     }
   }
 
   // Fonction pour s'inscrire
-  Future<User> register(String username, String password) async {
+  Future<Map<String, dynamic>> register(
+      String username, String password) async {
     try {
       final Response response = await _dio.post('/auth/register', data: {
         'username': username,
         'password': password,
-      });
+      }, options: Options(
+        validateStatus: (status) {
+          return status != null &&
+              (status >= 200 && status < 300 || status == 400 || status == 401);
+        },
+      ));
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 201 && response.data != null) {
@@ -142,14 +161,22 @@ class ApiService {
         await _secureStorage.storeTokens(accessToken, refreshToken);
         final User? user = await getUser();
         if (user != null) {
-          return user;
+          return {'user': user, 'success': true};
         }
-        throw Exception('Failed to get user');
+        return {
+          'error': 'Failed to get user',
+          'success': false,
+          'errorField': 'username'
+        };
       }
-      throw Exception('${response.statusCode} ${response.data['error']}');
+      return {
+        'error': response.data['error'],
+        'success': false,
+        'errorField': response.data['errorField']
+      };
     } catch (e) {
       logger.e('Failed to register: $e');
-      throw Exception('$e');
+      return {'error': '$e', 'success': false, 'errorField': 'username'};
     }
   }
 
@@ -315,6 +342,7 @@ class ApiService {
     }
   }
 
+  //update user username TODO : se servir d'inspiration pour les autres
   Future<Map<String, dynamic>> updateUsername(String username) async {
     try {
       final Response response = await _dio.put('/users/update-username', data: {
