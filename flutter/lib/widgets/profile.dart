@@ -20,6 +20,7 @@ class ProfileWidget extends StatefulWidget {
 
 bool _isAvatarChanged = false;
 final Map<String, String> _apiErrors = {};
+final Duration _snackBarDuration = const Duration(seconds: 3);
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   late final ApiService _apiService;
@@ -53,7 +54,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       }
       if (avatarUrl == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Echec de la mise à jour de l\'image')),
+          SnackBar(
+            content: const Text('Echec de la mise à jour de l\'image'),
+            duration: _snackBarDuration,
+          ),
         );
         return;
       } else {
@@ -62,7 +66,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           _isAvatarChanged = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('L\'image de profil a été mise à jour')),
+          SnackBar(
+            content: const Text('L\'image de profil a été mise à jour'),
+            duration: _snackBarDuration,
+          ),
         );
         return;
       }
@@ -72,7 +79,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to pick image')),
+        SnackBar(
+          content: const Text('Failed to pick image'),
+          duration: _snackBarDuration,
+        ),
       );
     }
   }
@@ -206,7 +216,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         }
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Compte supprimé avec succès')),
+          SnackBar(
+            content: const Text('Compte supprimé avec succès'),
+            duration: _snackBarDuration,
+          ),
         );
         Navigator.pushReplacement(
           context,
@@ -221,7 +234,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur de suppression du compte')),
+        SnackBar(
+          content: const Text('Erreur de suppression du compte'),
+          duration: _snackBarDuration,
+        ),
       );
       return;
     }
@@ -330,8 +346,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   void confirmStatus(BuildContext context) async {
     if (_userProvider.user!.status == _selectedStatus) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Le status est déjà à jour')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Le status est déjà à jour'),
+        duration: _snackBarDuration,
+      ));
       return;
     }
 
@@ -348,15 +366,17 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Status mis à jour avec succès.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Status mis à jour avec succès.'),
+          duration: _snackBarDuration));
     } catch (e) {
       logger.e('Error updating status: $e');
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du status')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur de mise à jour du status'),
+          duration: _snackBarDuration));
       return;
     }
   }
@@ -519,7 +539,8 @@ class _UsernameFormState extends State<UsernameForm> {
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Nom d\'utilisateur mis à jour avec succès.')));
+            content: Text('Nom d\'utilisateur mis à jour avec succès.'),
+            duration: _snackBarDuration));
         Navigator.of(context).pop();
         return;
       }
@@ -537,7 +558,8 @@ class _UsernameFormState extends State<UsernameForm> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur de mise à jour du nom d\'utilisateur')));
+          content: Text('Erreur de mise à jour du nom d\'utilisateur'),
+          duration: _snackBarDuration));
       return;
     }
   }
@@ -691,8 +713,10 @@ class _PasswordFormState extends State<PasswordForm> {
         if (context.mounted == false) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Mot de passe mis à jour avec succès.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Mot de passe mis à jour avec succès.'),
+          duration: _snackBarDuration,
+        ));
         Navigator.of(context).pop();
         return;
       }
@@ -708,8 +732,9 @@ class _PasswordFormState extends State<PasswordForm> {
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du mot de passe')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur de mise à jour du mot de passe'),
+          duration: _snackBarDuration));
       return;
     }
   }
