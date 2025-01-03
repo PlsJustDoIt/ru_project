@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/models/searchResult.dart';
@@ -48,9 +49,11 @@ class ApiService {
                 final response = await _dio.fetch(requestOptions);
                 return handler.resolve(response);
               } else {
+                //TODO: quand le token ne peut pas être rafraîchi
                 logger.e('Failed to refresh token');
               }
             } catch (_) {
+              //TODO: quand le token ne peut pas être rafraîchi erreur
               // En cas d'erreur, déconnecter
               await logout();
             }
@@ -83,6 +86,10 @@ class ApiService {
   Future<String?> refreshToken() async {
     try {
       final String? refreshToken = await _secureStorage.getRefreshToken();
+      if (refreshToken == null) {
+        UserProvider(api: this).logout();
+        return null;
+      }
       final Response response =
           await _dio.post('/auth/token', data: {'refreshToken': refreshToken});
 
