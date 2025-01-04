@@ -3,6 +3,8 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/widgets/map_widget.dart';
+import 'package:ru_project/widgets/floor_plan_widget.dart';
 import 'package:ru_project/widgets/menu.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -25,7 +27,7 @@ class TabBarWidget extends StatelessWidget {
     final apiService = Provider.of<ApiService>(context);
 
     return DefaultTabController(
-      length: 8,
+      length: 9,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -63,6 +65,7 @@ class TabBarWidget extends StatelessWidget {
           ],
           backgroundColor: AppColors.primaryColor,
           bottom: const TabBar(
+            // physics: NeverScrollableScrollPhysics(),
             labelColor:
                 Colors.white, // Couleur du texte et de l'icône sélectionnés
             unselectedLabelColor: AppColors
@@ -70,7 +73,8 @@ class TabBarWidget extends StatelessWidget {
             indicatorColor: Colors
                 .yellow, // Couleur de l'indicateur sous l'onglet sélectionné
             tabs: [
-              Tab(icon: Icon(Icons.login), text: 'Carte ru'),
+              Tab(icon: Icon(Icons.map), text: 'Carte ru'),
+              Tab(icon: Icon(Icons.settings), text: 'Carte ru test'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
               Tab(icon: Icon(Icons.settings), text: 'socket test'),
@@ -84,6 +88,7 @@ class TabBarWidget extends StatelessWidget {
         body: TabBarView(
           children: [
             const CafeteriaLayout(),
+            SimpleStatelessWidget(),
             const MenuWidget(),
             FriendsListSheet(),
             ChatScreen(),
