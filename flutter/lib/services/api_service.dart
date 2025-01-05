@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http_parser/http_parser.dart';
 
 import 'package:image_picker/image_picker.dart';
@@ -127,14 +128,18 @@ class ApiService {
           'errorField': 'username'
         };
       }
-      return {
-        'error': response.data['error'],
-        'success': false,
-        'errorField': response.data['errorField']
-      };
+      //cas d'erreur field
+      if (response.data['error']['field'] != null) {
+        return {
+          'error': response.data['error']['message'],
+          'success': false,
+          'errorField': response.data['error']['field']
+        };
+      }
+      throw Exception('Failed to login: ${response.data['error']['message']}');
     } catch (e) {
       logger.e('Failed to login: $e');
-      return {'error': '$e', 'success': false, 'errorField': 'username'};
+      throw Exception('Failed to login: $e');
     }
   }
 
@@ -145,12 +150,7 @@ class ApiService {
       final Response response = await _dio.post('/auth/register', data: {
         'username': username,
         'password': password,
-      }, options: Options(
-        validateStatus: (status) {
-          return status != null &&
-              (status >= 200 && status < 300 || status == 400 || status == 401);
-        },
-      ));
+      });
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 201 && response.data != null) {
@@ -162,20 +162,19 @@ class ApiService {
         if (user != null) {
           return {'user': user, 'success': true};
         }
-        return {
-          'error': 'Failed to get user',
-          'success': false,
-          'errorField': 'username'
-        };
+        throw Exception('Failed to get user');
+      }
+      if (response.data['error']['field'] == null) {
+        throw Exception('Failed to register: ${response.data['error']['message']}');
       }
       return {
-        'error': response.data['error'],
+        'error': response.data['error']['message'],
         'success': false,
-        'errorField': response.data['errorField']
+        'errorField': response.data['error']['field']
       };
     } catch (e) {
       logger.e('Failed to register: $e');
-      return {'error': '$e', 'success': false, 'errorField': 'username'};
+      throw Exception('Failed to register: $e');
     }
   }
 
@@ -353,11 +352,13 @@ class ApiService {
         logger.i('Password updated');
         return {'message': response.data['message'], 'success': true};
       }
-      // logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      if (response.data['error']['field'] == null) {
+        return {'error': response.data['error']['message'], 'success': false};
+      }
       return {
-        'error': response.data['error'],
+        'error': response.data['error']['message'],
         'success': false,
-        'errorField': response.data['errorField']
+        'errorField': response.data['error']['field']
       };
     } catch (e) {
       logger.e('Failed to update password: $e');

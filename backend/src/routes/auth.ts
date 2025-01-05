@@ -23,12 +23,12 @@ const generateRefreshToken = (id: Types.ObjectId) => {
 };
 
 router.post('/register', async (req, res) => {
-    let { username, password } = req.body;
     try {
+        let { username, password } = req.body;
         // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists', errorField: 'username' });
+            return res.status(400).json({ error: 'Username or password field dosn\'t exists' });
         }
 
         username = username.trim();
@@ -36,18 +36,18 @@ router.post('/register', async (req, res) => {
 
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'username' });
+            return res.status(400).json({ error: { message: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, field: 'username' } });
         }
 
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'password' });
+            return res.status(400).json({ error: { message: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, field: 'password' } });
         }
 
         let user = await User.findOne({ username });
         if (user != null) {
             logger.error('User already exists');
-            return res.status(400).json({ error: { msg: 'User already exists', field: 'username' } }); // TODO utiliser ceci ailleurs
+            return res.status(400).json({ error: { message: 'User already exists', field: 'username' } }); // TODO utiliser ceci ailleurs
         }
         user = new User({ username,
             password });
@@ -67,25 +67,24 @@ router.post('/register', async (req, res) => {
             refreshToken });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error ' + err, errorField: 'username' });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
 router.post('/login', async (req, res) => {
-    let { username, password } = req.body;
-
     try {
+        let { username, password } = req.body;
         // test authentification header
         if (req.headers.authorization && req.headers.authorization.length > 0) {
             logger.error('User is already connected');
-            return res.status(400).json({ error: 'User is already connected', errorField: 'username' });
+            return res.status(400).json({ error: 'User is already connected' });
         }
 
         // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
 
         if (!username || !password) {
             logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists', errorField: 'username' });
+            return res.status(400).json({ error: 'Username or password field dosn\'t exists' });
         }
 
         username = username.trim();
@@ -93,18 +92,18 @@ router.post('/login', async (req, res) => {
 
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'username' });
+            return res.status(400).json({ error: { message: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, field: 'username' } });
         }
 
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, errorField: 'password' });
+            return res.status(400).json({ error: { message: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, field: 'password' } });
         }
 
         const user = await User.findOne({ username });
-        if (!user) return res.status(400).json({ error: 'This user does not exists', errorField: 'username' });
+        if (!user) return res.status(400).json({ error: 'This user does not exists' });
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ error: 'Incorrect password', errorField: 'password' });
+        if (!isMatch) return res.status(400).json({ error: 'Invalid username or password' });
         // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
         // Générer les tokens
         const accessToken = generateAccessToken(user._id);
@@ -118,7 +117,7 @@ router.post('/login', async (req, res) => {
 
         if (!response) {
             logger.error('Error while saving the refresh token');
-            return res.status(500).json({ error: 'Error while saving the refresh token', errorField: 'username' });
+            return res.status(500).json({ error: 'An error has occured' });
         }
 
         logger.info(`Connexion de l'utilisateur ${username}`);
@@ -126,7 +125,7 @@ router.post('/login', async (req, res) => {
         return res.json({ accessToken, refreshToken });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error ' + err, errorField: 'username' });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
@@ -172,7 +171,7 @@ router.post('/token', auth, async (req, res) => {
         // });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error: ' + err });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
@@ -188,14 +187,15 @@ router.post('/logout', auth, async (req, res) => {
         return res.json({ message: 'Logged out' });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error: ' + err });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
 router.delete('/delete-account', auth, async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     if (!refreshToken) {
-        return res.status(400).json({ error: 'No refresh token provided' });
+        logger.error('No refresh token provided');
+        return res.status(500).json({ error: 'An error has occured' });
     }
     try {
         const user = await User.findById(req.user.id);
@@ -218,7 +218,7 @@ router.delete('/delete-account', auth, async (req: Request, res: Response) => {
         return res.json({ message: 'User deleted' });
     } catch (err: unknown) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error : ' + err });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 

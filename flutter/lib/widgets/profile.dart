@@ -723,6 +723,7 @@ class _PasswordFormState extends State<PasswordForm> {
       });
       throw Exception('Failed to update password');
     } catch (e) {
+      logger.e('Error updating password: $e');
       if (context.mounted == false) {
         return;
       }

@@ -65,12 +65,6 @@ const convertAndCompressAvatar = async (req: Request, res: Response, next: NextF
 
             // Convertir et compresser l'image
             await sharp(inputPath)
-                // .resize({
-                //     width: 500, // Largeur maximale
-                //     height: 500, // Hauteur maximale
-                //     fit: 'inside',
-                //     withoutEnlargement: true,
-                // })
                 .jpeg({
                     quality: 85, // Compression à 75%
                     mozjpeg: true, // Utiliser l'encodeur mozjpeg pour de meilleures compressions
