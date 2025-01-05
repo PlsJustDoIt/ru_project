@@ -34,7 +34,6 @@ class ApiService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onError: (DioException e, ErrorInterceptorHandler handler) async {
-          logger.e(e.requestOptions.validateStatus);
           if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
             try {
               final newToken = await refreshToken();
