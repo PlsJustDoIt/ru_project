@@ -8,6 +8,7 @@ import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/test_statefull.dart';
 import 'package:video_player/video_player.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/custom_snack_bar.dart';
 
 class WelcomeWidget extends StatefulWidget {
   const WelcomeWidget({super.key});
@@ -188,8 +189,9 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                                   response['error'];
                               _formKey.currentState!.validate();
                             });
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text('Erreur de connexion.')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                CustomSnackBar(
+                                    message: 'Erreur de connexion.'));
                             return;
                           }
                           final User user = response['user'];
@@ -204,9 +206,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           if (context.mounted == false) {
                             return;
                           }
-                          logger.e(e);
                           ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erreur de connexion.')));
+                              CustomSnackBar(message: 'Erreur de connexion.'));
                           return;
                         }
                       },

@@ -74,17 +74,15 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         // test validation username
         let username = req.body.username;
         if (!username) {
-            logger.error('Username field dosn\'t exists');
             return res.status(400).json({ error: 'Username dosn\'t exists' });
         }
         username = username.trim();
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
             return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
         const testUser = await User.findOne({ username });
-        if (testUser) return res.status(400).json({ error: 'Username already exists' });
+        if (testUser) return res.status(400).json({ error: 'A user with this username already exists' });
 
         const user = await User.findById(req.user.id);
 

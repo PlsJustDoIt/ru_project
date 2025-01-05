@@ -26,10 +26,14 @@ class ApiService {
       baseUrl: Config.apiUrl,
       connectTimeout: Duration(seconds: 10), // Plus généreux
       receiveTimeout: Duration(seconds: 7), // Plus long
+      validateStatus: (status) {
+        return status != null;
+      },
     ));
     _dio.interceptors.add(
       InterceptorsWrapper(
         onError: (DioException e, ErrorInterceptorHandler handler) async {
+          logger.e(e.requestOptions.validateStatus);
           if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
             try {
               final newToken = await refreshToken();
@@ -106,12 +110,7 @@ class ApiService {
       final Response response = await _dio.post('/auth/login', data: {
         'username': username,
         'password': password,
-      }, options: Options(
-        validateStatus: (status) {
-          return status != null &&
-              (status >= 200 && status < 300 || status == 400 || status == 401);
-        },
-      ));
+      });
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data['error'] == null) {
         final String accessToken = response.data['accessToken'];
@@ -342,30 +341,6 @@ class ApiService {
     }
   }
 
-  //update user username TODO : se servir d'inspiration pour les autres
-  Future<Map<String, dynamic>> updateUsername(String username) async {
-    try {
-      final Response response = await _dio.put('/users/update-username', data: {
-        'username': username,
-      }, options: Options(
-        validateStatus: (status) {
-          return status != null &&
-              (status >= 200 && status < 300 || status == 400 || status == 401);
-        },
-      ));
-      if (response.statusCode == 200) {
-        logger.i('Username updated: $username');
-        return {'username': response.data['username'], 'success': true};
-      }
-      logger.e(
-          'Invalid response from server in updateUsername(): ${response.statusCode} ${response.data['error']}');
-      return {'error': response.data['error'], 'success': false};
-    } catch (e) {
-      logger.e('Failed to update username: $e');
-      return {'error': '$e', 'success': false};
-    }
-  }
-
   //update user password (requires user id also requires the old password for verification)
   Future<Map<String, dynamic>> updatePassword(
       String password, String oldPassword) async {
@@ -373,12 +348,7 @@ class ApiService {
       final Response response = await _dio.put('/users/update-password', data: {
         'password': password,
         'oldPassword': oldPassword,
-      }, options: Options(
-        validateStatus: (status) {
-          return status != null &&
-              (status >= 200 && status < 300 || status == 400 || status == 401);
-        },
-      ));
+      });
       if (response.statusCode == 200) {
         logger.i('Password updated');
         return {'message': response.data['message'], 'success': true};
@@ -411,6 +381,25 @@ class ApiService {
     } catch (e) {
       logger.e('Failed to update status: $e');
       return {'error': e, 'success': false};
+    }
+  }
+
+  //update user username TODO : se servir d'inspiration pour les autres
+  Future<Map<String, dynamic>> updateUsername(String username) async {
+    try {
+      final Response response = await _dio.put('/users/update-username', data: {
+        'username': username,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Username updated: $username');
+        return {'username': response.data['username'], 'success': true};
+      }
+      logger.e(
+          'Invalid response from server in updateUsername(): ${response.statusCode} ${response.data['error']}');
+      return {'error': response.data['error'], 'success': false};
+    } catch (e) {
+      logger.e('Failed to update username: $e');
+      return {'error': '$e', 'success': false};
     }
   }
 

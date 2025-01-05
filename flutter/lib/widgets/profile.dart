@@ -6,6 +6,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/welcome.dart';
+import 'package:ru_project/widgets/custom_snack_bar.dart';
 
 class ProfileWidget extends StatefulWidget {
   final statusList = ['en ligne', 'au ru', 'absent'];
@@ -54,10 +55,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       }
       if (avatarUrl == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Echec de la mise à jour de l\'image'),
-            duration: _snackBarDuration,
-          ),
+          CustomSnackBar(message: 'Echec de la mise à jour de l\'image'),
         );
         return;
       } else {
@@ -66,10 +64,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           _isAvatarChanged = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('L\'image de profil a été mise à jour'),
-            duration: _snackBarDuration,
-          ),
+          CustomSnackBar(message: 'L\'image de profil a été mise à jour'),
         );
         return;
       }
@@ -312,7 +307,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   Form statusFormNoButton(BuildContext context) {
     return Form(
       key: _formKeyStatus,
-      autovalidateMode: AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
