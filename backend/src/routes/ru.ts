@@ -37,7 +37,7 @@ function decodeHtmlEntities(text: string) {
 }
 
 // Fonction récursive pour décoder les valeurs dans un objet JSON
-function decodeJsonValues(obj: any): any {
+function decodeJsonValues(obj: any) {
     const res = JSON.parse(JSON.stringify(obj)); // On crée une copie de l'objet pour éviter de modifier l'original
 
     for (const key in res) {
@@ -127,8 +127,10 @@ async function fetchMenusFromExternalAPI() {
         const restaurants = result.root.resto;
         const restoR135 = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_lumiere_id);
         const menus = decodeJsonValues(restoR135.menu);
+        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+        const filteredMenus = menus.filter((menu: MenuXml) => menu.$.date >= today);
 
-        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
+        const transformedMenus: MenuResponse[] = filteredMenus.map((menu: MenuXml) => transformToMenu(menu));
         return transformedMenus;
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
@@ -147,18 +149,18 @@ router.get('/menus', auth, async (req: Request, res: Response) => {
         const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
         if (cachedMenus) {
             logger.info('Les menus sont en cache');
-            return res.json(cachedMenus);
+            return res.json({ menus: cachedMenus });
         }
 
         // Si les menus ne sont pas en cache, on les récupère de l'API externe
         const menus = await fetchMenusFromExternalAPI();
 
-        // On met les menus en cache pour 1 heure
+        // On met les menus en cache pour une semaine
         cache.set('menus', menus);
-        return res.json(menus);
+        return res.json({ menus: menus });
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
-        return res.status(500).send('Erreur lors de la récupération des menus');
+        return res.status(500).json({ error: 'Erreur lors de la récupération des menus' });
     }
 },
 );
