@@ -58,6 +58,12 @@ class _FriendsListSheetState extends State<FriendsListSheet>
     _loadFriends();
   }
 
+  static String generatePrivateRoomName(String user1Id, String user2Id) {
+    List<String> ids = [user1Id, user2Id];
+    ids.sort();
+    return ids.join('_');
+  }
+
   Future<void> _loadFriends() async {
     try {
       ApiService api = Provider.of<ApiService>(context, listen: false);

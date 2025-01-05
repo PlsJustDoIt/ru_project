@@ -900,10 +900,10 @@ paths:
                 - roomId
                 - message
               properties:
-                recipientId:
+                roomId:
                   type: string
-                  description: ID de l'utilisateur destinataire
-                message:
+                  description: ID de la room
+                content:
                   type: string
                   description: Contenu du message
       responses:
@@ -970,6 +970,102 @@ paths:
                       format: date-time
         '401':
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '500':
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+  /socket/chat-room:
+    get:
+      tags: [socket]
+      summary: Récupérer les messages de la room globale
+      description: "Récupérer tous les messages de la room globale"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    senderId:
+                      type: string
+                    message:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+        '401':
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '500':
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+  /socket/send-chat-room:
+    post:
+      tags: [socket]
+      summary: Envoyer un message dans la room globale
+      description: "Envoyer un message dans la room globale via socket"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: Contenu du message
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  username:
+                    type: string
+                  id:
+                    type: string
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '401':
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        '404':
+          description: Room ou utilisateur non trouvé
           content:
             application/json:
               schema:

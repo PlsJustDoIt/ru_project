@@ -1,12 +1,14 @@
 // routes/message.routes.ts
 import { Router, Request, Response } from 'express';
 import { Types } from 'mongoose';
-import Message, { IMessage } from '../models/message.js';
+import Message from '../models/message.js';
 import Room from '../models/room.js';
 import User from '../models/user.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import { socketService } from '../services/socket.js';
+import MessageResponse from '../interfaces/messageResponse.js';
+import { Socket } from 'socket.io';
 
 const router = Router();
 
@@ -15,7 +17,7 @@ router.post('/send', auth, async (req: Request, res: Response) => {
         const { roomId, content } = req.body;
         const userId = req.user.id;
 
-        if (!content || typeof content !== 'string') {
+        if (!content || !roomId) {
             return res.status(400).json({ error: 'Message content is required' });
         }
 
@@ -29,33 +31,31 @@ router.post('/send', auth, async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // const room = await Room.findById(roomId);
-        // if (!room) {
-        //     return res.status(404).json({ error: 'Room not found' });
-        // }
-
-        const exampleRoom = new Room({
-            name: 'Conference Room',
-            owner: user, // Replace with a valid user ID
-        });
-
-        await exampleRoom.save();
-
-        if (!exampleRoom) throw new Error('Room creation failed');
-
-        console.log(exampleRoom);
+        const room = await Room.findById(roomId);
+        if (!room) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
 
         const message = new Message({
             content: content,
             user: user,
-            room: exampleRoom,
+            room: room,
         });
 
         await message.save();
 
-        socketService.emitToRoom(roomId, 'receive_message', message);
+        const response = {
+            content: content,
+            createdAt: message.createdAt,
+            username: user.username,
+            id: message._id.toString(),
+        };
 
-        return res.status(201).json(message);
+        console.log(response);
+
+        socketService.emitToRoom('receive_message', roomId, { message: response });
+
+        return res.status(201).json({ message: response });
     } catch (err) {
         logger.error('Error in /send:', err);
         return res.status(500).json({
@@ -65,14 +65,72 @@ router.post('/send', auth, async (req: Request, res: Response) => {
     }
 });
 
+router.post('/send-chat-room', auth, async (req: Request, res: Response) => {
+    try {
+        const { content } = req.body as { content: string };
+        const userId = req.user.id;
+
+        if (!content) {
+            return res.status(400).json({ error: 'Message content is required' });
+        }
+
+        const user = await User.findById(userId).select('username');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const room = await Room.findOne({ name: 'Global' });
+        if (!room) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        const message = new Message({
+            content: content,
+            user: user,
+            room: room,
+        });
+
+        await message.save();
+
+        const response = {
+            content: content,
+            createdAt: message.createdAt,
+            username: user.username,
+            id: message._id.toString(),
+        };
+
+        console.log(socketService.connectedUsers);
+
+        const socket: Socket | undefined = socketService.getSocketFromUserId(userId);
+        if (socket) {
+            socketService.emitToRoomWithSocket(socket, 'receive_message', room._id.toString(), { message: response });
+            return res.status(201).json({ message: response });
+        }
+
+        // socketService.emitToRoom('receive_message', room._id.toString(), { message: response });
+    } catch (err) {
+        logger.error('Error in /send-chat-room:', err);
+        return res.status(500).json({
+            error: 'Internal server error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+        });
+    }
+});
+
 router.get('/messages', auth, async (req: Request, res: Response) => {
     try {
-        const roomId = req.query.roomId as string;
-        if (!Types.ObjectId.isValid(roomId)) {
-            return res.status(400).json({ error: 'Invalid room ID' });
+        const roomName = req.query.roomName as string;
+        if (!roomName) {
+            return res.status(400).json({ error: 'Room name is required' });
         }
-        const messages = await getMessagesByRoomId(roomId);
-        return res.json(messages);
+
+        const room = await Room.findOne({ name: roomName });
+        if (!room) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        const messages = await getMessagesByRoomId(room._id.toString());
+        return res.json({ messages: messages });
     } catch (err) {
         logger.error('Error in /messages:', err);
         return res.status(500).json({
@@ -82,12 +140,62 @@ router.get('/messages', auth, async (req: Request, res: Response) => {
     }
 });
 
-async function getMessagesByRoomId(roomId: string): Promise<IMessage[]> {
-    return Message.find({ room: roomId })
-        .populate('room')
-        .populate('user', 'username')
-        .sort({ createdAt: -1 })
+router.get('/chat-room', auth, async (req: Request, res: Response) => {
+    try {
+        const chatRoom = await Room.findOne({ name: 'Global' });
+        if (!chatRoom) {
+            return res.status(404).json({ error: 'Chat room not found' });
+        }
+        const messages = await getMessagesByRoomId(chatRoom._id.toString());
+        return res.json({ messages: messages });
+    } catch (err) {
+        logger.error('Error in /chat-room:', err);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+        });
+    }
+});
+
+router.delete('/delete-messages', auth, async (req: Request, res: Response) => {
+    try {
+        const roomId = req.query.roomId as string;
+        if (!roomId) {
+            return res.status(400).json({ error: 'Room ID is required' });
+        }
+
+        if (!Types.ObjectId.isValid(roomId)) {
+            logger.error('Invalid room ID : ' + roomId);
+            return res.status(400).json({ error: 'Invalid room ID' });
+        }
+
+        await Message.deleteMany({ room: roomId });
+
+        return res.json({ message: 'Messages deleted' });
+    } catch (err) {
+        logger.error('Error in /delete-messages:', err);
+        return res.status(500).json({
+            error: 'Internal server error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+        });
+    }
+});
+
+async function getMessagesByRoomId(roomId: string): Promise<MessageResponse[]> {
+    const messages = await Message.find({ room: roomId })
+        .populate<{ user: { username: string } }>('user', 'username')
+        // .populate('room')
+        .sort({ createdAt: 1 })
         .limit(50);
+
+    return messages.map((message) => {
+        return {
+            content: message.content,
+            createdAt: message.createdAt,
+            username: message.user.username,
+            id: message._id.toString(),
+        };
+    });
 }
 
 export default router;

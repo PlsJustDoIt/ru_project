@@ -6,7 +6,7 @@ interface IUser extends Document {
     username: string;
     password: string;
     status: Status;
-    friends: IUser[];
+    friends: Types.ObjectId[];
     avatarUrl: string;
     _id: Types.ObjectId;
 }
@@ -30,5 +30,7 @@ UserSchema.pre('save', async function (next): Promise<void> {
     }
 });
 
-export default model('User', UserSchema);
+const User = model<IUser>('User', UserSchema);
+
+export default User;
 export { IUser, Status };
