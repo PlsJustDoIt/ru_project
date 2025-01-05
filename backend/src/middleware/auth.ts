@@ -7,13 +7,14 @@ import isProduction from '../config.js';
 
 export default function (req: Request, res: Response, next: NextFunction): void {
     if (req.url.includes('/token') || ((req.url.includes('/menus') || req.url.includes('/info')) && !isProduction)) {
-        return next();
+        next();
+        return;
     }
-    const authHeader = req.headers['authorization']; // Utilisation de l'en-tête Authorization
+    const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (token == null || token == undefined) {
+    if (!token) {
         logger.error('No token, authorization denied');
-        return res.status(401).json({ error: 'No token, authorization denied' });
+        res.status(401).json({ error: 'No token, authorization denied' });
         return;
     }
     try {
@@ -24,8 +25,9 @@ export default function (req: Request, res: Response, next: NextFunction): void 
         }
         req.user = decoded;
         next();
+        return;
     } catch (err: unknown) {
         logger.error(err);
-        return res.status(403).json({ error: err });
+        res.status(403).json({ error: err });
     }
 };

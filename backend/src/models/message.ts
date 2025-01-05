@@ -2,9 +2,11 @@ import { Schema, Types, model } from 'mongoose';
 
 interface IMessage {
     content: string;
-    created_timestamp: Date;
-    user: Types.ObjectId;
+    createdAt: Date;
+    updatedAt: Date;
+    user: Types.ObjectId | { username: string };
     room: Types.ObjectId;
+    _id: Types.ObjectId;
 }
 
 const messageSchema = new Schema<IMessage>({
