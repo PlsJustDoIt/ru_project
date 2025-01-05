@@ -66,7 +66,6 @@ class _MenuWidgetState extends State<MenuWidget>
     }
     setState(() {
       _menus = menus;
-      _currentPage = 0;
       _pageController = PageController(initialPage: _currentPage);
     });
   }
