@@ -28,40 +28,6 @@ String formatDate(String dateString) {
   return formattedDate;
 }
 
-int indexCloserDateInMenus(List<Menu> menus) {
-  if (menus.isEmpty) return 0;
-
-  DateTime now = DateTime.now();
-  int index = 0;
-  int minDiff = -1;
-
-  for (int i = 0; i < menus.length; i++) {
-    DateTime menuDate = DateTime.parse(menus[i].date);
-    int diff = menuDate.difference(now).inDays;
-
-    if (diff >= 0 && (minDiff == -1 || diff < minDiff)) {
-      minDiff = diff;
-      index = i;
-    }
-  }
-
-  // cas ou tous les menus sont dans le passé (normallement impossible)
-  if (minDiff == -1) {
-    minDiff = (DateTime.parse(menus[0].date).difference(now)).inDays.abs();
-    index = 0;
-
-    for (int i = 1; i < menus.length; i++) {
-      int diff = (DateTime.parse(menus[i].date).difference(now)).inDays.abs();
-      if (diff < minDiff) {
-        minDiff = diff;
-        index = i;
-      }
-    }
-  }
-
-  return index;
-}
-
 class _MenuWidgetState extends State<MenuWidget>
     with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
@@ -100,7 +66,6 @@ class _MenuWidgetState extends State<MenuWidget>
     }
     setState(() {
       _menus = menus;
-      _currentPage = indexCloserDateInMenus(menus);
       _pageController = PageController(initialPage: _currentPage);
     });
   }

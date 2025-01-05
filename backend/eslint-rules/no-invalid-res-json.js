@@ -18,11 +18,10 @@ export default {
                 ) {
                     const [arg] = node.arguments;
 
-                    // Autoriser les objets, tableaux et identifiants (variables)
+                    // Autoriser les objets et identifiants (variables)
                     if (
                         arg
                         && arg.type !== 'ObjectExpression' // Objet littéral
-                        && arg.type !== 'ArrayExpression' // Tableau littéral
                         && arg.type !== 'Identifier' // Variable
                     ) {
                         context.report({
