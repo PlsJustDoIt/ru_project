@@ -324,7 +324,7 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Cannot add yourself' });
         }
 
-        if (user.friends.includes(friend._id)) {
+        if (user.friends.some(f => f._id.equals(friend._id))) {
             return res.status(400).json({ error: 'Already friends' });
         }
         user.friends.push(friend._id);

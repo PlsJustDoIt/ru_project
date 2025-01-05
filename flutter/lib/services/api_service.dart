@@ -9,7 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
+import 'package:ru_project/models/message.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/models/searchResult.dart';
@@ -21,6 +23,8 @@ class ApiService {
   // Singleton pattern
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
+
+  get secureStorage => _secureStorage;
 
   ApiService._internal() {
     _dio = Dio(BaseOptions(
@@ -49,9 +53,11 @@ class ApiService {
                 final response = await _dio.fetch(requestOptions);
                 return handler.resolve(response);
               } else {
+                //TODO: quand le token ne peut pas être rafraîchi
                 logger.e('Failed to refresh token');
               }
             } catch (_) {
+              //TODO: quand le token ne peut pas être rafraîchi erreur
               // En cas d'erreur, déconnecter
               await logout();
             }
@@ -84,6 +90,10 @@ class ApiService {
   Future<String?> refreshToken() async {
     try {
       final String? refreshToken = await _secureStorage.getRefreshToken();
+      if (refreshToken == null) {
+        UserProvider(api: this).logout();
+        return null;
+      }
       final Response response =
           await _dio.post('/auth/token', data: {'refreshToken': refreshToken});
 
@@ -288,9 +298,8 @@ class ApiService {
       final Response response = await _dio.get('/ru/menus');
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> rawMenuData = response.data;
-        //logger.i('Menus récupérés : $rawMenuData');
-        return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
+        final List<dynamic> menus = response.data['menus'] as List;
+        return menus.map((menu) => Menu.fromJson(menu)).toList();
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
@@ -479,36 +488,99 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getMessagesChatRoom() async {
+  Future<List<Message>?> getMessagesChatRoom() async {
     try {
       final Response response = await _dio.get('/socket/chat-room');
       if (response.statusCode == 200 && response.data != null) {
-        return response.data;
+        List<Message> messages = [
+          for (Map<String, dynamic> message in response.data['messages'])
+            Message.fromJson(message)
+        ];
+        return messages;
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return {};
+      return null;
     } catch (e) {
       logger.e('Failed to get messages: $e');
-      return {};
+      return null;
     }
   }
 
-  Future<Map<String, dynamic>> getMessagesFromRoom(String roomId) async {
+  Future<Message?> sendMessageChatRoom(String content) async {
     try {
       final Response response =
-          await _dio.get('/socket/messages', queryParameters: {
-        'roomId': roomId,
+          await _dio.post('/socket/send-chat-room', data: {
+        'content': content,
       });
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data;
+      if (response.statusCode == 201) {
+        Message message = Message.fromJson(response.data['message']);
+        return message;
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return {};
+      return null;
+    } catch (e) {
+      logger.e('Failed to send message: $e');
+      return null;
+    }
+  }
+
+  Future<List<Message>?> getMessagesFromRoom(String roomName) async {
+    try {
+      final Response response =
+          await _dio.get('/socket/messages', queryParameters: {
+        'roomName': roomName,
+      });
+      if (response.statusCode == 200 && response.data != null) {
+        List<Message> messages = [
+          for (Map<String, dynamic> message in response.data['messages'])
+            Message.fromJson(message)
+        ];
+        return messages;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return null;
     } catch (e) {
       logger.e('Failed to get messages: $e');
-      return {};
+      return null;
+    }
+  }
+
+  Future<Message?> sendMessageToRoom(String roomName, String content) async {
+    try {
+      final Response response = await _dio.post('/socket/send-message', data: {
+        'roomName': roomName,
+        'content': content,
+      });
+      if (response.statusCode == 201) {
+        Message message = Message.fromJson(response.data['message']);
+        return message;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to send message: $e');
+      return null;
+    }
+  }
+
+  // router.delete('/delete-messages
+  Future<bool> deleteMessages(String roomId) async {
+    try {
+      final Response response = await _dio.delete('/socket/delete-messages',
+          queryParameters: {'roomId': roomId});
+      if (response.statusCode == 200) {
+        return true;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to delete messages: $e');
+      return false;
     }
   }
 
@@ -516,4 +588,20 @@ class ApiService {
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';
   }
+
+  // //get user profile picture
+  // Future<String?> getProfilePicture(String ) async {
+  //   try {
+  //     final Response response = await _dio.get('/users/profile-picture');
+  //     if (response.statusCode == 200 && response.data != null) {
+  //       return response.data['avatarUrl'];
+  //     }
+  //     logger.e(
+  //         'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+  //     return null;
+  //   } catch (e) {
+  //     logger.e('Failed to get profile picture: $e');
+  //     return null;
+  //   }
+  // }
 }
