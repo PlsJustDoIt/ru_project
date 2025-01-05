@@ -6,6 +6,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/welcome.dart';
+import 'package:ru_project/widgets/custom_snack_bar.dart';
 
 class ProfileWidget extends StatefulWidget {
   final statusList = ['en ligne', 'au ru', 'absent'];
@@ -18,8 +19,9 @@ class ProfileWidget extends StatefulWidget {
   State createState() => _ProfileWidgetState();
 }
 
-bool _hasSubmitted = false;
 bool _isAvatarChanged = false;
+final Map<String, String> _apiErrors = {};
+final Duration _snackBarDuration = const Duration(seconds: 3);
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   late final ApiService _apiService;
@@ -53,7 +55,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       }
       if (avatarUrl == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Echec de la mise à jour de l\'image')),
+          CustomSnackBar(message: 'Echec de la mise à jour de l\'image'),
         );
         return;
       } else {
@@ -62,7 +64,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           _isAvatarChanged = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('L\'image de profil a été mise à jour')),
+          CustomSnackBar(message: 'L\'image de profil a été mise à jour'),
         );
         return;
       }
@@ -72,7 +74,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to pick image')),
+        SnackBar(
+          content: const Text('Failed to pick image'),
+          duration: _snackBarDuration,
+        ),
       );
     }
   }
@@ -206,7 +211,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         }
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Compte supprimé avec succès')),
+          SnackBar(
+            content: const Text('Compte supprimé avec succès'),
+            duration: _snackBarDuration,
+          ),
         );
         Navigator.pushReplacement(
           context,
@@ -221,7 +229,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur de suppression du compte')),
+        SnackBar(
+          content: const Text('Erreur de suppression du compte'),
+          duration: _snackBarDuration,
+        ),
       );
       return;
     }
@@ -296,9 +307,6 @@ class _ProfileWidgetState extends State<ProfileWidget> {
   Form statusFormNoButton(BuildContext context) {
     return Form(
       key: _formKeyStatus,
-      autovalidateMode: _hasSubmitted
-          ? AutovalidateMode.onUserInteraction
-          : AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -332,8 +340,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   void confirmStatus(BuildContext context) async {
     if (_userProvider.user!.status == _selectedStatus) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Le status est déjà à jour')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Le status est déjà à jour'),
+        duration: _snackBarDuration,
+      ));
       return;
     }
 
@@ -350,15 +360,17 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Status mis à jour avec succès.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Status mis à jour avec succès.'),
+          duration: _snackBarDuration));
     } catch (e) {
       logger.e('Error updating status: $e');
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du status')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur de mise à jour du status'),
+          duration: _snackBarDuration));
       return;
     }
   }
@@ -441,6 +453,7 @@ class UsernameForm extends StatefulWidget {
 class _UsernameFormState extends State<UsernameForm> {
   late TextEditingController _usernameController;
   final _formKeyUsername = GlobalKey<FormState>();
+  bool _hasSubmitted = false;
 
   @override
   void initState() {
@@ -457,8 +470,6 @@ class _UsernameFormState extends State<UsernameForm> {
 
   @override
   Widget build(BuildContext context) {
-    _hasSubmitted = false;
-
     return Form(
       key: _formKeyUsername,
       autovalidateMode: _hasSubmitted
@@ -475,6 +486,9 @@ class _UsernameFormState extends State<UsernameForm> {
               prefixIcon: Icon(Icons.person),
             ),
             validator: (value) {
+              if (_apiErrors.containsKey('username')) {
+                return _apiErrors['username'];
+              }
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un nom d\'utilisateur';
               }
@@ -504,6 +518,7 @@ class _UsernameFormState extends State<UsernameForm> {
   }
 
   void confirmUsername(BuildContext context) async {
+    _apiErrors.clear();
     if (_formKeyUsername.currentState?.validate() == false) {
       return;
     }
@@ -518,10 +533,18 @@ class _UsernameFormState extends State<UsernameForm> {
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Nom d\'utilisateur mis à jour avec succès.')));
+            content: Text('Nom d\'utilisateur mis à jour avec succès.'),
+            duration: _snackBarDuration));
         Navigator.of(context).pop();
         return;
       }
+
+      setState(() {
+        _apiErrors.clear();
+        _apiErrors['username'] = response["error"];
+        _formKeyUsername.currentState?.validate();
+        _hasSubmitted = true;
+      });
 
       throw Exception('Failed to update username');
     } catch (e) {
@@ -529,7 +552,8 @@ class _UsernameFormState extends State<UsernameForm> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur de mise à jour du nom d\'utilisateur')));
+          content: Text('Erreur de mise à jour du nom d\'utilisateur'),
+          duration: _snackBarDuration));
       return;
     }
   }
@@ -545,7 +569,7 @@ class PasswordForm extends StatefulWidget {
   final TextEditingController _passwordConfirmController =
       TextEditingController();
   final _formKeyPassword = GlobalKey<FormState>();
-  final Future<bool> Function(String, String) updatePassword;
+  final Future<Map<String, dynamic>> Function(String, String) updatePassword;
 
   @override
   State<PasswordForm> createState() => _PasswordFormState();
@@ -555,6 +579,7 @@ class _PasswordFormState extends State<PasswordForm> {
   late TextEditingController _oldPasswordController;
   late TextEditingController _passwordController;
   late TextEditingController _passwordConfirmController;
+  bool _hasSubmitted = false;
 
   @override
   void initState() {
@@ -574,8 +599,6 @@ class _PasswordFormState extends State<PasswordForm> {
 
   @override
   Widget build(BuildContext context) {
-    _hasSubmitted = false;
-
     return Form(
       key: widget._formKeyPassword,
       autovalidateMode: _hasSubmitted
@@ -595,6 +618,9 @@ class _PasswordFormState extends State<PasswordForm> {
               prefixIcon: Icon(Icons.lock),
             ),
             validator: (value) {
+              if (_apiErrors.containsKey('oldPassword')) {
+                return _apiErrors['oldPassword'];
+              }
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un mot de passe';
               }
@@ -619,6 +645,9 @@ class _PasswordFormState extends State<PasswordForm> {
               prefixIcon: Icon(Icons.lock),
             ),
             validator: (value) {
+              if (_apiErrors.containsKey('password')) {
+                return _apiErrors['password'];
+              }
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un mot de passe';
               }
@@ -666,30 +695,41 @@ class _PasswordFormState extends State<PasswordForm> {
   }
 
   void confirmPassword(BuildContext context) async {
+    _apiErrors.clear();
     if (widget._formKeyPassword.currentState?.validate() == false) {
       return;
     }
 
     try {
-      bool success = await widget.updatePassword(
+      Map<String, dynamic> response = await widget.updatePassword(
           widget._passwordController.text, widget._oldPasswordController.text);
-      if (success) {
+      if (response["success"]) {
         if (context.mounted == false) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Mot de passe mis à jour avec succès.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Mot de passe mis à jour avec succès.'),
+          duration: _snackBarDuration,
+        ));
         Navigator.of(context).pop();
         return;
       }
 
+      setState(() {
+        _apiErrors.clear();
+        _apiErrors[response["errorField"]] = response["error"];
+        widget._formKeyPassword.currentState?.validate();
+        _hasSubmitted = true;
+      });
       throw Exception('Failed to update password');
     } catch (e) {
+      logger.e('Error updating password: $e');
       if (context.mounted == false) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur de mise à jour du mot de passe')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur de mise à jour du mot de passe'),
+          duration: _snackBarDuration));
       return;
     }
   }
