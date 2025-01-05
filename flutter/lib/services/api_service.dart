@@ -264,9 +264,8 @@ class ApiService {
       final Response response = await _dio.get('/ru/menus');
 
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> rawMenuData = response.data;
-        //logger.i('Menus récupérés : $rawMenuData');
-        return rawMenuData.map((menu) => Menu.fromJson(menu)).toList();
+        final List<dynamic> menus = response.data['menus'] as List;
+        return menus.map((menu) => Menu.fromJson(menu)).toList();
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
