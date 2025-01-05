@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http_parser/http_parser.dart';
 
 import 'package:image_picker/image_picker.dart';
@@ -30,6 +31,9 @@ class ApiService {
       baseUrl: Config.apiUrl,
       connectTimeout: Duration(seconds: 10), // Plus généreux
       receiveTimeout: Duration(seconds: 7), // Plus long
+      validateStatus: (status) {
+        return status != null;
+      },
     ));
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -111,7 +115,7 @@ class ApiService {
   }
 
   // Fonction pour login
-  Future<User> login(String username, String password) async {
+  Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final Response response = await _dio.post('/auth/login', data: {
         'username': username,
@@ -125,19 +129,32 @@ class ApiService {
         await _secureStorage.storeTokens(accessToken, refreshToken);
         final User? user = await getUser();
         if (user != null) {
-          return user;
+          return {'user': user, 'success': true};
         }
-        throw Exception('Failed to get user');
+        return {
+          'error': 'Failed to get user',
+          'success': false,
+          'errorField': 'username'
+        };
       }
-      throw Exception('${response.statusCode} ${response.data['error']}');
+      //cas d'erreur field
+      if (response.data['error']['field'] != null) {
+        return {
+          'error': response.data['error']['message'],
+          'success': false,
+          'errorField': response.data['error']['field']
+        };
+      }
+      throw Exception('Failed to login: ${response.data['error']['message']}');
     } catch (e) {
       logger.e('Failed to login: $e');
-      throw Exception('$e');
+      throw Exception('Failed to login: $e');
     }
   }
 
   // Fonction pour s'inscrire
-  Future<User> register(String username, String password) async {
+  Future<Map<String, dynamic>> register(
+      String username, String password) async {
     try {
       final Response response = await _dio.post('/auth/register', data: {
         'username': username,
@@ -152,14 +169,21 @@ class ApiService {
         await _secureStorage.storeTokens(accessToken, refreshToken);
         final User? user = await getUser();
         if (user != null) {
-          return user;
+          return {'user': user, 'success': true};
         }
         throw Exception('Failed to get user');
       }
-      throw Exception('${response.statusCode} ${response.data['error']}');
+      if (response.data['error']['field'] == null) {
+        throw Exception('Failed to register: ${response.data['error']['message']}');
+      }
+      return {
+        'error': response.data['error']['message'],
+        'success': false,
+        'errorField': response.data['error']['field']
+      };
     } catch (e) {
       logger.e('Failed to register: $e');
-      throw Exception('$e');
+      throw Exception('Failed to register: $e');
     }
   }
 
@@ -325,7 +349,8 @@ class ApiService {
   }
 
   //update user password (requires user id also requires the old password for verification)
-  Future<bool> updatePassword(String password, String oldPassword) async {
+  Future<Map<String, dynamic>> updatePassword(
+      String password, String oldPassword) async {
     try {
       final Response response = await _dio.put('/users/update-password', data: {
         'password': password,
@@ -333,14 +358,19 @@ class ApiService {
       });
       if (response.statusCode == 200) {
         logger.i('Password updated');
-        return true;
+        return {'message': response.data['message'], 'success': true};
       }
-      logger.e(
-          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return false;
+      if (response.data['error']['field'] == null) {
+        return {'error': response.data['error']['message'], 'success': false};
+      }
+      return {
+        'error': response.data['error']['message'],
+        'success': false,
+        'errorField': response.data['error']['field']
+      };
     } catch (e) {
       logger.e('Failed to update password: $e');
-      return false;
+      return {'error': '$e', 'success': false};
     }
   }
 
@@ -363,7 +393,7 @@ class ApiService {
     }
   }
 
-  //update username (requires user id)
+  //update user username TODO : se servir d'inspiration pour les autres
   Future<Map<String, dynamic>> updateUsername(String username) async {
     try {
       final Response response = await _dio.put('/users/update-username', data: {

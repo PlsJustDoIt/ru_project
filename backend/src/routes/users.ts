@@ -11,7 +11,8 @@ router.get('/me', auth, async (req: Request, res: Response) => {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         return res.json({ user: user });
     } catch (err: unknown) {
-        return res.status(500).json({ error: 'Could not retrieve user : ' + err });
+        logger.error('Could not retrieve user : ' + err);
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
@@ -74,22 +75,21 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         // test validation username
         let username = req.body.username;
         if (!username) {
-            logger.error('Username field dosn\'t exists');
             return res.status(400).json({ error: 'Username dosn\'t exists' });
         }
         username = username.trim();
         if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
             return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
         const testUser = await User.findOne({ username });
-        if (testUser) return res.status(400).json({ error: 'User already exists' });
+        if (testUser) return res.status(400).json({ error: 'A user with this username already exists' });
 
         const user = await User.findById(req.user.id);
 
         if (user === null) {
-            return res.status(404).json({ error: 'User not found' });
+            logger.error('User not found');
+            return res.status(500).json({ error: 'An error has occured' });
         }
         user.username = username;
 
@@ -98,7 +98,7 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         return res.json({ username: username });
     } catch (err: unknown) {
         logger.error(`Could not update username : ${err}`);
-        return res.status(500).json({ error: `Could not update username : ${err} ` });
+        return res.status(500).json({ error: `An error has occured` });
     }
 });
 
@@ -111,48 +111,46 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
 
         if (!oldPassword) {
             logger.error('Old password field dosn\'t exists');
-            return res.status(400).json({ error: 'Old password dosn\'t exists' });
+            return res.status(400).json({ error: { message: 'Old password dosn\'t exists', field: 'oldPassword' } });
         }
 
         if (!password) {
             logger.error('Password field dosn\'t exists');
-            return res.status(400).json({ error: 'Password dosn\'t exists' });
+            return res.status(400).json({ error: { message: 'Password dosn\'t exists', field: 'password' } });
         }
         password = password.trim();
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
+            return res.status(400).json({ error: { message: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`, field: 'password' } });
         }
 
         const user = await User.findById(req.user.id);
 
         if (user === null) {
             logger.error('User not found');
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(500).json({ error: 'An error has occured' });
         }
 
         const isMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isMatch) {
             logger.error('Incorrect old password');
-            return res.status(400).json({ error: 'Incorrect old password' });
+            return res.status(400).json({ error: { message: 'Incorrect old password', field: 'oldPassword' } });
         }
 
-        user.password = password;
+        user.password = password; // le mot de passe est hashé dans le pre save du model user tkt
 
         await user.save();
 
         return res.json({ message: 'Password updated' });
     } catch (err: unknown) {
         logger.error(`Could not update password : ${err}`);
-        return res.status(500).json({ error: `Could not update password : ${err} ` });
+        return res.status(500).json({ error: `An error has occured` });
     }
 });
 
 // update only status, we need status
 router.put('/update-status', auth, async (req: Request, res: Response) => {
     try {
-        // test validation status
-        // const { status } = req.body;
         const status = req.body.status;
 
         if (!status) {
@@ -173,7 +171,7 @@ router.put('/update-status', auth, async (req: Request, res: Response) => {
         return res.json({ status: user.status });
     } catch (err: unknown) {
         logger.error(`Could not update status : ${err}`);
-        return res.status(500).json({ error: `Could not update status : ${err} ` });
+        return res.status(500).json({ error: `An error has occured` });
     }
 });
 
@@ -198,7 +196,7 @@ router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), conve
         return res.json({ avatarUrl: avatarUrl });
     } catch (err: unknown) {
         logger.error('Could not update profile picture : ' + err);
-        return res.status(500).json({ error: 'Could not update profile picture : ' + err });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
@@ -219,7 +217,8 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
         logger.info('User friends : ' + friends);
         return res.json({ friends: friends });
     } catch (err: unknown) {
-        return res.status(500).json({ error: 'Could not retrieve friends : ' + err });
+        logger.error('Could not retrieve friends : ' + err);
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
@@ -281,7 +280,7 @@ router.get('/search', auth, async (req: Request, res: Response) => {
         return res.json({ results: searchResults });
     } catch (err: unknown) {
         logger.error('Could not search for user: ' + err);
-        return res.status(500).json({ Error: 'Could not search for user' });
+        return res.status(500).json({ Error: 'An error has occured' });
     }
 });
 
@@ -337,7 +336,8 @@ router.post('/add-friend', auth, async (req: Request, res: Response) => {
         logger.info('friends list : ' + user.friends);
         return res.json({ message: 'Friend added', friend: friend });
     } catch (err: unknown) {
-        return res.status(500).json({ error: 'Server error : ' + err });
+        logger.error('Could not add friend : ' + err);
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
@@ -358,7 +358,8 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
         await user.save();
         return res.json({ user: user });
     } catch (err: unknown) {
-        return res.status(500).json({ error: 'Server error : ' + err });
+        logger.error('Could not remove friend : ' + err);
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
