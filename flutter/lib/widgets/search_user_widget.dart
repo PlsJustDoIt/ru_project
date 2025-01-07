@@ -1,11 +1,18 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/searchResult.dart';
 
+// TODO
 class LocalSearchDB {
   final List<SearchResult> _items = [];
   final int maxItems;
@@ -52,76 +59,150 @@ class LocalSearchDB {
   int get size => _items.length;
 }
 
-// Cache de recherche simple
-// class SearchCache {
-//   final int cacheMaxSize;
-//   final _cache = LinkedHashMap<String, List<SearchResult>>();
-
-//   SearchCache({this.cacheMaxSize = 50});
-
-//   List<SearchResult>? getUsersFromCache(String query) {
-//     final results = _cache.remove(query);
-//     if (results != null) {
-//       _cache[query] = results; // Move to end
-//     }
-//     return results;
-//   }
-
-//   void addUsersToCache(String query, List<SearchResult> results) {
-//     if (_cache.length >= cacheMaxSize) {
-//       _cache.remove(_cache.keys.first);
-//     }
-//     _cache[query] = results;
-//   }
-// }
-
-class CacheEntry<T> {
-  final T data;
-  final DateTime timestamp;
-
-  CacheEntry(this.data) : timestamp = DateTime.now();
-}
-
-class SearchCache {
+class PlatformAdaptiveCache {
   final int cacheMaxSize;
   final Duration timeToLive;
-  final _cache = <String, CacheEntry<List<SearchResult>>>{};
+  final Map<String, CacheEntry<List<SearchResult>>> _memoryCache = {};
+  bool _isInitialized = false;
 
-  int _hits = 0;
-  int _misses = 0;
+  static const String _cacheKey = 'search_cache';
+  late final Directory? _cacheDir;
 
-  SearchCache({
+  PlatformAdaptiveCache({
     this.cacheMaxSize = 50,
     this.timeToLive = const Duration(minutes: 30),
   });
 
-  List<SearchResult>? getUsersFromCache(String query) {
-    final entry = _cache[query];
+  Future<void> init() async {
+    if (_isInitialized) return;
 
+    if (!kIsWeb) {
+      final appCacheDir = await getApplicationCacheDirectory();
+      _cacheDir = Directory(path.join(appCacheDir.path, 'search_cache'));
+      if (!await _cacheDir!.exists()) {
+        await _cacheDir!.create(recursive: true);
+      }
+    }
+
+    await _loadCache();
+    _isInitialized = true;
+  }
+
+  Future<void> _loadCache() async {
+    try {
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        final String? cachedData = prefs.getString(_cacheKey);
+        if (cachedData != null) {
+          final Map<String, dynamic> data = json.decode(cachedData);
+          _loadCacheData(data);
+        }
+      } else {
+        final cacheFile = File(path.join(_cacheDir!.path, 'cache.json'));
+        if (await cacheFile.exists()) {
+          final String contents = await cacheFile.readAsString();
+          final Map<String, dynamic> data = json.decode(contents);
+          _loadCacheData(data);
+        }
+      }
+    } catch (e) {
+      // En cas d'erreur, on nettoie le cache
+      await clear();
+    }
+  }
+
+  void _loadCacheData(Map<String, dynamic> data) {
+    data.forEach((key, value) {
+      final entry = CacheEntry<List<SearchResult>>.fromJson(value);
+      if (_isExpired(entry) == false) {
+        _memoryCache[key] = entry;
+      }
+    });
+  }
+
+  Future<void> _saveCache() async {
+    final Map<String, dynamic> data = {};
+    _memoryCache.forEach((key, value) {
+      if (!_isExpired(value)) {
+        data[key] = value.toJson();
+      }
+    });
+
+    final String encodedData = json.encode(data);
+
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, encodedData);
+    } else {
+      final cacheFile = File(path.join(_cacheDir!.path, 'cache.json'));
+      await cacheFile.writeAsString(encodedData);
+    }
+  }
+
+  Future<List<SearchResult>?> getUsersFromCache(String query) async {
+    if (!_isInitialized) await init();
+
+    final entry = _memoryCache[query];
     if (entry == null || _isExpired(entry)) {
-      _misses++;
-      _cache.remove(query);
+      _memoryCache.remove(query);
+      await _saveCache();
       return null;
     }
 
-    _hits++;
-    _cache.remove(query);
-    _cache[query] = entry; // Move to end
+    // Déplacer à la fin pour le comportement LRU
+    _memoryCache.remove(query);
+    _memoryCache[query] = entry;
     return entry.data;
   }
 
-  void addUsersToCache(String query, List<SearchResult> results) {
-    if (_cache.length >= cacheMaxSize) {
-      _cache.remove(_cache.keys.first);
+  Future<void> addUsersToCache(String query, List<SearchResult> results) async {
+    if (!_isInitialized) await init();
+
+    if (_memoryCache.length >= cacheMaxSize) {
+      _memoryCache.remove(_memoryCache.keys.first);
     }
-    _cache[query] = CacheEntry(results);
+
+    _memoryCache[query] = CacheEntry(results);
+    await _saveCache();
   }
 
   bool _isExpired(CacheEntry entry) {
     return DateTime.now().difference(entry.timestamp) > timeToLive;
   }
 
-  double getHitRate() => _hits / (_hits + _misses);
+  Future<void> clear() async {
+    _memoryCache.clear();
+
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_cacheKey);
+    } else {
+      if (await _cacheDir!.exists()) {
+        await _cacheDir.delete(recursive: true);
+        await _cacheDir.create(recursive: true);
+      }
+    }
+  }
+}
+
+class CacheEntry<T> {
+  final T data;
+  DateTime timestamp;
+
+  CacheEntry(this.data) : timestamp = DateTime.now();
+
+  Map<String, dynamic> toJson() {
+    return {
+      'data': data, // Assurez-vous que T peut être sérialisé en JSON
+      'timestamp': timestamp.toIso8601String(),
+    };
+  }
+
+  factory CacheEntry.fromJson(Map<String, dynamic> json) {
+    return CacheEntry(
+      json['data'] as T,
+    )..timestamp = DateTime.parse(json['timestamp'] as String);
+  }
 }
 
 // Realtime search widget
@@ -145,7 +226,7 @@ class RealtimeSearchWidget extends StatefulWidget {
 
 class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   final TextEditingController _searchController = TextEditingController();
-  final SearchCache _searchCache = SearchCache();
+  late final PlatformAdaptiveCache _searchCache;
   List<SearchResult> _currentResults = [];
   List<SearchResult> _localResults = [];
   bool _isLoading = false;
@@ -157,6 +238,8 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   @override
   void initState() {
     super.initState();
+    _searchCache = PlatformAdaptiveCache();
+    _searchCache.init();
   }
 
   @override
@@ -173,6 +256,8 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     // 1. Recherche immédiate dans les données locales
     _performLocalSearch(query);
 
+    // si deja cache alors on ne fait pas la recherche distante
+
     // 2. Debounce pour la recherche distante
     _debounceTimer?.cancel();
     if (query.length >= 3) {
@@ -186,7 +271,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     }
   }
 
-  void _performLocalSearch(String query) {
+  Future<void> _performLocalSearch(String query) async {
     if (query.isEmpty) {
       setState(() {
         _localResults = [];
@@ -196,7 +281,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     }
 
     // Recherche dans le cache d'abord
-    final cachedResults = _searchCache.getUsersFromCache(query);
+    final cachedResults = await _searchCache.getUsersFromCache(query);
     if (cachedResults != null) {
       setState(() {
         _currentResults = cachedResults;
@@ -350,7 +435,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     );
   }
 
-  // Ajouter un ami, TODO : faire l'implémentation total et voir avec leo pour plein de trucs
+  // Ajouter un ami
   Future<void> addFriend(String friend) async {
     try {
       User? friendAdded = await widget.addFriend(friend);
