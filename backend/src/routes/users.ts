@@ -211,7 +211,7 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
             username: friend.username,
             status: friend.status,
             avatarUrl: friend.avatarUrl,
-            id: friend._id,
+            _id: friend._id,
         }));
 
         logger.info('User friends : ' + friends);
