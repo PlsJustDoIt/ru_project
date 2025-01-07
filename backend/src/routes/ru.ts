@@ -149,7 +149,9 @@ router.get('/menus', auth, async (req: Request, res: Response) => {
         const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
         if (cachedMenus) {
             logger.info('Les menus sont en cache');
-            return res.json({ menus: cachedMenus });
+            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+            const filteredMenus = cachedMenus.filter((menu: MenuResponse) => menu.date >= today);
+            return res.json({ menus: filteredMenus });
         }
 
         // Si les menus ne sont pas en cache, on les récupère de l'API externe
