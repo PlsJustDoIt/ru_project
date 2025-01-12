@@ -174,7 +174,8 @@ class ApiService {
         throw Exception('Failed to get user');
       }
       if (response.data['error']['field'] == null) {
-        throw Exception('Failed to register: ${response.data['error']['message']}');
+        throw Exception(
+            'Failed to register: ${response.data['error']['message']}');
       }
       return {
         'error': response.data['error']['message'],
@@ -496,6 +497,7 @@ class ApiService {
           for (Map<String, dynamic> message in response.data['messages'])
             Message.fromJson(message)
         ];
+        logger.i('Messages: $messages');
         return messages;
       }
       logger.e(

@@ -47,4 +47,9 @@ class Message {
       'createdAt': createdAt,
     };
   }
+
+  @override
+  String toString() {
+    return 'Message{id: $id, content: $content, sender: $sender, createdAt: $createdAt}';
+  }
 }
