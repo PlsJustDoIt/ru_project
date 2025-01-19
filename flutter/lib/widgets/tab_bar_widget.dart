@@ -88,7 +88,7 @@ class TabBarWidget extends StatelessWidget {
             const MenuWidget(),
             FriendsListSheet(),
             ChatScreen(),
-            ChatUi(),
+            ChatUi(roomName: 'Global', actualUser: userProvider.user!),
             ProfileWidget(),
             TransportTimeWidget(),
             DebugWidget(),

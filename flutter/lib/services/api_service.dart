@@ -497,7 +497,6 @@ class ApiService {
           for (Map<String, dynamic> message in response.data['messages'])
             Message.fromJson(message)
         ];
-        logger.i('Messages: $messages');
         return messages;
       }
       logger.e(
@@ -572,7 +571,7 @@ class ApiService {
   // router.delete('/delete-messages
   Future<bool> deleteMessages(String roomId) async {
     try {
-      final Response response = await _dio.delete('/socket/delete-messages',
+      final Response response = await _dio.delete('/socket/delete-all-messages',
           queryParameters: {'roomId': roomId});
       if (response.statusCode == 200) {
         return true;
@@ -582,6 +581,22 @@ class ApiService {
       return false;
     } catch (e) {
       logger.e('Failed to delete messages: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteMessage(String messageId) async {
+    try {
+      final Response response = await _dio.delete('/socket/delete-message',
+          queryParameters: {'messageId': messageId});
+      if (response.statusCode == 200) {
+        return true;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to delete message: $e');
       return false;
     }
   }

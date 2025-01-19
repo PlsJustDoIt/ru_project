@@ -17,7 +17,7 @@ class Message {
   final String id;
   String content;
   final String sender;
-  final String createdAt; // TODO : faire bien parce que voila
+  final DateTime createdAt; // TODO : faire bien parce que voila
 
   Message({
     required this.id,
@@ -32,7 +32,7 @@ class Message {
         id: json['id'],
         content: json['content'],
         sender: json['username'],
-        createdAt: timeAgo(DateTime.parse((json['createdAt']))),
+        createdAt: DateTime.parse((json['createdAt'])),
       );
     } catch (e) {
       throw Exception('Error parsing message data: $e');

@@ -12,7 +12,7 @@ import { Socket } from 'socket.io';
 
 const router = Router();
 
-router.post('/send', auth, async (req: Request, res: Response) => {
+router.post('/send-message', auth, async (req: Request, res: Response) => {
     try {
         const { roomName, content } = req.body as { roomName: string; content: string };
         const userId = req.user.id;
@@ -58,6 +58,8 @@ router.post('/send', auth, async (req: Request, res: Response) => {
             socketService.emitToRoomWithSocket(socket, 'receive_message', room._id.toString(), { message: response });
             return res.status(201).json({ message: response });
         }
+        logger.error('Socket not found for user : ' + userId);
+        return res.status(500).json({ error: 'Internal server error' });
     } catch (err) {
         logger.error('Error in /send:', err);
         return res.status(500).json({
@@ -178,6 +180,7 @@ router.delete('/delete-all-messages', auth, async (req: Request, res: Response) 
 router.delete('/delete-message', auth, async (req: Request, res: Response) => {
     try {
         const messageId = req.query.messageId as string;
+
         if (!messageId) {
             return res.status(400).json({ error: 'Message ID is required' });
         }

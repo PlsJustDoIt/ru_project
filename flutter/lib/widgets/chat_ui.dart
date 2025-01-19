@@ -1,57 +1,33 @@
-import 'dart:async';
-import 'dart:ui_web';
-
+import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
-//import 'package:ru_project/models/user.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ru_project/models/user.dart' as ru_project;
+import 'package:ru_project/models/message.dart' as ru_project;
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/logger.dart';
+import 'package:cross_cache/cross_cache.dart';
 
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flyer_chat_image_message/flyer_chat_image_message.dart';
 import 'package:flyer_chat_text_message/flyer_chat_text_message.dart';
-import 'package:cross_cache/cross_cache.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_lorem/flutter_lorem.dart';
 import 'dart:math';
 
-//WIP pour le momment tout sera en statique
 class ChatUi extends StatefulWidget {
-  ChatUi({super.key});
-  User user = User(
-    id: '1234',
-    firstName: 'Test1',
-    lastName: 'Test2',
-  ); //TODO utiliser notre propre user qui sera passé en paramètre
-  final String chatId =
-      '4567'; //TODO utiliser id room qui sera passé en paramètre
+  ChatUi({super.key, required this.roomName, required this.actualUser})
+      : user = User(
+          id: actualUser.username,
+          firstName: actualUser.username,
+        );
 
-  //ici on simule des utilisateurs qui enverront des messages
-  static final User otherUserA = User(
-    id: '5678',
-    firstName: 'Toto',
-    lastName: 'LAPOINTE',
-  );
-  static final User otherUserB = User(
-    id: '5678',
-    firstName: 'Jacques',
-    lastName: 'SELAIRE',
-  );
-  final List<Message> initialMessages = [
-    Message.text(
-      id: '1',
-      author: otherUserA,
-      createdAt: DateTime(2021, 1, 1),
-      text: "Hello!",
-    ),
-    Message.text(
-      id: '2',
-      author: otherUserB,
-      createdAt: DateTime(2021, 1, 1),
-      text: "Hi!",
-    )
-  ];
-  //TODO on passera aussi une instance de apiService plus tard
+  final ru_project.User actualUser;
+  final User user;
+  final String roomName;
 
   @override
   ChatUiState createState() => ChatUiState();
@@ -61,24 +37,130 @@ class ChatUi extends StatefulWidget {
 class ChatUiState extends State<ChatUi> {
   final CrossCache _crossCache = CrossCache();
   final _uuid = const Uuid();
-
-  late final ChatController _chatController;
+  late final List<Message> initialMessages;
+  ChatController? _chatController;
+  late final ApiService apiService;
+  io.Socket? socket;
+  late String roomId;
 
   @override
   void initState() {
     super.initState();
-    _chatController = InMemoryChatController(messages: widget.initialMessages);
+    apiService = Provider.of<ApiService>(context, listen: false);
+
+    //récupérer les messages de la room
+    _initializeMessages();
+
+    //conexion au serveur
+    connectToServer();
+  }
+
+  void connectToServer() async {
+    try {
+      socket = io.io(Config.serverUrl, <String, dynamic>{
+        'transports': ['websocket'],
+        'autoConnect': false,
+        'query': {
+          'token': await apiService.secureStorage.getAccessToken(),
+        },
+        // 'withCredentials': true,
+      });
+      socket?.connect();
+      socket?.emit("join_global_room", "test");
+      socket?.on('receive_message', (response) {
+        try {
+          Map<String, dynamic> data = response[0];
+          logger.i('Received_message: $data');
+          ru_project.Message message =
+              ru_project.Message.fromJson(data['message']);
+          if (mounted) {
+            setState(() {
+              _chatController?.insert(Message.text(
+                  id: message.id,
+                  author: User(
+                    id: message.sender,
+                    firstName: message.sender,
+                  ),
+                  text: message.content,
+                  createdAt: message.createdAt));
+            });
+          }
+        } catch (e) {
+          logger.e('Error parsing message data: $e');
+        }
+      });
+
+      socket?.on('userOnline', (response) {
+        Map<String, dynamic> data = response[0] ?? {};
+        logger.i('User online: $data');
+      });
+
+      socket?.on('room_joined', (response) {
+        Map<String, dynamic> data = response[0];
+        logger.i("room joined, data: $data");
+        logger.i('Room joined: ${data['roomId']}');
+
+        logger.i('Room joined: ${data['roomId']}');
+        setState(() {
+          roomId = data['roomId'];
+        });
+      });
+    } catch (e) {
+      logger.e('Error connecting to server: $e');
+    }
+  }
+
+  Future<void> _initializeMessages() async {
+    initialMessages = await setMessages();
+    if (mounted) {
+      setState(() {
+        _chatController = InMemoryChatController(messages: initialMessages);
+      });
+    }
+  }
+
+  //todo demander a leo pour les messages
+  Future<List<Message>> setMessages() async {
+    List<Message> messagesList = [];
+    List<ru_project.Message>? messagesReceived =
+        await apiService.getMessagesFromRoom(widget.roomName);
+    if (messagesReceived != null) {
+      for (ru_project.Message message in messagesReceived) {
+        messagesList.add(Message.text(
+          id: message.id,
+          author: User(
+            id: message.sender,
+            firstName: message.sender,
+          ),
+          text: message.content,
+          createdAt: message.createdAt,
+        ));
+      }
+    }
+    return messagesList;
   }
 
   @override
   void dispose() {
-    _chatController.dispose();
+    _chatController?.dispose();
     _crossCache.dispose();
+    disconnectFromServer();
     super.dispose();
+  }
+
+  void disconnectFromServer() {
+    socket?.off('receive_message');
+    socket?.disconnect();
+    socket?.emit(('leave_room'), roomId);
+    socket?.dispose(); // Dispose the socket
+    socket = null;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_chatController == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Chat(
       builders: Builders(
         textMessageBuilder: (context, message, index) =>
@@ -96,7 +178,9 @@ class ChatUiState extends State<ChatUi> {
                 icon: const Icon(Icons.delete_sweep),
                 onPressed: () async {
                   if (mounted) {
-                    await _chatController.set([]);
+                    await _chatController!.set([]);
+                    //TODO retirer les messages du serveur avec apiService
+                    apiService.deleteMessages(roomId);
                   }
                 },
               ),
@@ -104,53 +188,58 @@ class ChatUiState extends State<ChatUi> {
           ),
         ),
       ),
-      chatController: _chatController,
+      chatController: _chatController!,
       crossCache: _crossCache,
       user: widget.user,
       onMessageSend: _addItem,
       onMessageTap: _removeItem,
       onAttachmentTap: _handleAttachmentTap,
+      theme: ChatTheme.fromThemeData(Theme.of(context)),
     );
   }
 
-  // InputActionBar(
-  //           buttons: [
-  //             InputActionButton(
-  //               icon: Icons.shuffle,
-  //               title: 'Send random text msg',
-  //               onPressed: () => _addItem(null),
-  //             ),
-  //             InputActionButton(
-  //               icon: Icons.delete_sweep,
-  //               title: 'Clear all',
-  //               onPressed: () async {
-  //                 if (mounted) {
-  //                   await _chatController.set([]);
-  //                 }
-  //               },
-  //               destructive: true,
-  //             ),
-  //           ],
-  //         )
-
-  //TODO
+  //TODO refléchire a une fonction create message
   void _addItem(String? text) async {
     text ??=
         lorem(paragraphs: 1, words: Random().nextInt(30) + 1); //text aléatoire
     logger.i('Adding text $text to chat');
+
     final message = Message.text(
       id: _uuid.v4(),
       author: widget.user,
       createdAt: DateTime.now(),
-      text: text!,
+      text: text,
     );
 
     if (mounted) {
       //ajout du message dans le chat local
-      await _chatController.insert(message);
+      await _chatController!.insert(message);
     }
 
-    //TODO envoyer le message au serveur avec apiService
+    //TODO envoyer le message au serveur avec apiService voir comme dans l'exemple
+    try {
+      ru_project.Message? response =
+          await apiService.sendMessageToRoom(widget.roomName, text);
+      if (response != null) {
+        Message message = Message.text(
+          id: response.id,
+          author: widget.user,
+          createdAt: response.createdAt,
+          text: response.content,
+        );
+        final currentMessage = _chatController!.messages.firstWhere(
+          (element) => element.id == message.id,
+          orElse: () => message,
+        );
+        final nextMessage = currentMessage.copyWith(
+          id: message.id,
+          createdAt: message.createdAt,
+        );
+        await _chatController!.update(currentMessage, nextMessage);
+      }
+    } catch (e) {
+      logger.e('Error sending message to server: $e');
+    }
   }
 
   void _handleAttachmentTap() async {
@@ -174,14 +263,18 @@ class ChatUiState extends State<ChatUi> {
     );
 
     // Insert message to UI before uploading (local)
-    await _chatController.insert(imageMessage);
+    await _chatController!.insert(imageMessage);
 
     //TODO envoyer l'image au serveur avec apiService
   }
 
   void _removeItem(Message item) async {
-    await _chatController.remove(item); // retirer le message du chat local
-
-    //TODO retirer le message du serveur avec apiService
+    await _chatController!.remove(item);
+    bool res = await apiService.deleteMessage(item.id);
+    if (res) {
+      logger.i('Message deleted');
+    } else {
+      logger.e('Error deleting message');
+    }
   }
 }

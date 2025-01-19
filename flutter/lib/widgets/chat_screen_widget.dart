@@ -212,7 +212,7 @@ class _ChatScreenState extends State<ChatScreen>
                 return ListTile(
                   title: Text(message.content),
                   subtitle: Text(message.sender),
-                  trailing: Text(message.createdAt),
+                  trailing: Text(timeAgo(message.createdAt)),
                 );
               },
             ),

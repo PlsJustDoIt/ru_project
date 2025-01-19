@@ -52,6 +52,8 @@ class MyApp extends StatelessWidget {
           onSurface: Colors.black,
           onError: Colors.white,
           brightness: Brightness.light,
+          surfaceContainerHigh:
+              Color.fromARGB(255, 196, 201, 202), //TODO a voir si on garde
         ),
         fontFamily: 'Marianne',
       ),
