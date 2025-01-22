@@ -41,7 +41,9 @@ class MyApp extends StatelessWidget {
         const Locale('fr', 'FR'),
       ],
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
       theme: ThemeData(
+        brightness: Brightness.light,
         colorScheme: const ColorScheme(
           primary: AppColors.primaryColor,
           secondary: Colors.blue,

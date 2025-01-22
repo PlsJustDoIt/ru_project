@@ -35,13 +35,12 @@ class ChatUi extends StatefulWidget {
 
 //TODO
 class ChatUiState extends State<ChatUi> {
-  final CrossCache _crossCache = CrossCache();
+  CrossCache? _crossCache = CrossCache();
   final _uuid = const Uuid();
   late final List<Message> initialMessages;
   ChatController? _chatController;
   late final ApiService apiService;
   io.Socket? socket;
-  late String roomId;
 
   @override
   void initState() {
@@ -98,13 +97,27 @@ class ChatUiState extends State<ChatUi> {
       socket?.on('room_joined', (response) {
         Map<String, dynamic> data = response[0];
         logger.i("room joined, data: $data");
-        logger.i('Room joined: ${data['roomId']}');
-
-        logger.i('Room joined: ${data['roomId']}');
-        setState(() {
-          roomId = data['roomId'];
-        });
+        logger.i('Room joined: ${data['roomName']}');
       });
+
+      socket?.on('receive_delete_all_messages', (response) {
+        logger.i('All messages deleted');
+        if (mounted) {
+          _chatController?.set([]);
+        }
+      });
+
+      socket?.on('receive_delete_message', (response) {
+        Map<String, dynamic> data = response[0];
+        logger.i('Message deleted: ${data['messageId']}');
+        if (mounted) {
+          Message? message = _chatController?.messages.firstWhere(
+            (element) => element.id == data['messageId'],
+          );
+          if (message != null) _chatController?.remove(message);
+        }
+      });
+
     } catch (e) {
       logger.e('Error connecting to server: $e');
     }
@@ -136,22 +149,33 @@ class ChatUiState extends State<ChatUi> {
           createdAt: message.createdAt,
         ));
       }
+    }else{
+      if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to fetch messages'),
+          ),
+        );
+      }
+      logger.e('Error getting messages from server');
     }
     return messagesList;
   }
 
   @override
   void dispose() {
-    _chatController?.dispose();
-    _crossCache.dispose();
     disconnectFromServer();
+    _chatController?.dispose();
+    _chatController = null;
+    _crossCache?.dispose();
+    _crossCache = null;
     super.dispose();
   }
 
   void disconnectFromServer() {
     socket?.off('receive_message');
     socket?.disconnect();
-    socket?.emit(('leave_room'), roomId);
+    socket?.emit(('leave_room'), widget.roomName);
     socket?.dispose(); // Dispose the socket
     socket = null;
   }
@@ -180,7 +204,15 @@ class ChatUiState extends State<ChatUi> {
                   if (mounted) {
                     await _chatController!.set([]);
                     //TODO retirer les messages du serveur avec apiService
-                    apiService.deleteMessages(roomId);
+                    apiService.deleteMessages(widget.roomName).then((value) {
+                      if (value == false && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to delete messages'),
+                          ),
+                        );
+                      }
+                    });
                   }
                 },
               ),
@@ -195,6 +227,7 @@ class ChatUiState extends State<ChatUi> {
       onMessageTap: _removeItem,
       onAttachmentTap: _handleAttachmentTap,
       theme: ChatTheme.fromThemeData(Theme.of(context)),
+      themeMode: ThemeMode.light,
     );
   }
 
@@ -204,8 +237,9 @@ class ChatUiState extends State<ChatUi> {
         lorem(paragraphs: 1, words: Random().nextInt(30) + 1); //text aléatoire
     logger.i('Adding text $text to chat');
 
+    final tempId = _uuid.v4();
     final message = Message.text(
-      id: _uuid.v4(),
+      id: tempId,
       author: widget.user,
       createdAt: DateTime.now(),
       text: text,
@@ -221,21 +255,20 @@ class ChatUiState extends State<ChatUi> {
       ru_project.Message? response =
           await apiService.sendMessageToRoom(widget.roomName, text);
       if (response != null) {
-        Message message = Message.text(
+        final nextMessage = message.copyWith(
           id: response.id,
-          author: widget.user,
           createdAt: response.createdAt,
-          text: response.content,
         );
-        final currentMessage = _chatController!.messages.firstWhere(
-          (element) => element.id == message.id,
-          orElse: () => message,
+        await _chatController!.update(message, nextMessage);
+        return;
+      }
+      logger.e('Error sending message to server');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message'),
+          ),
         );
-        final nextMessage = currentMessage.copyWith(
-          id: message.id,
-          createdAt: message.createdAt,
-        );
-        await _chatController!.update(currentMessage, nextMessage);
       }
     } catch (e) {
       logger.e('Error sending message to server: $e');
@@ -251,7 +284,7 @@ class ChatUiState extends State<ChatUi> {
 
     final bytes = await image.readAsBytes();
     // Saves image to persistent cache using image.path as key
-    await _crossCache.set(image.path, bytes);
+    await _crossCache?.set(image.path, bytes);
 
     final id = _uuid.v4();
 
@@ -270,7 +303,7 @@ class ChatUiState extends State<ChatUi> {
 
   void _removeItem(Message item) async {
     await _chatController!.remove(item);
-    bool res = await apiService.deleteMessage(item.id);
+    bool res = await apiService.deleteMessage(item.id, widget.roomName);
     if (res) {
       logger.i('Message deleted');
     } else {

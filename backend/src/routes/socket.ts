@@ -155,19 +155,31 @@ router.get('/messages', auth, async (req: Request, res: Response) => {
 
 router.delete('/delete-all-messages', auth, async (req: Request, res: Response) => {
     try {
-        const roomId = req.query.roomId as string;
-        if (!roomId) {
-            return res.status(400).json({ error: 'Room ID is required' });
+        const roomName = req.query.roomName as string;
+
+        const room = await Room.findOne({ name: roomName });
+
+        const user = await User.findById(req.user.id);
+
+        if (!room) {
+            logger.error('Room not found : ' + roomName);
+            return res.status(404).json({ error: 'An error has occured' });
         }
 
-        if (!Types.ObjectId.isValid(roomId)) {
-            logger.error('Invalid room ID : ' + roomId);
-            return res.status(400).json({ error: 'Invalid room ID' });
+        if (!user) {
+            logger.error('User not found : ' + req.user.id);
+            return res.status(404).json({ error: 'An error has occured' });
         }
 
-        await Message.deleteMany({ room: roomId });
+        await Message.deleteMany({ room: room._id });
 
-        return res.json({ message: 'Messages deleted' });
+        const socket: Socket | undefined = socketService.getSocketFromUserId(user._id.toString());
+        if (socket) {
+            socketService.emitToRoomWithSocket(socket, 'receive_delete_all_messages', room._id.toString(), {});
+            return res.json({ message: 'Messages deleted' });
+        }
+        logger.error('Socket not found for user : ' + user._id);
+        return res.status(500).json({ error: 'Internal server error' });
     } catch (err) {
         logger.error('Error in /delete-messages:', err);
         return res.status(500).json({
@@ -179,7 +191,22 @@ router.delete('/delete-all-messages', auth, async (req: Request, res: Response) 
 
 router.delete('/delete-message', auth, async (req: Request, res: Response) => {
     try {
+        const roomName = req.query.roomName as string;
         const messageId = req.query.messageId as string;
+
+        const user = await User.findById(req.user.id);
+
+        const room = await Room.findOne({ name: roomName });
+
+        if (!user) {
+            logger.error('User not found : ' + req.user.id);
+            return res.status(404).json({ error: 'An error has occured' });
+        }
+
+        if (!room) {
+            logger.error('Room not found : ' + roomName);
+            return res.status(404).json({ error: 'An error has occured' });
+        }
 
         if (!messageId) {
             return res.status(400).json({ error: 'Message ID is required' });
@@ -192,7 +219,13 @@ router.delete('/delete-message', auth, async (req: Request, res: Response) => {
 
         await Message.deleteOne({ _id: messageId });
 
-        return res.json({ message: 'Message deleted' });
+        const socket: Socket | undefined = socketService.getSocketFromUserId(user._id.toString());
+        if (socket) {
+            socketService.emitToRoomWithSocket(socket, 'receive_delete_message', room._id.toString(), { messageId: messageId });
+            return res.json({ message: 'Message deleted' });
+        }
+        logger.error('Socket not found for user : ' + user._id);
+        return res.status(500).json({ error: 'Internal server error' });
     } catch (err) {
         logger.error('Error in /delete-message:', err);
         return res.status(500).json({

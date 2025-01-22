@@ -569,10 +569,10 @@ class ApiService {
   }
 
   // router.delete('/delete-messages
-  Future<bool> deleteMessages(String roomId) async {
+  Future<bool> deleteMessages(String roomName) async {
     try {
       final Response response = await _dio.delete('/socket/delete-all-messages',
-          queryParameters: {'roomId': roomId});
+          queryParameters: {'roomName': roomName});
       if (response.statusCode == 200) {
         return true;
       }
@@ -585,10 +585,10 @@ class ApiService {
     }
   }
 
-  Future<bool> deleteMessage(String messageId) async {
+  Future<bool> deleteMessage(String messageId,String roomName) async {
     try {
       final Response response = await _dio.delete('/socket/delete-message',
-          queryParameters: {'messageId': messageId});
+          queryParameters: {'messageId': messageId,'roomName': roomName});
       if (response.statusCode == 200) {
         return true;
       }
