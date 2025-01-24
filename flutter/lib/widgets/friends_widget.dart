@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/search_user_widget.dart';
+import 'package:ru_project/widgets/chat_widget.dart';
 
 class FriendsListButton extends StatelessWidget {
   const FriendsListButton({super.key});
@@ -141,6 +143,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
   Widget build(BuildContext context) {
     super.build(context);
     final apiService = Provider.of<ApiService>(context);
+    final userProvider = Provider.of<UserProvider>(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
@@ -261,6 +264,16 @@ class _FriendsListSheetState extends State<FriendsListSheet>
                                     icon: Icon(Icons.message_outlined),
                                     onPressed: () {
                                       logger.i('Message à ${friend.username}');
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute( 
+                                          builder: (context) => ChatWidget(
+                                            roomname: generatePrivateRoomName(
+                                                userProvider.user!.id, friend.id),
+                                            actualUser: userProvider.user!,
+                                          ),
+                                        ),
+                                      );
                                     },
                                   ),
                                   IconButton(

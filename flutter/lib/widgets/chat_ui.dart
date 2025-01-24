@@ -65,7 +65,9 @@ class ChatUiState extends State<ChatUi> {
         // 'withCredentials': true,
       });
       socket?.connect();
+      //TODO change join_global_room to join_room
       socket?.emit("join_global_room", "test");
+      //socket?.emit("join_room", widget.roomName);
       socket?.on('receive_message', (response) {
         try {
           Map<String, dynamic> data = response[0];

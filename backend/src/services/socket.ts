@@ -109,7 +109,8 @@ export class SocketService {
             }
         });
 
-        socket.on('join_room', async (friendId: string) => {
+        socket.on('join_friend_room', async (friendId: string) => {
+            logger.info('User %s joining room with friend %s', socket.id, friendId);
             try {
                 if (!friendId) {
                     throw new Error('Friend ID is required');
@@ -146,6 +147,7 @@ export class SocketService {
                     roomName = room.name; // très important
                 } else { // cas ou la room n'existe pas
                     roomName = generatePrivateRoomName(userId, friendId);
+                    logger.info('Creating private room %s', roomName);
                     await Room.create({
                         participants: [userId, friendId],
                         name: roomName,
@@ -154,6 +156,33 @@ export class SocketService {
 
                 await socket.join(roomName);
                 socket.emit('room_joined', { roomName }); // très important
+            } catch (error) {
+                logger.error('Error joining room:', error);
+                socket.emit('error', 'Failed to join room');
+            }
+        });
+
+        // TODO : à finir
+        socket.on('join_room', async (roomName: string) => {
+            logger.info('User %s joining room %s', socket.id, roomName);
+            try {
+                if (!roomName) {
+                    return socket.emit('error', 'Room name is required');
+                }
+
+                const userId = socket.data.userId;
+                const room = await Room.findOne({ name: 'Global' });
+
+                if (!room) { // cas room n'existe pas
+                    logger.info('Creating private room %s', roomName);
+                    await Room.create({
+                        participants: [userId],
+                        name: roomName,
+                    });
+                }
+
+                await socket.join(roomName);
+                socket.emit('room_joined', { roomName });
             } catch (error) {
                 logger.error('Error joining room:', error);
                 socket.emit('error', 'Failed to join room');
