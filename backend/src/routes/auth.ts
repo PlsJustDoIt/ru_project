@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import User from '../models/user.js';
+import User, { IUser } from '../models/user.js';
 import RefreshToken from '../models/refreshToken.js';
 import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
@@ -133,7 +133,7 @@ router.post('/token', auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
         const existingToken = await RefreshToken.findOne({ token: refreshToken });
-        logger.info('existingToken found : ' + existingToken);
+        logger.info('existingToken found : ' + existingToken?.token);
         if (!existingToken) {
             logger.error('Invalid refresh token');
             return res.status(403).json({ error: 'Invalid refresh token' });
@@ -148,7 +148,7 @@ router.post('/token', auth, async (req, res) => {
         }
 
         // Vérifier si le refresh token est valide
-        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as JwtPayload;
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as JwtPayload; // throw if expired
         logger.info(decoded);
 
         const userIdFromToken = decoded.id;
@@ -162,15 +162,18 @@ router.post('/token', auth, async (req, res) => {
         // Générer un nouveau access token
         const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
 
-        const userUsername = await User.findById(userIdFromToken).select('username');
+        const userUsername: IUser | null = await User.findById(userIdFromToken).select('username');
 
-        logger.info(`Nouveau token créé pour l'utilisateur ${userUsername} :\n accessToken: ${accessToken}`);
+        logger.info(`Nouveau token créé pour l'utilisateur ${userUsername?.username} :\n accessToken: ${accessToken}`);
 
         return res.json({ accessToken });
 
         // });
     } catch (err) {
         logger.error(err);
+        if (err instanceof jwt.TokenExpiredError) {
+            return res.status(403).json({ error: 'Token expired' });
+        }
         return res.status(500).json({ error: 'An error has occured' });
     }
 });
