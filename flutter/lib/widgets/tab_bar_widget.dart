@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +12,6 @@ import 'package:ru_project/widgets/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:ru_project/widgets/chat_screen_widget.dart';
-import 'package:ru_project/widgets/chat_page_widget.dart';
 import 'package:liquid_swipe/liquid_swipe.dart';
 
 class TabBarWidget extends StatelessWidget {
@@ -21,8 +19,8 @@ class TabBarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-    final apiService = Provider.of<ApiService>(context);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final apiService = Provider.of<ApiService>(context, listen: false);
 
     return DefaultTabController(
       length: 8,
@@ -39,20 +37,14 @@ class TabBarWidget extends StatelessWidget {
                 color: Colors.white,
                 onPressed: () async {
                   bool res = await apiService.logout();
-                  userProvider.logout();
+                  userProvider.clearUserData();
                   //log out apiservice (test bool)
                   if (!context.mounted) {
                     return;
                   }
-                  if (res) {
-                    logger.i('Logout successful');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Déconnexion réussie')));
-                  } else {
-                    logger.e('Logout failed');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Déconnexion échouée')));
-                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Déconnexion réussie')));
 
                   Navigator.pushReplacement(
                     context,

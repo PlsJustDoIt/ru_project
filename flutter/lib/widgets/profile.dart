@@ -205,10 +205,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     try {
       bool isSuccess = await _apiService.deleteAccount();
       if (isSuccess) {
-        _userProvider.logout();
+        await _apiService.logout();
+
         if (context.mounted == false) {
           return;
         }
+        _userProvider.clearUserData();
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
