@@ -5,8 +5,13 @@ import 'package:ru_project/models/user.dart';
 class ChatWidget extends StatelessWidget {
   final String roomname;
   final User actualUser;
+  final List<User>? friends;
 
-  const ChatWidget({super.key, required this.roomname, required this.actualUser});
+  const ChatWidget(
+      {super.key,
+      required this.roomname,
+      required this.actualUser,
+      this.friends});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +25,8 @@ class ChatWidget extends StatelessWidget {
         ),
         title: const Text('Chat'),
       ),
-      body: ChatUi(roomName: roomname, actualUser: actualUser),
+      body:
+          ChatUi(roomName: roomname, actualUser: actualUser, friends: friends),
     );
   }
 }

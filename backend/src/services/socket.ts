@@ -2,7 +2,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import logger from './logger.js';
-import Room, { generatePrivateRoomName } from '../models/room.js';
+import Room, { generatePrivateRoomName, getOrCreatePrivateRoom } from '../models/room.js';
 import User from '../models/user.js';
 import { instrument } from '@socket.io/admin-ui';
 import jwt from 'jsonwebtoken';
@@ -99,9 +99,9 @@ export class SocketService {
                     throw new Error('Global room not found');
                 }
 
-                logger.info('User %s joining global room %s', socket.id, globalRoom._id.toString());
+                logger.info('User %s joining global room %s', socket.id, globalRoom.name);
 
-                await socket.join(globalRoom._id.toString());
+                await socket.join(globalRoom.name);
                 socket.emit('room_joined', { roomName: globalRoom.name });
             } catch (error) {
                 logger.error('Error joining global room:', error);
@@ -163,26 +163,24 @@ export class SocketService {
         });
 
         // TODO : à finir
-        socket.on('join_room', async (roomName: string) => {
-            logger.info('User %s joining room %s', socket.id, roomName);
+        socket.on('join_room', async (data: any[]) => {
+            logger.info('User %s joining room with data %o', socket.id, data);
+            logger.info(data);
             try {
-                if (!roomName) {
-                    return socket.emit('error', 'Room name is required');
+                if (!data) {
+                    throw new Error('data is required');
                 }
 
-                const userId = socket.data.userId;
-                const room = await Room.findOne({ name: 'Global' });
-
-                if (!room) { // cas room n'existe pas
-                    logger.info('Creating private room %s', roomName);
-                    await Room.create({
-                        participants: [userId],
-                        name: roomName,
-                    });
+                if (data.length !== 2) {
+                    throw new Error('Exactly 2 participants are required, other cases are not supported');
                 }
 
-                await socket.join(roomName);
-                socket.emit('room_joined', { roomName });
+                const participants = data as string[];
+
+                const room = await getOrCreatePrivateRoom(participants[0], participants[1]);
+
+                await socket.join(room.name);
+                socket.emit('room_joined', { roomName: room.name });
             } catch (error) {
                 logger.error('Error joining room:', error);
                 socket.emit('error', 'Failed to join room');
@@ -232,13 +230,17 @@ export class SocketService {
     //     this.io.to(roomName).emit(event, data);
     // }
 
-    public async emitToRoomWithSocket(socket: Socket, event: string, roomName: string, data: unknown): Promise<void> {
-        if (!roomName) {
-            throw new Error('Room name is required');
+    public emitToRoomWithSocket(socket: Socket, event: string, roomName: string, data: unknown): void {
+        try {
+            if (!roomName) {
+                throw new Error('Room name is required');
+            }
+            logger.info(socket.data.userId);
+            logger.info('trying to %s to room %s with socket %s: %o', event, roomName, socket.id, data);
+            socket.to(roomName).emit(event, data);
+        } catch (error) {
+            logger.error('Error in emitToRoomWithSocket:', error);
         }
-
-        logger.info('trying to %s to room %s with socket %s: %o', event, roomName, socket.id, data);
-        socket.to(roomName).emit(event, data);
     }
 
     public broadcastToEveryone(event: string, data: unknown): void {

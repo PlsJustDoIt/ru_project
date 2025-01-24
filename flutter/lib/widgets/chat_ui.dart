@@ -19,13 +19,18 @@ import 'package:flutter_lorem/flutter_lorem.dart';
 import 'dart:math';
 
 class ChatUi extends StatefulWidget {
-  ChatUi({super.key, required this.roomName, required this.actualUser})
+  ChatUi(
+      {super.key,
+      required this.roomName,
+      required this.actualUser,
+      this.friends})
       : user = User(
           id: actualUser.username,
           firstName: actualUser.username,
         );
 
   final ru_project.User actualUser;
+  final List<ru_project.User>? friends;
   final User user;
   final String roomName;
 
@@ -66,8 +71,16 @@ class ChatUiState extends State<ChatUi> {
       });
       socket?.connect();
       //TODO change join_global_room to join_room
-      socket?.emit("join_global_room", "test");
-      //socket?.emit("join_room", widget.roomName);
+      if (widget.roomName == 'Global') {
+        socket?.emit("join_global_room");
+      } else {
+        List<String> participants = [
+          widget.actualUser.id,
+          ...widget.friends!.map((e) => e.id)
+        ];
+        logger.i('Participants: $participants');
+        socket?.emit("join_room", {participants});
+      }
       socket?.on('receive_message', (response) {
         try {
           Map<String, dynamic> data = response[0];
@@ -119,7 +132,6 @@ class ChatUiState extends State<ChatUi> {
           if (message != null) _chatController?.remove(message);
         }
       });
-
     } catch (e) {
       logger.e('Error connecting to server: $e');
     }
@@ -151,9 +163,9 @@ class ChatUiState extends State<ChatUi> {
           createdAt: message.createdAt,
         ));
       }
-    }else{
+    } else {
       if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to fetch messages'),
           ),
@@ -304,12 +316,66 @@ class ChatUiState extends State<ChatUi> {
   }
 
   void _removeItem(Message item) async {
-    await _chatController!.remove(item);
-    bool res = await apiService.deleteMessage(item.id, widget.roomName);
-    if (res) {
-      logger.i('Message deleted');
-    } else {
-      logger.e('Error deleting message');
-    }
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Supprimer le message'),
+          content:
+              const Text('Etes-vous sûr de vouloir supprimer ce message ?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Annuler'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Supprimer'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _chatController!.remove(item);
+                bool res =
+                    await apiService.deleteMessage(item.id, widget.roomName);
+                if (res) {
+                  logger.i('Message deleted');
+                } else {
+                  logger.e('Error deleting message');
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showDeleteConfirmationDialog(Message item) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Message'),
+          content: const Text('Are you sure you want to delete this message?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Delete'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _removeItem(item);
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }

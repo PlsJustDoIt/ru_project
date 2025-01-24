@@ -266,11 +266,13 @@ class _FriendsListSheetState extends State<FriendsListSheet>
                                       logger.i('Message à ${friend.username}');
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute( 
+                                        MaterialPageRoute(
                                           builder: (context) => ChatWidget(
                                             roomname: generatePrivateRoomName(
-                                                userProvider.user!.id, friend.id),
+                                                userProvider.user!.id,
+                                                friend.id),
                                             actualUser: userProvider.user!,
+                                            friends: [friend],
                                           ),
                                         ),
                                       );

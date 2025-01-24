@@ -55,7 +55,7 @@ router.post('/send-message', auth, async (req: Request, res: Response) => {
 
         const socket: Socket | undefined = socketService.getSocketFromUserId(userId);
         if (socket) {
-            socketService.emitToRoomWithSocket(socket, 'receive_message', room._id.toString(), { message: response });
+            socketService.emitToRoomWithSocket(socket, 'receive_message', room.name, { message: response });
             return res.status(201).json({ message: response });
         }
         logger.error('Socket not found for user : ' + userId);
@@ -175,7 +175,7 @@ router.delete('/delete-all-messages', auth, async (req: Request, res: Response) 
 
         const socket: Socket | undefined = socketService.getSocketFromUserId(user._id.toString());
         if (socket) {
-            socketService.emitToRoomWithSocket(socket, 'receive_delete_all_messages', room._id.toString(), {});
+            socketService.emitToRoomWithSocket(socket, 'receive_delete_all_messages', room.name, {});
             return res.json({ message: 'Messages deleted' });
         }
         logger.error('Socket not found for user : ' + user._id);
@@ -221,7 +221,7 @@ router.delete('/delete-message', auth, async (req: Request, res: Response) => {
 
         const socket: Socket | undefined = socketService.getSocketFromUserId(user._id.toString());
         if (socket) {
-            socketService.emitToRoomWithSocket(socket, 'receive_delete_message', room._id.toString(), { messageId: messageId });
+            socketService.emitToRoomWithSocket(socket, 'receive_delete_message', room.name, { messageId: messageId });
             return res.json({ message: 'Message deleted' });
         }
         logger.error('Socket not found for user : ' + user._id);
