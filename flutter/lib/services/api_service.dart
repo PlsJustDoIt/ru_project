@@ -128,7 +128,7 @@ class ApiService {
         final String refreshToken = response.data['refreshToken'];
 
         await secureStorage.storeAccessToken(accessToken);
-        await secureStorage.storeAccessToken(refreshToken);
+        await secureStorage.storeRefreshToken(refreshToken);
         final User? user = await getUser();
         if (user != null) {
           return {'user': user, 'success': true};
