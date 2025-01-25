@@ -62,6 +62,10 @@ dependencies:
   duration: ^4.0.3
   flutter_localizations:
     sdk: flutter
+  flyer_chat_image_message: ^0.0.4
+  flyer_chat_text_message: ^0.0.4
+  cross_cache: ^0.0.4
+  flutter_lorem: ^2.0.0
 
 dev_dependencies:
   flutter_test:

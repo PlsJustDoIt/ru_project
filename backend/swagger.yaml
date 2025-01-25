@@ -897,12 +897,12 @@ paths:
             schema:
               type: object
               required:
-                - roomId
+                - roomName
                 - message
               properties:
-                roomId:
+                roomName:
                   type: string
-                  description: ID de la room
+                  description: Nom de la room
                 content:
                   type: string
                   description: Contenu du message
@@ -945,12 +945,12 @@ paths:
         - bearerAuth: []
       parameters:
         - in: query
-          name: roomId
+          name: roomName
           required: true
           schema:
             type: string
-          description: identifiant de la room
-          example: "42"
+          description: Nom de la room
+          example: "Global"
       responses:
         '200':
           description: OK

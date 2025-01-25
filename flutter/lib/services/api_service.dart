@@ -565,10 +565,10 @@ class ApiService {
   }
 
   // router.delete('/delete-messages
-  Future<bool> deleteMessages(String roomId) async {
+  Future<bool> deleteMessages(String roomName) async {
     try {
-      final Response response = await _dio.delete('/socket/delete-messages',
-          queryParameters: {'roomId': roomId});
+      final Response response = await _dio.delete('/socket/delete-all-messages',
+          queryParameters: {'roomName': roomName});
       if (response.statusCode == 200) {
         return true;
       }
@@ -577,6 +577,22 @@ class ApiService {
       return false;
     } catch (e) {
       logger.e('Failed to delete messages: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteMessage(String messageId,String roomName) async {
+    try {
+      final Response response = await _dio.delete('/socket/delete-message',
+          queryParameters: {'messageId': messageId,'roomName': roomName});
+      if (response.statusCode == 200) {
+        return true;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to delete message: $e');
       return false;
     }
   }

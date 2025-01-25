@@ -48,7 +48,9 @@ class MyApp extends StatelessWidget {
         const Locale('fr', 'FR'),
       ],
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
       theme: ThemeData(
+        brightness: Brightness.light,
         colorScheme: const ColorScheme(
           primary: AppColors.primaryColor,
           secondary: Colors.blue,
@@ -59,6 +61,8 @@ class MyApp extends StatelessWidget {
           onSurface: Colors.black,
           onError: Colors.white,
           brightness: Brightness.light,
+          surfaceContainerHigh:
+              Color.fromARGB(255, 196, 201, 202), //TODO a voir si on garde
         ),
         fontFamily: 'Marianne',
       ),

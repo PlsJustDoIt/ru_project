@@ -38,9 +38,9 @@ socket.handshake.auth.token || socket.handshake.query.token
   ```typescript
   socket.on('join_global_room')
   ```
-- `join_room` - Join a private room with a friend
+- `join_room` - Join a private room with participants
   ```typescript
-  socket.on('join_room', friendId: string)
+  socket.on('join_room', participants: string[])
   ```
 - `leave_room` - Leave a specific room
   ```typescript

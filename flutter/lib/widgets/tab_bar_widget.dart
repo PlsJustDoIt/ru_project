@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/widgets/chat_ui.dart';
 import 'package:ru_project/widgets/menu_widget.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -79,7 +80,7 @@ class TabBarWidget extends StatelessWidget {
             const MenuWidget(),
             FriendsListSheet(),
             ChatScreen(),
-            CircularProgressIndicator(),
+            ChatUi(roomName: 'Global', actualUser: userProvider.user!),
             ProfileWidget(),
             TransportTimeWidget(),
             DebugWidget(),

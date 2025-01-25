@@ -27,7 +27,7 @@ const generatePrivateRoomName = (user1Id: string, user2Id: string) => {
 };
 
 // Fonction pour obtenir ou créer une room privée
-async function getOrCreatePrivateRoom(user1Id: Types.ObjectId, user2Id: Types.ObjectId) {
+async function getOrCreatePrivateRoom(user1Id: string, user2Id: string) {
     // Chercher une room existante avec exactement ces deux participants
     const existingRoom = await Room.findOne({
         participants: {
@@ -41,7 +41,10 @@ async function getOrCreatePrivateRoom(user1Id: Types.ObjectId, user2Id: Types.Ob
     }
 
     // Créer une nouvelle room si elle n'existe pas
+    const roomName = generatePrivateRoomName(user1Id, user2Id);
+
     return await Room.create({
+        name: roomName,
         participants: [user1Id, user2Id],
     });
 }
