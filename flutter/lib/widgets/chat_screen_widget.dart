@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:provider/provider.dart';
+
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
-import 'package:ru_project/models/room.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -23,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen>
   List<Message> messages = [];
   late String roomId;
   late ApiService apiService;
+  late final SecureStorage secureStorage;
 
   String replaceSmileysWithEmojisUsingRegex(String input) {
     final Map<String, String> smileyToEmoji = {
@@ -85,6 +85,8 @@ class _ChatScreenState extends State<ChatScreen>
       });
     });
 
+    secureStorage = Provider.of<SecureStorage>(context, listen: false);
+
     connectToServer();
 
     super.initState();
@@ -112,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen>
         'transports': ['websocket'],
         'autoConnect': false,
         'query': {
-          'token': await apiService.secureStorage.getAccessToken(),
+          'token': await secureStorage.getAccessToken(),
         },
         // 'withCredentials': true,
       });

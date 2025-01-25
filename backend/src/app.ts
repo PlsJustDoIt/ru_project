@@ -1,5 +1,5 @@
 import isProduction from './config.js';
-import express from 'express';
+import express, { Response } from 'express';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -78,6 +78,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
 app.use('/api/ginko', ginkoRoutes);
 app.use('/api/socket', socketRoute);
+app.get('/api/health', (res: Response) => {
+    res.status(200).json({ message: 'API is alive !' });
+});
 
 // app.use((error: any, req: Request, res: Response, next: NextFunction) => {
 //     res.status(500).json({ message: error.message, stack: error.stack, path: req.path });
