@@ -1,3 +1,4 @@
+import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
@@ -33,6 +34,14 @@ class TabBarWidget extends StatelessWidget {
             style: TextStyle(
                 fontFamily: 'Marianne', color: AppColors.secondaryColor),
           ),
+          leading: IconButton(
+              icon: Icon(Icons.bug_report),
+              color: const Color.fromARGB(255, 19, 18, 18),
+              onPressed: () {
+                BetterFeedback.of(context).show((UserFeedback feedback) {
+                  return;
+                });
+              }),
           actions: [
             IconButton(
                 icon: const Icon(Icons.logout),

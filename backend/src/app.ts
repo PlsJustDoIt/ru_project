@@ -20,6 +20,10 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yaml';
 import { socketService } from './services/socket.js';
 import socketRoute from './routes/socket.js';
+import AdminJS from 'adminjs';
+import BugReport from './models/bugReport.js';
+import AdminJSExpress from '@adminjs/express';
+import * as AdminJSMongoose from '@adminjs/mongoose';
 
 if (!isProduction) {
     dotenv.config();
@@ -78,10 +82,50 @@ app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
 app.use('/api/ginko', ginkoRoutes);
 app.use('/api/socket', socketRoute);
+app.post('/api/bug-reports', async (req, res) => {
+    try {
+        const { description, screenshot_url, app_version, platform } = req.body;
+        const bugReport = new BugReport({
+            description,
+            screenshot_url,
+            app_version,
+            platform,
+            status: 'open', // Par défaut, le bug est ouvert
+        });
 
-// app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-//     res.status(500).json({ message: error.message, stack: error.stack, path: req.path });
-// });
+        await bugReport.save();
+        res.status(201).json({ message: 'Bug report created successfully', bugReport });
+    } catch (error) {
+        res.status(400).json({ message: 'Error creating bug report', error });
+    }
+});
+
+if (!isProduction) {
+    // Configurer AdminJS
+
+    AdminJS.registerAdapter({
+        Resource: AdminJSMongoose.Resource,
+        Database: AdminJSMongoose.Database,
+    });
+
+    const admin = new AdminJS({
+        resources: [
+            {
+                resource: BugReport,
+                options: {
+                    // Options supplémentaires comme les filtres ou les champs à afficher
+                },
+            },
+        ],
+        rootPath: '/admin',
+    });
+
+    admin.watch();
+
+    const adminRouter = AdminJSExpress.buildRouter(admin);
+    app.use(admin.options.rootPath, adminRouter);
+    logger.info(`admin JS running on http://localhost:${5000}${admin.options.rootPath}`);
+}
 
 // Swagger
 const swaggerFilePath = path.join(path.resolve(), 'swagger.yaml');

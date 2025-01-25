@@ -1,3 +1,4 @@
+import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +19,26 @@ void main() {
               api: Provider.of<ApiService>(context, listen: false)),
         ),
       ],
-      child: const MyApp(),
+      child: BetterFeedback(
+        theme: FeedbackThemeData(
+          feedbackSheetColor: Colors.white,
+          background: Colors.green,
+          drawColors: [
+            Colors.red,
+            Colors.green,
+            Colors.blue,
+            Colors.yellow,
+          ],
+        ),
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalFeedbackLocalizationsDelegate(),
+        ],
+        localeOverride: const Locale('fr', 'FR'),
+        child: MyApp(),
+      ),
     ),
   );
 }
