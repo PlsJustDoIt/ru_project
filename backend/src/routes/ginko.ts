@@ -8,7 +8,7 @@ import NodeCache from 'node-cache';
 import fs from 'fs';
 import path from 'path';
 
-import isProduction from '../config.js';
+import { isProduction } from '../config.js';
 
 if (!isProduction) {
     dotenv.config();

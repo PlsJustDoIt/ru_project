@@ -1,23 +1,23 @@
 import multer from 'multer';
-import path from 'path';
+import { resolve, dirname, join, extname, basename } from 'path';
 import logger from './logger.js';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import { NextFunction, Request, Response } from 'express';
-import isProduction from '../config.js';
+import { isProduction } from '../config.js';
 
 let uploadDir;
 let screenshotDir;
 
-logger.info(path.resolve());
-logger.info(path.dirname(path.resolve()));
+logger.info(resolve());
+logger.info(dirname(resolve()));
 
 if (isProduction) {
-    uploadDir = path.dirname(path.resolve()) + '/uploads/avatar';
-    screenshotDir = path.dirname(path.resolve()) + '/uploads/bugReport';
+    uploadDir = dirname(resolve()) + '/uploads/avatar';
+    screenshotDir = dirname(resolve()) + '/uploads/bugReport';
 } else {
-    uploadDir = path.resolve() + '/uploads/avatar';
-    screenshotDir = path.resolve() + '/uploads/bugReport';
+    uploadDir = resolve() + '/uploads/avatar';
+    screenshotDir = resolve() + '/uploads/bugReport';
 }
 
 try {
@@ -92,13 +92,13 @@ const convertAndCompress = async (req: Request, res: Response, next: NextFunctio
 
     try {
         const inputPath = req.file.path;
-        const originalExtension = path.extname(req.file.originalname).toLowerCase();
+        const originalExtension = extname(req.file.originalname).toLowerCase();
 
         // Ne convertir que si ce n'est pas déjà un JPG
         if (originalExtension !== '.jpg' && req.file.mimetype !== 'image/jpeg') {
-            const outputPath = path.join(
-                path.dirname(inputPath),
-                `${path.basename(inputPath, originalExtension)}.jpg`,
+            const outputPath = join(
+                dirname(inputPath),
+                `${basename(inputPath, originalExtension)}.jpg`,
             );
 
             // Convertir et compresser l'image
@@ -114,7 +114,7 @@ const convertAndCompress = async (req: Request, res: Response, next: NextFunctio
 
             // Mettre à jour les informations du fichier
             req.file.path = outputPath;
-            req.file.filename = path.basename(outputPath);
+            req.file.filename = basename(outputPath);
             req.file.mimetype = 'image/jpeg';
         }
 

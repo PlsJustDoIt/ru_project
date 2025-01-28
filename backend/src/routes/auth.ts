@@ -8,7 +8,7 @@ import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import path from 'path';
 import fs from 'fs';
-import isProduction from '../config.js';
+import { isProduction } from '../config.js';
 const router = Router();
 
 const TEXT_MIN_LENGTH = 3;

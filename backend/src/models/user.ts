@@ -17,7 +17,7 @@ const UserSchema = new Schema({
     status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'absent' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     avatarUrl: { type: String, default: 'uploads/avatar/default.png' },
-});
+}, { timestamps: true });
 
 UserSchema.pre('save', async function (next): Promise<void> {
     try {
