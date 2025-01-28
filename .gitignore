@@ -48,3 +48,4 @@ uploads
 /backend/dist/
 **/.env
 env.sh
+/backend/.adminjs/**

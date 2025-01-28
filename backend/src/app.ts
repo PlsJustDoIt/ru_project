@@ -24,6 +24,8 @@ import AdminJS from 'adminjs';
 import BugReport from './models/bugReport.js';
 import AdminJSExpress from '@adminjs/express';
 import * as AdminJSMongoose from '@adminjs/mongoose';
+import User from './models/user.js';
+import { ComponentLoader } from 'adminjs';
 
 if (!isProduction) {
     dotenv.config();
@@ -37,7 +39,7 @@ mongoose.set('strictQuery', false);
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    limit: 30, // Limit each IP to 15 requests per windowMs
+    limit: 50, // Limit each IP to 15 requests per windows
     standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
     // store: ... , // Redis, Memcached, etc. See below.
@@ -82,23 +84,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
 app.use('/api/ginko', ginkoRoutes);
 app.use('/api/socket', socketRoute);
-app.post('/api/bug-reports', async (req, res) => {
-    try {
-        const { description, screenshot_url, app_version, platform } = req.body;
-        const bugReport = new BugReport({
-            description,
-            screenshot_url,
-            app_version,
-            platform,
-            status: 'open', // Par défaut, le bug est ouvert
-        });
-
-        await bugReport.save();
-        res.status(201).json({ message: 'Bug report created successfully', bugReport });
-    } catch (error) {
-        res.status(400).json({ message: 'Error creating bug report', error });
-    }
-});
 
 if (!isProduction) {
     // Configurer AdminJS
@@ -108,24 +93,94 @@ if (!isProduction) {
         Database: AdminJSMongoose.Database,
     });
 
+    const componentLoader = new ComponentLoader();
     const admin = new AdminJS({
         resources: [
             {
                 resource: BugReport,
                 options: {
-                    // Options supplémentaires comme les filtres ou les champs à afficher
+                    properties: {
+                        user: {
+                            reference: 'User', // Référence au modèle User
+                        },
+                        _id: {
+                            isVisible: { list: false, show: true, edit: false },
+                        },
+                        screenshot_url: {
+                            components: {
+                                list: isProduction ? componentLoader.add('ScreenshotUrlList', '../components/screenshot-url-list') : componentLoader.add('ScreenshotUrlList', './components/screenshot-url-list'),
+                                show: isProduction ? componentLoader.add('ScreenshotUrlShow', '../components/screenshot-url-show') : componentLoader.add('ScreenshotUrlShow', './components/screenshot-url-show'),
+                                edit: isProduction ? componentLoader.add('ScreenshotUrlEdit', '../components/screenshot-url-edit') : componentLoader.add('ScreenshotUrlEdit', './components/screenshot-url-edit'),
+                            },
+                        },
+                    },
+                },
+            },
+            {
+                resource: User,
+                // features: [passwordsFeature({ // problèmes si on veut utiliser sa propre méthode de hash
+                //     properties: {
+                //         encryptedPassword: 'encryptedPassword',
+                //     },
+                //     hash: async (password: string): Promise<string> => {
+                //         const salt = await genSalt(10);
+                //         return await hash(password, salt);
+                //     },
+                //     componentLoader,
+
+                // })],
+                options: {
+                    properties: {
+                        friends: {
+                            reference: 'User',
+                        },
+                        _id: {
+                            isVisible: { list: false, show: true, edit: false },
+                        },
+                        password: {
+                            isVisible: { list: false, show: false, edit: false },
+                        },
+                        avatarUrl: {
+                            components: {
+                                list: isProduction ? componentLoader.add('AvatarUrlList', '../components/avatar-url-list') : componentLoader.add('AvatarUrlList', './components/avatar-url-list'),
+                                show: isProduction ? componentLoader.add('AvatarUrlShow', '../components/avatar-url-show') : componentLoader.add('AvatarUrlShow', './components/avatar-url-show'),
+                                edit: isProduction ? componentLoader.add('AvatarUrlEdit', '../components/avatar-url-edit') : componentLoader.add('AvatarUrlEdit', './components/avatar-url-edit'),
+                            },
+                        },
+                    },
                 },
             },
         ],
         rootPath: '/admin',
+        componentLoader,
     });
 
     admin.watch();
 
-    const adminRouter = AdminJSExpress.buildRouter(admin);
+    const customRouter = express.Router();
+    const handleImageRequest = (req, res) => {
+        const filePath = req.params[0];
+        const finalPath = filePath.startsWith('uploads/') ? filePath : `api/uploads/${filePath}`;
+        res.redirect(`/${finalPath}`);
+    };
+
+    // Gérer les deux patterns d'URL possibles
+    customRouter.get('/admin/resources/:model/records/:recordId/uploads/*', handleImageRequest);
+    customRouter.get('/admin/api/resources/:model/records/:recordId/uploads/*', handleImageRequest);
+    customRouter.get('/resources/:model/records/:recordId/uploads/*', handleImageRequest);
+    customRouter.get('/api/resources/:model/records/:recordId/uploads/*', handleImageRequest);
+
+    // Routes pour les accès directs aux uploads
+    customRouter.get('/admin/resources/uploads/*', handleImageRequest);
+    customRouter.get('/admin/api/resources/uploads/*', handleImageRequest);
+    customRouter.get('/resources/uploads/*', handleImageRequest);
+    customRouter.get('/api/resources/uploads/*', handleImageRequest);
+    const adminRouter = AdminJSExpress.buildRouter(admin, customRouter);
     app.use(admin.options.rootPath, adminRouter);
     logger.info(`admin JS running on http://localhost:${5000}${admin.options.rootPath}`);
 }
+
+// app.use('/admin/resources/uploads', express.static(path.resolve() + '/uploads'));
 
 // Swagger
 const swaggerFilePath = path.join(path.resolve(), 'swagger.yaml');
