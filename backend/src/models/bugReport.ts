@@ -13,10 +13,21 @@ const bugReportSchema = new mongoose.Schema({
         enum: ['open', 'resolved', 'closed'],
         default: 'open',
     },
+    severity: {
+        type: String,
+        enum: ['low', 'medium', 'high', 'critical'],
+    },
+
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
     timestamp: {
         type: Date,
         default: Date.now,
     },
+
 });
 
 const BugReport = mongoose.model('BugReport', bugReportSchema);

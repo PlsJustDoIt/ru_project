@@ -7,17 +7,28 @@ import { NextFunction, Request, Response } from 'express';
 import isProduction from '../config.js';
 
 let uploadDir;
+let screenshotDir;
 
 logger.info(path.resolve());
 logger.info(path.dirname(path.resolve()));
 
 if (isProduction) {
     uploadDir = path.dirname(path.resolve()) + '/uploads/avatar';
+    screenshotDir = path.dirname(path.resolve()) + '/uploads/bugReport';
 } else {
     uploadDir = path.resolve() + '/uploads/avatar';
+    screenshotDir = path.resolve() + '/uploads/bugReport';
 }
 
-const storage = multer.diskStorage({
+try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.mkdir(screenshotDir, { recursive: true });
+} catch (error) {
+    logger.error('Error creating upload directory:', error);
+}
+
+const storageAvatar = multer.diskStorage({
+
     destination: (req, file, cb) => {
         cb(null, uploadDir); // Répertoire où les fichiers seront stockés
     },
@@ -28,9 +39,20 @@ const storage = multer.diskStorage({
     },
 });
 
+const storageScreenshotBugReport = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, screenshotDir); // Répertoire où les fichiers seront stockés
+    },
+    filename: (req, file, cb) => {
+        logger.info(file);
+        logger.info(req.body);
+        cb(null, `${file.originalname}`);
+    },
+});
+
 // Middleware multer
 const uploadAvatar = multer({
-    storage: storage,
+    storage: storageAvatar,
     limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
@@ -46,8 +68,24 @@ const uploadAvatar = multer({
 
 });
 
+const uploadBugReport = multer({
+    storage: storageScreenshotBugReport,
+    limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
+    fileFilter: (req, file, cb) => {
+        const allowedMimeTypes = ['image/png'];
+        if (file.size > 4 * 1024 * 1024) {
+            cb(null, false);
+        }
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
+    },
+});
+
 // Middleware de conversion et compression
-const convertAndCompressAvatar = async (req: Request, res: Response, next: NextFunction) => {
+const convertAndCompress = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.file) {
         return next();
     }
@@ -87,4 +125,4 @@ const convertAndCompressAvatar = async (req: Request, res: Response, next: NextF
     }
 };
 
-export { uploadAvatar, convertAndCompressAvatar };
+export { uploadAvatar, convertAndCompress, uploadBugReport };

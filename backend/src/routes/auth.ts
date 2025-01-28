@@ -175,7 +175,7 @@ router.post('/token', auth, async (req, res) => {
     }
 });
 
-router.post('/logout', auth, async (req, res) => {
+router.post('/logout', auth, async (req, res) => { // TODO : à voir si on doit utiliser le middleware auth
     const refreshToken = req.body.refreshToken;
     try {
         await RefreshToken.findOneAndDelete({ token: refreshToken });
