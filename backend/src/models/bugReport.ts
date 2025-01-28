@@ -23,12 +23,8 @@ const bugReportSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
-    timestamp: {
-        type: Date,
-        default: Date.now,
-    },
 
-});
+}, { timestamps: true });
 
 const BugReport = mongoose.model('BugReport', bugReportSchema);
 
