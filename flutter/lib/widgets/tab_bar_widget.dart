@@ -26,7 +26,7 @@ class TabBarWidget extends StatelessWidget {
     final apiService = Provider.of<ApiService>(context);
 
     return DefaultTabController(
-      length: 8,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -36,10 +36,20 @@ class TabBarWidget extends StatelessWidget {
           ),
           leading: IconButton(
               icon: Icon(Icons.bug_report),
-              color: const Color.fromARGB(255, 19, 18, 18),
+              color: Colors.white,
               onPressed: () {
-                BetterFeedback.of(context).show((UserFeedback feedback) {
-                  return;
+                BetterFeedback.of(context).show((UserFeedback feedback) async {
+                  bool res = await apiService.sendFeedback(feedback);
+                  if (!context.mounted) {
+                    return;
+                  }
+                  if (res) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Feedback envoyé :)')));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Echec de l\'envoi du feedback :(')));
+                  }
                 });
               }),
           actions: [
@@ -82,7 +92,6 @@ class TabBarWidget extends StatelessWidget {
               Tab(icon: Icon(Icons.login), text: 'Carte ru'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
-              Tab(icon: Icon(Icons.settings), text: 'socket test'),
               Tab(icon: Icon(Icons.messenger), text: 'Chat'),
               Tab(icon: Icon(Icons.person), text: 'Profil'),
               Tab(icon: Icon(Icons.directions_bus), text: 'Bus'),
@@ -95,7 +104,6 @@ class TabBarWidget extends StatelessWidget {
             const CafeteriaLayout(),
             const MenuWidget(),
             FriendsListSheet(),
-            ChatScreen(),
             CircularProgressIndicator(),
             ProfileWidget(),
             TransportTimeWidget(),

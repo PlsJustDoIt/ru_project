@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
+import 'package:feedback/feedback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http_parser/http_parser.dart';
 
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/models/menu.dart';
@@ -174,7 +176,8 @@ class ApiService {
         throw Exception('Failed to get user');
       }
       if (response.data['error']['field'] == null) {
-        throw Exception('Failed to register: ${response.data['error']['message']}');
+        throw Exception(
+            'Failed to register: ${response.data['error']['message']}');
       }
       return {
         'error': response.data['error']['message'],
@@ -432,8 +435,6 @@ class ApiService {
   //update user profile picture
   Future<String?> updateProfilePicture(XFile pickedFile) async {
     try {
-      //update user profile picture (requires user id) //TODO: implement
-
       var file;
 
       if (kIsWeb) {
@@ -589,19 +590,30 @@ class ApiService {
     return '${Config.apiUrl}/$avatarUrl';
   }
 
-  // //get user profile picture
-  // Future<String?> getProfilePicture(String ) async {
-  //   try {
-  //     final Response response = await _dio.get('/users/profile-picture');
-  //     if (response.statusCode == 200 && response.data != null) {
-  //       return response.data['avatarUrl'];
-  //     }
-  //     logger.e(
-  //         'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-  //     return null;
-  //   } catch (e) {
-  //     logger.e('Failed to get profile picture: $e');
-  //     return null;
-  //   }
-  // }
+  Future<bool> sendFeedback(UserFeedback feedback) async {
+    try {
+      String timestamp = DateFormat('ddMMyyyy_HHmmss').format(DateTime.now());
+      String filename = 'bug_screenshot_$timestamp.png';
+      FormData formData = FormData.fromMap({
+        'description': feedback.text,
+        'screenshot': MultipartFile.fromBytes(feedback.screenshot,
+            filename: filename, contentType: MediaType('image', 'png')),
+        'extra': feedback.extra,
+        'platform': kIsWeb ? 'web' : Platform.operatingSystem,
+        'app_version': Config.appVersion,
+      });
+
+      final response =
+          await _dio.post('/users/send-bug-report', data: formData);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+      logger.e('Failed to send feedback: ${response.data["error"]}');
+      return false;
+    } catch (e) {
+      logger.e('Error sending feedback: $e');
+      return false;
+    }
+  }
 }

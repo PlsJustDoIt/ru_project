@@ -2,6 +2,7 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
@@ -9,7 +10,9 @@ import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Config.init();
   runApp(
     MultiProvider(
       providers: [
@@ -95,37 +98,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-// class AuthChecker extends StatelessWidget {
-//   const AuthChecker({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // Appel de la méthode isConnected via le UserProvider
-//     // bool isConnected = await UserProvider().isConnected();// await UserProvider().isLoggedIn();  // Vérification synchrone
-//     //
-//     // // Choisir la page selon l'état de connexion
-//     // if (isConnected) {
-//     //   return const TabBarWidget();  // Si connecté, aller à l'écran principal
-//     // } else {
-//     //   return WelcomeWidget2();  // Sinon, afficher l'écran de connexion
-//     // }
-//     return FutureBuilder(
-//         future: UserProvider().isConnected(),
-//         builder: (context, snapshot) {
-//           if (snapshot.connectionState == ConnectionState.done) {
-//             if (snapshot.data == true) {
-//               return const TabBarWidget();
-//             } else {
-//               return const WelcomeWidget();
-//             }
-//           } else {
-//             return const Scaffold(
-//               body: Center(
-//                 child: CircularProgressIndicator(),
-//               ),
-//             );
-//           }
-//         });
-//   }
-// }
