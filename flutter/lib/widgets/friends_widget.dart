@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:ru_project/models/friends_request.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/friends_request_widget.dart';
 import 'package:ru_project/widgets/search_user_widget.dart';
 import 'package:ru_project/widgets/chat_widget.dart';
 
@@ -177,21 +179,21 @@ class _FriendsListSheetState extends State<FriendsListSheet>
             ),
           ),
 
-          // Barre de recherche
+          // Bouton de demande d'ami
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Rechercher un ami...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-            ),
+            child: IconButton(
+                onPressed: () async {
+                  Map<String, dynamic> response = await apiService.getFriendsRequests();
+                  List<FriendsRequest> friendsRequests = response['friendsRequests'];
+                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                    return FriendsRequestWidget(
+                      initialFriendsRequests: friendsRequests,
+                      apiService: apiService,
+                    );
+                  }));
+                },
+                icon: Icon(Icons.person_add_alt_1_rounded)),
           ),
 
           // Nombre d'amis

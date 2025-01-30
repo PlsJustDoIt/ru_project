@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/main.dart';
+import 'package:ru_project/models/friends_request.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/models/user.dart';
@@ -229,10 +231,10 @@ class ApiService {
     }
   }
 
-  // Fonction pour ajouter un ami
+  // Fonction pour ajouter un ami 
   Future<User?> addFriend(String friendUsername) async {
     try {
-      final Response response = await _dio.post('/users/add-friend', data: {
+      final Response response = await _dio.post('/users/send-friend-request', data: { //temp  /users/add-friend
         'username': friendUsername,
       });
 
@@ -275,6 +277,7 @@ class ApiService {
     }
   }
 
+  // Fonction pour supprimer un ami TODO : à revoir pour suprimer dans les 2 sens dans le backend 
   Future<bool> removeFriend(String friendId) async {
     try {
       final Response response =
@@ -294,6 +297,89 @@ class ApiService {
       return false; // Renvoie une exception si quelque chose ne va pas
     }
   }
+
+  // Fonction pour récupérer les demandes d'amis
+  Future<Map<String, dynamic>> getFriendsRequests() async {
+  try {
+    final Response response = await _dio.get('/users/friends-requests');
+    
+    logger.i('Friends requests: ${response.data}');
+
+    List<dynamic> rawFriendsRequests = response.data['friendsRequests'];
+
+    if (response.statusCode == 200 && response.data != null) {
+      logger.i('Raw friends requests: $rawFriendsRequests');
+      List<FriendsRequest> friendsRequests = rawFriendsRequests.map((request) {
+        logger.i('Processing friend request: $request, type: ${request.runtimeType}');
+        return FriendsRequest.fromJson(request);
+      }).toList();
+      logger.i('Processed friends requests: $friendsRequests');
+      
+      return {
+        'friendsRequests': friendsRequests,
+        'success': true
+      };
+    }
+    
+    logger.e('Invalid response from server: ${response.statusCode} ${response.data?['error']}');
+    return {
+      'error': response.data?['error'] ?? 'An error occurred',
+      'success': false
+    };
+  } catch (e) {
+    logger.e('Failed to get friend requests: $e');
+    return {
+      'error': 'Failed to get friend requests: $e',
+      'success': false
+    };
+  }
+}
+
+// Fonction pour accepter une demande d'ami
+Future<bool> acceptFriendRequest(String requestId) async {
+  try {
+    final Response response = await _dio.post('/users/handle-friend-request', 
+      data: {
+        'requestId': requestId,
+        'isAccepted': true
+      }
+    );
+
+    if (response.statusCode == 200) {
+      logger.i('Friend request accepted');
+      return true;
+    }
+    
+    logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+    return false;
+  } catch (e) {
+    logger.e('Failed to accept friend request: $e');
+    return false;
+  }
+}
+
+// Fonction pour refuser une demande d'ami
+Future<bool> rejectFriendRequest(String requestId) async {
+  try {
+    final Response response = await _dio.post('/users/handle-friend-request', 
+      data: {
+        'requestId': requestId,
+        'isAccepted': false
+      }
+    );
+
+    if (response.statusCode == 200) {
+      logger.i('Friend request rejected');
+      return true;
+    }
+    
+    logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+    return false;
+  } catch (e) {
+    logger.e('Failed to reject friend request: $e');
+    return false;
+  }
+}
 
   //get menus from the API
   Future<List<Menu>> getMenus() async {
@@ -390,7 +476,7 @@ class ApiService {
     }
   }
 
-  //update user username TODO : se servir d'inspiration pour les autres
+  //update user username
   Future<Map<String, dynamic>> updateUsername(String username) async {
     try {
       final Response response = await _dio.put('/users/update-username', data: {

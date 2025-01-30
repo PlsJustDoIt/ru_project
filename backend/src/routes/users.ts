@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import User, { IUser } from '../models/user.js';
+import FriendsRequest from '../models/friendsRequest.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import { uploadAvatar, convertAndCompressAvatar } from '../services/multer.js';
@@ -347,6 +348,13 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
         if (user == null) {
             return res.status(404).json({ error: 'User not found' });
         }
+        const friend = await User.findById(friendId);
+        if (friend == null) {
+            return res.status(404).json({ error: 'Friend not found' });
+        }
+
+        friend.friends = friend.friends.filter((f: { toString: () => string }) => f.toString() !== user._id.toString());
+
         const index = user.friends.findIndex((friend: { toString: () => string }) => friend.toString() === friendId);
         if (index !== -1) {
             user.friends.splice(index, 1);
@@ -356,6 +364,103 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
     } catch (err: unknown) {
         logger.error('Could not remove friend : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
+    }
+});
+
+router.get('/friends-requests', auth, async (req: Request, res: Response) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const resFriendsRequests = await FriendsRequest.find({ receiver: user._id }).populate<{ sender: IUser }>('sender', 'username avatarUrl');
+
+        logger.info('res : %o', resFriendsRequests);
+
+        const friendsRequests = resFriendsRequests.map(request => ({
+            id: request._id,
+            sender: {
+                username: request.sender.username,
+                avatarUrl: request.sender.avatarUrl,
+                id: request.sender._id,
+            },
+            createdAt: request.createdAt,
+            status: request.status,
+        }));
+
+        return res.json({ friendsRequests: friendsRequests });
+    } catch (err: unknown) {
+        logger.error('Could not retrieve friends requests : ' + err);
+        return res.status(500).json({ error: 'An error has occured' });
+    }
+});
+
+router.post('/send-friend-request', auth, async (req: Request, res: Response) => {
+    try {
+        const { username } = req.body;
+        const sender = await User.findById(req.user.id);
+        if (sender === null) {
+            logger.error('User not found');
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const receiver = await User.findOne({ username: username });
+        if (receiver === null) {
+            logger.error('Receiver not found');
+            return res.status(404).json({ error: 'Receiver not found' });
+        }
+        const friendsRequest = new FriendsRequest({
+            sender: sender._id,
+            receiver: receiver._id,
+            status: 'pending',
+        });
+        await friendsRequest.save();
+        return res.json({ message: 'Friend request sent', friend: receiver });
+    } catch (err: unknown) {
+        logger.error('Could not send friend request : ' + err);
+        return res.status(500).json({ error: 'An error has occured' });
+    }
+});
+
+router.post('/handle-friend-request', auth, async (req: Request, res: Response) => {
+    try {
+        const { requestId, isAccepted } = req.body;
+
+        if (!requestId) {
+            return res.status(400).json({ error: 'No requestId provided' });
+        }
+
+        if (typeof isAccepted !== 'boolean') {
+            return res.status(400).json({ error: 'isAccepted must be a boolean' });
+        }
+
+        const friendRequest = await FriendsRequest.findById(requestId);
+        if (friendRequest === null) {
+            return res.status(404).json({ error: 'Friend request not found' });
+        }
+
+        if (isAccepted) {
+            // Add each user to the other's friends list
+            const sender = await User.findById(friendRequest.sender);
+            const receiver = await User.findById(friendRequest.receiver);
+
+            if (sender && receiver) {
+                sender.friends.push(receiver._id);
+                receiver.friends.push(sender._id);
+
+                await sender.save();
+                await receiver.save();
+            }
+        } else {
+            // TODO géré cas refus : notifier l'user qui a fait la demande d'ami
+        }
+
+        // Temp delete the friend request for now (TODO : use status field)
+        await friendRequest.deleteOne();
+
+        return res.json({ message: `Friend request ${isAccepted ? 'accepted' : 'declined'}` });
+    } catch (err: unknown) {
+        logger.error('Could not handle friend request : ' + err);
+        return res.status(500).json({ error: 'An error has occurred' });
     }
 });
 
