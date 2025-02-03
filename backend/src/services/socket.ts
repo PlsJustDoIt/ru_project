@@ -5,7 +5,7 @@ import logger from './logger.js';
 import Room, { generatePrivateRoomName } from '../models/room.js';
 import User from '../models/user.js';
 import { instrument } from '@socket.io/admin-ui';
-import jwt from 'jsonwebtoken';
+import { verify, Secret } from 'jsonwebtoken';
 
 export class SocketService {
     private io: SocketIOServer | null = null;
@@ -60,7 +60,7 @@ export class SocketService {
                 }
 
                 // Vérifier et décoder le token
-                const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as jwt.Secret) as { id: string };
+                const decoded = verify(token, process.env.JWT_ACCESS_SECRET as Secret) as { id: string };
                 socket.data.userId = decoded.id;
                 next();
             } catch (error) {

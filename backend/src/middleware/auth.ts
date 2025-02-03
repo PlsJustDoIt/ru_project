@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { verify, Secret } from 'jsonwebtoken';
 
 import { Request, Response, NextFunction } from 'express';
 import logger from '../services/logger.js';
@@ -16,7 +16,7 @@ export default function (req: Request, res: Response, next: NextFunction): void 
         return;
     }
     try {
-        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as jwt.Secret);
+        const decoded = verify(token, process.env.JWT_ACCESS_SECRET as Secret);
         if (typeof decoded === 'string') { // token expired
             logger.error('Invalid token');
             throw new Error('Invalid token');

@@ -1,28 +1,14 @@
 import multer from 'multer';
-import { resolve, dirname, join, extname, basename } from 'path';
+import { dirname, join, extname, basename } from 'path';
 import logger from './logger.js';
 import sharp from 'sharp';
-import fs from 'fs/promises';
+import { mkdir, unlink } from 'fs/promises';
 import { NextFunction, Request, Response } from 'express';
-import { isProduction } from '../config.js';
-
-let uploadDir;
-let screenshotDir;
-
-logger.info(resolve());
-logger.info(dirname(resolve()));
-
-if (isProduction) {
-    uploadDir = dirname(resolve()) + '/uploads/avatar';
-    screenshotDir = dirname(resolve()) + '/uploads/bugReport';
-} else {
-    uploadDir = resolve() + '/uploads/avatar';
-    screenshotDir = resolve() + '/uploads/bugReport';
-}
+import { uploadsPath, bugReportPath } from '../config.js';
 
 try {
-    await fs.mkdir(uploadDir, { recursive: true });
-    await fs.mkdir(screenshotDir, { recursive: true });
+    await mkdir(uploadsPath, { recursive: true });
+    await mkdir(bugReportPath, { recursive: true });
 } catch (error) {
     logger.error('Error creating upload directory:', error);
 }
@@ -30,7 +16,7 @@ try {
 const storageAvatar = multer.diskStorage({
 
     destination: (req, file, cb) => {
-        cb(null, uploadDir); // Répertoire où les fichiers seront stockés
+        cb(null, uploadsPath); // Répertoire où les fichiers seront stockés
     },
     filename: (req, file, cb) => {
         const userId = req.user.id; // Assurez-vous que req.user existe et contient un id
@@ -41,7 +27,7 @@ const storageAvatar = multer.diskStorage({
 
 const storageScreenshotBugReport = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, screenshotDir); // Répertoire où les fichiers seront stockés
+        cb(null, bugReportPath); // Répertoire où les fichiers seront stockés
     },
     filename: (req, file, cb) => {
         logger.info(file);
@@ -110,7 +96,7 @@ const convertAndCompress = async (req: Request, res: Response, next: NextFunctio
                 .toFile(outputPath);
 
             // Supprimer le fichier original
-            await fs.unlink(inputPath);
+            await unlink(inputPath);
 
             // Mettre à jour les informations du fichier
             req.file.path = outputPath;

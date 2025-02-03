@@ -3,7 +3,7 @@ import User, { IUser } from '../models/user.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import { uploadAvatar, convertAndCompress, uploadBugReport } from '../services/multer.js';
-import bcrypt from 'bcrypt';
+import { compare } from 'bcrypt';
 import BugReport from '../models/bugReport.js';
 const router = Router();
 
@@ -132,7 +132,7 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
             return res.status(500).json({ error: 'An error has occured' });
         }
 
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        const isMatch = await compare(oldPassword, user.password);
         if (!isMatch) {
             logger.error('Incorrect old password');
             return res.status(400).json({ error: { message: 'Incorrect old password', field: 'oldPassword' } });

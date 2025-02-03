@@ -2,17 +2,11 @@ import { Router, Request, Response } from 'express';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
 import axios, { AxiosResponse } from 'axios';
-import dotenv from 'dotenv';
 import { TempsInfo } from '../interfaces/tempsInfo.js';
 import NodeCache from 'node-cache';
-import fs from 'fs';
-import path from 'path';
-
+import { readFileSync } from 'fs';
+import { join, resolve } from 'path';
 import { isProduction } from '../config.js';
-
-if (!isProduction) {
-    dotenv.config();
-}
 
 const cache = new NodeCache({ stdTTL: 60 }); // 1 minute
 const router = Router();
@@ -27,7 +21,7 @@ logger.info('API Key : ' + apiKey);
 router.get('/info', auth, async (req: Request, res: Response) => {
     try {
         if (!isProduction) {
-            const data = fs.readFileSync(path.join(path.resolve(), 'horaires.json'));
+            const data = readFileSync(join(resolve(), 'horaires.json'));
             const horaires = JSON.parse(data.toString());
             return res.json(horaires);
         }
