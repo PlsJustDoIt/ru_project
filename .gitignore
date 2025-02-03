@@ -49,3 +49,4 @@ uploads
 **/.env
 env.sh
 /backend/.adminjs/**
+backend/menus.xml

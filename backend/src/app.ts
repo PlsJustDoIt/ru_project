@@ -18,12 +18,12 @@ import { serve, setup } from 'swagger-ui-express';
 import YAML from 'yaml';
 import { socketService } from './services/socket.js';
 import socketRoute from './routes/socket.js';
+import { join } from 'path';
 import AdminJS, { CurrentAdmin, DefaultAuthenticatePayload, DefaultAuthProvider } from 'adminjs';
 import BugReport from './models/bugReport.js';
 import * as AdminJSMongoose from '@adminjs/mongoose';
 import User from './models/user.js';
 import { ComponentLoader } from 'adminjs';
-import { join } from 'path';
 import AdminJSExpress from '@adminjs/express';
 import { AuthService } from './services/auth.js';
 
@@ -73,6 +73,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
 app.use('/api/ginko', ginkoRoutes);
 app.use('/api/socket', socketRoute);
+app.get('/api/health', (res: Response) => {
+    res.status(200).json({ message: 'API is alive !' });
+});
 app.use('/api/uploads', express.static(uploadsPath));
 
 // Configurer AdminJS
