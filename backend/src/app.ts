@@ -1,34 +1,35 @@
 import { isProduction, uploadsPath, rootDir, componentsPath } from './config.js';
 import express, { Request, Response } from 'express';
-import mongoose from 'mongoose';
+import { set, connect } from 'mongoose';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import ruRoutes from './routes/ru.js';
 import ginkoRoutes from './routes/ginko.js';
 import cors from 'cors';
-import fs from 'fs';
+import { createWriteStream, readFileSync } from 'fs';
 // import https from 'https';
-import path from 'path';
 import morgan from 'morgan';
 import logger from './services/logger.js';
 import { exit } from 'process';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import helmet from 'helmet';
-import swaggerUi from 'swagger-ui-express';
+import { serve, setup } from 'swagger-ui-express';
 import YAML from 'yaml';
 import { socketService } from './services/socket.js';
 import socketRoute from './routes/socket.js';
-import AdminJS from 'adminjs';
+import AdminJS, { CurrentAdmin, DefaultAuthenticatePayload, DefaultAuthProvider } from 'adminjs';
 import BugReport from './models/bugReport.js';
-import AdminJSExpress from '@adminjs/express';
 import * as AdminJSMongoose from '@adminjs/mongoose';
 import User from './models/user.js';
 import { ComponentLoader } from 'adminjs';
+import { join } from 'path';
+import AdminJSExpress from '@adminjs/express';
+import { AuthService } from './services/auth.js';
 
 const app = express();
 
-mongoose.set('strictQuery', false);
+set('strictQuery', false);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -49,7 +50,7 @@ app.use(cors());
 app.use(compression()); // Compression des réponses
 if (isProduction) {
     console.log('lancement en production');
-    const accessLogStream = fs.createWriteStream(path.join(rootDir, 'logs', 'access.log'), { flags: 'a+' });
+    const accessLogStream = createWriteStream(join(rootDir, 'logs', 'access.log'), { flags: 'a+' });
     // log requests combined format
     app.use(morgan('combined', { stream: accessLogStream }));
 } else {
@@ -63,7 +64,7 @@ if (process.env.MONGO_URI == null) {
 }
 
 logger.info('MONGO_URI: ' + process.env.MONGO_URI);
-mongoose.connect(process.env.MONGO_URI)
+connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB Connected'))
     .catch(err => logger.error('MongoDB connection error:', err));
 
@@ -88,6 +89,10 @@ const admin = new AdminJS({
         {
             resource: BugReport,
             options: {
+                sort: {
+                    sortBy: 'createdAt',
+                    direction: 'desc',
+                },
                 properties: {
                     user: {
                         reference: 'User', // Référence au modèle User
@@ -97,9 +102,9 @@ const admin = new AdminJS({
                     },
                     screenshot_url: {
                         components: {
-                            list: componentLoader.add('ScreenshotUrlList', path.join(componentsPath, 'screenshot-url-list')),
-                            show: componentLoader.add('ScreenshotUrlShow', path.join(componentsPath, 'screenshot-url-show')),
-                            edit: componentLoader.add('ScreenshotUrlEdit', path.join(componentsPath, 'screenshot-url-edit')),
+                            list: componentLoader.add('ScreenshotUrlList', join(componentsPath, 'screenshot-url-list')),
+                            show: componentLoader.add('ScreenshotUrlShow', join(componentsPath, 'screenshot-url-show')),
+                            edit: componentLoader.add('ScreenshotUrlEdit', join(componentsPath, 'screenshot-url-edit')),
                         },
                     },
                 },
@@ -131,9 +136,9 @@ const admin = new AdminJS({
                     },
                     avatarUrl: {
                         components: {
-                            list: componentLoader.add('AvatarUrlList', path.join(componentsPath, 'avatar-url-list')),
-                            show: componentLoader.add('AvatarUrlShow', path.join(componentsPath, 'avatar-url-show')),
-                            edit: componentLoader.add('AvatarUrlEdit', path.join(componentsPath, 'avatar-url-edit')),
+                            list: componentLoader.add('AvatarUrlList', join(componentsPath, 'avatar-url-list')),
+                            show: componentLoader.add('AvatarUrlShow', join(componentsPath, 'avatar-url-show')),
+                            edit: componentLoader.add('AvatarUrlEdit', join(componentsPath, 'avatar-url-edit')),
                         },
                     },
                 },
@@ -164,24 +169,58 @@ customRouter.get('/admin/resources/uploads/*', handleImageRequest);
 customRouter.get('/admin/api/resources/uploads/*', handleImageRequest);
 customRouter.get('/resources/uploads/*', handleImageRequest);
 customRouter.get('/api/resources/uploads/*', handleImageRequest);
-const adminRouter = AdminJSExpress.buildRouter(admin, customRouter);
+
+// VA TE FAIRE ENCULER ADMIN JS
+
+const authenticate = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin | null> => {
+    return new Promise((resolve) => {
+        AuthService.authenticate(payload.email, payload.password)
+            .then((user) => {
+                if (user.role === 'admin') {
+                    resolve({ email: user.username });
+                } else {
+                    resolve(null);
+                }
+            })
+            .catch((error) => {
+                logger.error('Authentication error: %o', error);
+                resolve(null);
+            });
+    });
+};
+
+const authProvider = new DefaultAuthProvider({
+    componentLoader,
+    authenticate,
+});
+
+const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
+    cookiePassword: process.env.JWT_ACCESS_SECRET ?? 'truc',
+    provider: authProvider,
+
+}, null, {
+    resave: false,
+    saveUninitialized: true,
+    secret: process.env.JWT_ACCESS_SECRET ?? 'truc',
+});
+app.use(customRouter);
 app.use(admin.options.rootPath, adminRouter);
 logger.info(`admin JS running on http://localhost:${5000}${admin.options.rootPath}`);
 
 if (isProduction) {
-    app.use('/admin', express.static(path.join(rootDir, '.adminjs')));
+    app.use('/admin', express.static(join(rootDir, '.adminjs')));
 } else {
     admin.watch();
 }
 
 // Swagger
-const swaggerFilePath = path.join(rootDir, 'swagger.yaml');
-const file = fs.readFileSync(swaggerFilePath, 'utf8');
+const swaggerFilePath = join(rootDir, 'swagger.yaml');
+const file = readFileSync(swaggerFilePath, 'utf8');
 const swaggerDocument = YAML.parse(file);
-swaggerUi.setup(swaggerDocument);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// setup(swaggerDocument);
+app.use('/api-docs', serve, setup(swaggerDocument));
 app.get('/test-socket', (req, res) => {
-    return res.sendFile(path.join(rootDir, 'public', 'socket-test.html'));
+    return res.sendFile(join(rootDir, 'public', 'socket-test.html'));
 });
 
 const PORT = process.env.PORT || 5000;
