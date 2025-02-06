@@ -48,9 +48,10 @@ class FriendsListSheet extends StatefulWidget {
   State createState() => _FriendsListSheetState();
 }
 
-class _FriendsListSheetState extends State<FriendsListSheet>
-    with AutomaticKeepAliveClientMixin {
+class _FriendsListSheetState extends State<FriendsListSheet>{
   List<User>? friends;
+  List<FriendsRequest>? friendsRequests;
+  late ApiService apiService;
 
   @override
   bool get wantKeepAlive => true; // Important !
@@ -58,8 +59,31 @@ class _FriendsListSheetState extends State<FriendsListSheet>
   @override
   void initState() {
     super.initState();
+    apiService = Provider.of<ApiService>(context, listen: false);
     // Appelle la fonction pour charger les amis au lancement du widget
     _loadFriends();
+  }
+
+ @override
+  void activate() {
+    super.activate();
+    _loadFriendsRequests(); // Reload when widget is reopened
+  }
+
+  Future<void> _loadFriendsRequests() async {
+    try {
+      Map<String, dynamic> response = await apiService.getFriendsRequests();
+      if (!mounted) return;
+      setState(() {
+        friendsRequests = response['friendsRequests'];
+      });
+    } catch (e) {
+      logger.e('Error loading friend requests: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading friend requests: $e')),
+      );
+    }
   }
 
   static String generatePrivateRoomName(String user1Id, String user2Id) {
@@ -70,8 +94,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
 
   Future<void> _loadFriends() async {
     try {
-      ApiService api = Provider.of<ApiService>(context, listen: false);
-      List<User> fetchedFriends = await api.getFriends();
+      List<User> fetchedFriends = await apiService.getFriends();
       logger.i('Amis récupérés: $fetchedFriends');
       setState(() {
         friends = fetchedFriends;
@@ -90,8 +113,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
 
   Future<void> addFriend(String friend) async {
     try {
-      ApiService api = Provider.of<ApiService>(context, listen: false);
-      User? friendAdded = await api.addFriend(friend);
+      User? friendAdded = await apiService.addFriend(friend);
       if (friendAdded == null) {
         throw 'peut etre un jour des vrais messages d\'erreurs';
       } else {
@@ -112,7 +134,6 @@ class _FriendsListSheetState extends State<FriendsListSheet>
   }
 
   void _showDeleteConfirmationDialog(String friendId) {
-    ApiService api = Provider.of<ApiService>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -128,7 +149,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
             child: Text('Supprimer', style: TextStyle(color: Colors.white)),
             onPressed: () {
               // Logique de suppression
-              api.removeFriend(friendId);
+              apiService.removeFriend(friendId);
 
               setState(() {
                 friends?.removeWhere((friend) => friend.id == friendId);
@@ -143,8 +164,20 @@ class _FriendsListSheetState extends State<FriendsListSheet>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    final apiService = Provider.of<ApiService>(context);
+    //super.build(context);
+    //recuperer les demandes d'amis
+    //if (friendsRequests == null) _loadFriendsRequests();
+    if (friendsRequests == null) {
+      () async {
+        logger.i('Chargement des demandes d\'amis');
+        Map<String, dynamic> response = await apiService.getFriendsRequests();
+        setState(() {       
+          friendsRequests = response['friendsRequests'];
+        });
+      }();
+    }
+    
+
     final userProvider = Provider.of<UserProvider>(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
@@ -179,22 +212,27 @@ class _FriendsListSheetState extends State<FriendsListSheet>
             ),
           ),
 
-          // Bouton de demande d'ami
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: IconButton(
-                onPressed: () async {
-                  Map<String, dynamic> response = await apiService.getFriendsRequests();
-                  List<FriendsRequest> friendsRequests = response['friendsRequests'];
-                  Navigator.push(context, MaterialPageRoute(builder: (context) {
-                    return FriendsRequestWidget(
-                      initialFriendsRequests: friendsRequests,
-                      apiService: apiService,
-                    );
-                  }));
-                },
-                icon: Icon(Icons.person_add_alt_1_rounded)),
-          ),
+            // Bouton de demande d'ami
+            Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: IconButton(
+              onPressed: () async {
+                Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return FriendsRequestWidget(
+                  initialFriendsRequests: friendsRequests,
+                  apiService: apiService,
+                  onAddFriend: addFriendToFriendsList,
+                );
+                }));
+              },
+              icon: (friendsRequests != null && friendsRequests!.isNotEmpty)
+                ? Icon(Icons.notifications_active, color: Colors.red)
+                : Icon(Icons.notifications),
+              ),
+            ),
+            ),
 
           // Nombre d'amis
           Padding(

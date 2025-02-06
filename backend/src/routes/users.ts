@@ -239,13 +239,24 @@ router.get('/search', auth, async (req: Request, res: Response) => {
         const searchTerm = query.toLowerCase().trim();
         const searchItem = new RegExp(query, 'i');
 
-        const foundUsers = await User.find({ username: searchItem })
+        let foundUsers = await User.find({ username: searchItem })
             .select('id username avatarUrl status')
             .limit(10);
 
         if (foundUsers.length === 0) {
             return res.status(404).json({ error: 'No users found' });
         }
+
+        const existingRequests = await FriendsRequest.find({
+            sender: req.user.id,
+            status: 'pending',
+        }).select('receiver');
+
+        const requestedIds = new Set(
+            existingRequests.map(req => req.receiver.toString()),
+        );
+
+        foundUsers = foundUsers.filter(u => !requestedIds.has(u._id.toString()));
 
         const searchResults = foundUsers.map((user) => {
             const username = user.username.toLowerCase();
@@ -311,32 +322,32 @@ function levenshteinDistance(str1: string, str2: string): number {
     return dp[m][n];
 }
 
-router.post('/add-friend', auth, async (req: Request, res: Response) => {
-    const { username } = req.body;
-    try {
-        const friend = await User.findOne({ username: username });
-        if (!friend) return res.status(404).json({ error: 'Friend not found' });
-        const user = await User.findById(req.user.id);
-        if (user === null) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+// router.post('/add-friend', auth, async (req: Request, res: Response) => {
+//     const { username } = req.body;
+//     try {
+//         const friend = await User.findOne({ username: username });
+//         if (!friend) return res.status(404).json({ error: 'Friend not found' });
+//         const user = await User.findById(req.user.id);
+//         if (user === null) {
+//             return res.status(404).json({ error: 'User not found' });
+//         }
 
-        if (user._id.equals(friend._id)) {
-            return res.status(400).json({ error: 'Cannot add yourself' });
-        }
+//         if (user._id.equals(friend._id)) {
+//             return res.status(400).json({ error: 'Cannot add yourself' });
+//         }
 
-        if (user.friends.some(f => f._id.equals(friend._id))) {
-            return res.status(400).json({ error: 'Already friends' });
-        }
-        user.friends.push(friend._id);
-        await user.save();
-        logger.info('friends list : ' + user.friends);
-        return res.json({ message: 'Friend added', friend: friend });
-    } catch (err: unknown) {
-        logger.error('Could not add friend : ' + err);
-        return res.status(500).json({ error: 'An error has occured' });
-    }
-});
+//         if (user.friends.some(f => f._id.equals(friend._id))) {
+//             return res.status(400).json({ error: 'Already friends' });
+//         }
+//         user.friends.push(friend._id);
+//         await user.save();
+//         logger.info('friends list : ' + user.friends);
+//         return res.json({ message: 'Friend added', friend: friend });
+//     } catch (err: unknown) {
+//         logger.error('Could not add friend : ' + err);
+//         return res.status(500).json({ error: 'An error has occured' });
+//     }
+// });
 
 router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
     try {
@@ -344,26 +355,29 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
         if (!friendId) {
             return res.status(400).json({ error: 'No friendId provided' });
         }
+
         const user = await User.findById(req.user.id);
-        if (user == null) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
+
         const friend = await User.findById(friendId);
-        if (friend == null) {
+        if (!friend) {
             return res.status(404).json({ error: 'Friend not found' });
         }
 
+        // Remove user from friend's friends list
         friend.friends = friend.friends.filter((f: { toString: () => string }) => f.toString() !== user._id.toString());
+        await friend.save();
 
-        const index = user.friends.findIndex((friend: { toString: () => string }) => friend.toString() === friendId);
-        if (index !== -1) {
-            user.friends.splice(index, 1);
-        }
+        // Remove friend from user's friends list
+        user.friends = user.friends.filter((f: { toString: () => string }) => f.toString() !== friendId);
         await user.save();
-        return res.json({ user: user });
+
+        return res.json({ message: 'Friend removed successfully', user: user });
     } catch (err: unknown) {
         logger.error('Could not remove friend : ' + err);
-        return res.status(500).json({ error: 'An error has occured' });
+        return res.status(500).json({ error: 'An error has occurred' });
     }
 });
 
@@ -408,6 +422,45 @@ router.post('/send-friend-request', auth, async (req: Request, res: Response) =>
             logger.error('Receiver not found');
             return res.status(404).json({ error: 'Receiver not found' });
         }
+
+        if (sender._id.equals(receiver._id)) {
+            logger.error('Cannot send friend request to yourself');
+            return res.status(400).json({ error: 'Cannot send friend request to yourself' });
+        }
+
+        // case where the user is already friend with the receiver
+        if (sender.friends.some(f => f.equals(receiver._id))) {
+            logger.error('Already friends');
+            return res.status(400).json({ error: 'Already friends' });
+        }
+
+        const existingRequest = await FriendsRequest.findOne({
+            sender: sender._id,
+            receiver: receiver._id,
+            status: 'pending',
+        });
+        if (existingRequest) {
+            logger.error('Friend request already exists');
+            return res.status(400).json({ error: 'Friend request already exists' });
+        }
+
+        const existingReverseRequest = await FriendsRequest.findOne({
+            sender: receiver._id,
+            receiver: sender._id,
+            status: 'pending',
+        });
+        if (existingReverseRequest) {
+            if (sender && receiver) {
+                sender.friends.push(receiver._id);
+                receiver.friends.push(sender._id);
+
+                await sender.save();
+                await receiver.save();
+            }
+            await existingReverseRequest.deleteOne();
+            return res.json({ message: 'Friend request accepted', friend: receiver });
+        }
+
         const friendsRequest = new FriendsRequest({
             sender: sender._id,
             receiver: receiver._id,

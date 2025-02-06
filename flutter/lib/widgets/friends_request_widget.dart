@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/friends_request.dart';
+import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/models/message.dart';
+import 'package:ru_project/services/logger.dart';
 
 class FriendsRequestWidget extends StatefulWidget {
   final List<FriendsRequest>? initialFriendsRequests;
   final ApiService apiService;
+  final void Function(User friend) onAddFriend;
 
   const FriendsRequestWidget({
     super.key,
     required this.initialFriendsRequests,
     required this.apiService,
+    required this.onAddFriend,
   });
 
   @override
@@ -25,6 +29,13 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
   void initState() {
     super.initState();
     _friendsRequests = widget.initialFriendsRequests;
+      () async {
+        logger.i('Chargement des demandes d\'amis');
+        Map<String, dynamic> response = await widget.apiService.getFriendsRequests();
+        setState(() {       
+          _friendsRequests = response['friendsRequests'];
+        });
+      }();
   }
 
   void _removeFriendRequest(int index) {
@@ -61,6 +72,9 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                   final request = _friendsRequests![index];
                   return Padding(padding: const EdgeInsets.all(8), child: 
                   ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: NetworkImage(widget.apiService.getImageNetworkUrl(request.sender["avatarUrl"])),
+                    ),
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(color: AppColors.primaryColor),
                       borderRadius: BorderRadius.circular(10),
@@ -76,6 +90,10 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                             bool res = await widget.apiService.acceptFriendRequest(request.requestId);
                             if (res) {
                               _removeFriendRequest(index);
+                              widget.onAddFriend(User(id: request.sender["id"], username: request.sender["username"], status:  'absent', avatarUrl: request.sender["avatarUrl"]));
+                              if (_friendsRequests!.isEmpty && mounted) {
+                                Navigator.pop(context);
+                              }
                             } else {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
