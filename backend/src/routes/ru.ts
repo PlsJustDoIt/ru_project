@@ -1,10 +1,10 @@
 import auth from '../middleware/auth.js';
 import { Router, Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import xml2js from 'xml2js';
+import { Parser } from 'xml2js';
 import { MenuResponse, MenuXml } from '../interfaces/menu.js';
 import logger from '../services/logger.js';
-import fs from 'fs';
+import { readFileSync } from 'fs';
 
 const router = Router();
 const ru_lumiere_id = 'r135';
@@ -37,6 +37,7 @@ function decodeHtmlEntities(text: string) {
 }
 
 // Fonction récursive pour décoder les valeurs dans un objet JSON
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function decodeJsonValues(obj: any) {
     const res = JSON.parse(JSON.stringify(obj)); // On crée une copie de l'objet pour éviter de modifier l'original
 
@@ -116,10 +117,10 @@ async function fetchMenusFromExternalAPI() {
         // // ecrire le contenu du fichier xml dans un fichier menus.xml
         // fs.writeFileSync('menus.xml', xmlData, 'utf-8');
 
-        const xmlData = fs.readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
+        const xmlData = readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
 
         // Conversion du XML en objet JS
-        const parser = new xml2js.Parser({
+        const parser = new Parser({
             explicitArray: false,
             preserveChildrenOrder: true, // Conserve l'ordre des enfants XML
         });

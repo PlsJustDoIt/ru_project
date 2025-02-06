@@ -1,3 +1,4 @@
+import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
@@ -24,7 +25,7 @@ class TabBarWidget extends StatelessWidget {
     final apiService = Provider.of<ApiService>(context, listen: false);
 
     return DefaultTabController(
-      length: 8,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -32,6 +33,24 @@ class TabBarWidget extends StatelessWidget {
             style: TextStyle(
                 fontFamily: 'Marianne', color: AppColors.secondaryColor),
           ),
+          leading: IconButton(
+              icon: Icon(Icons.bug_report),
+              color: Colors.white,
+              onPressed: () {
+                BetterFeedback.of(context).show((UserFeedback feedback) async {
+                  bool res = await apiService.sendFeedback(feedback);
+                  if (!context.mounted) {
+                    return;
+                  }
+                  if (res) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Feedback envoyé :)')));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Echec de l\'envoi du feedback :(')));
+                  }
+                });
+              }),
           actions: [
             IconButton(
                 icon: const Icon(Icons.logout),
@@ -66,7 +85,6 @@ class TabBarWidget extends StatelessWidget {
               Tab(icon: Icon(Icons.login), text: 'Carte ru'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
-              Tab(icon: Icon(Icons.settings), text: 'socket test'),
               Tab(icon: Icon(Icons.messenger), text: 'Chat'),
               Tab(icon: Icon(Icons.person), text: 'Profil'),
               Tab(icon: Icon(Icons.directions_bus), text: 'Bus'),
@@ -80,7 +98,6 @@ class TabBarWidget extends StatelessWidget {
             const MenuWidget(),
             FriendsListSheet(),
             ChatScreen(),
-            ChatUi(roomName: 'Global', actualUser: userProvider.user!),
             ProfileWidget(),
             TransportTimeWidget(),
             DebugWidget(),

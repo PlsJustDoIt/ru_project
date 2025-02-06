@@ -1,5 +1,7 @@
+import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
@@ -10,7 +12,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Config.init();
   runApp(
     MultiProvider(
       providers: [
@@ -24,7 +28,26 @@ void main() {
                   secureStorage: SecureStorage(),
                 )),
       ],
-      child: const MyApp(),
+      child: BetterFeedback(
+        theme: FeedbackThemeData(
+          feedbackSheetColor: Colors.white,
+          background: Colors.green,
+          drawColors: [
+            Colors.red,
+            Colors.green,
+            Colors.blue,
+            Colors.yellow,
+          ],
+        ),
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalFeedbackLocalizationsDelegate(),
+        ],
+        localeOverride: const Locale('fr', 'FR'),
+        child: MyApp(),
+      ),
     ),
   );
 }

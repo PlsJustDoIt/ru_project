@@ -9,6 +9,7 @@ interface IUser extends Document {
     friends: Types.ObjectId[];
     avatarUrl: string;
     _id: Types.ObjectId;
+    role: 'user' | 'admin' | 'moderator';
 }
 
 const UserSchema = new Schema({
@@ -17,7 +18,8 @@ const UserSchema = new Schema({
     status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'absent' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     avatarUrl: { type: String, default: 'uploads/avatar/default.png' },
-});
+    role: { type: String, enum: ['user', 'admin', 'moderator'], default: 'user' },
+}, { timestamps: true });
 
 UserSchema.pre('save', async function (next): Promise<void> {
     try {

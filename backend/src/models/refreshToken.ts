@@ -1,11 +1,13 @@
-import mongoose from 'mongoose';
+import { Schema, model } from 'mongoose';
 
-const RefreshTokenSchema = new mongoose.Schema({
+const RefreshTokenSchema = new Schema({
     token: { type: String, required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId,
+    userId: { type: Schema.Types.ObjectId,
         ref: 'User',
         required: true },
     expires: { type: Date, required: true },
-});
+}, { timestamps: true });
 
-export default mongoose.model('RefreshToken', RefreshTokenSchema);
+RefreshTokenSchema.index({ createdAt: 1 }, { expireAfterSeconds: 24 * 3600 * 7 }); // Expire après une semaine
+
+export default model('RefreshToken', RefreshTokenSchema);

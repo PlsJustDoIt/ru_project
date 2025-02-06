@@ -60,6 +60,8 @@ dependencies:
   flutter_chat_core: ^0.0.2
   liquid_swipe: ^3.1.0
   duration: ^4.0.3
+  feedback: ^3.1.0
+  package_info_plus: ^8.1.3
   flutter_localizations:
     sdk: flutter
   flyer_chat_image_message: ^0.0.4

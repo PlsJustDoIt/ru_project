@@ -1,25 +1,22 @@
 import multer from 'multer';
-import path from 'path';
+import { dirname, join, extname, basename } from 'path';
 import logger from './logger.js';
 import sharp from 'sharp';
-import fs from 'fs/promises';
+import { mkdir, unlink } from 'fs/promises';
 import { NextFunction, Request, Response } from 'express';
-import isProduction from '../config.js';
+import { uploadsPath, bugReportPath } from '../config.js';
 
-let uploadDir;
-
-logger.info(path.resolve());
-logger.info(path.dirname(path.resolve()));
-
-if (isProduction) {
-    uploadDir = path.dirname(path.resolve()) + '/uploads/avatar';
-} else {
-    uploadDir = path.resolve() + '/uploads/avatar';
+try {
+    await mkdir(uploadsPath, { recursive: true });
+    await mkdir(bugReportPath, { recursive: true });
+} catch (error) {
+    logger.error('Error creating upload directory:', error);
 }
 
-const storage = multer.diskStorage({
+const storageAvatar = multer.diskStorage({
+
     destination: (req, file, cb) => {
-        cb(null, uploadDir); // Répertoire où les fichiers seront stockés
+        cb(null, uploadsPath); // Répertoire où les fichiers seront stockés
     },
     filename: (req, file, cb) => {
         const userId = req.user.id; // Assurez-vous que req.user existe et contient un id
@@ -28,9 +25,20 @@ const storage = multer.diskStorage({
     },
 });
 
+const storageScreenshotBugReport = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, bugReportPath); // Répertoire où les fichiers seront stockés
+    },
+    filename: (req, file, cb) => {
+        logger.info(file);
+        logger.info(req.body);
+        cb(null, `${file.originalname}`);
+    },
+});
+
 // Middleware multer
 const uploadAvatar = multer({
-    storage: storage,
+    storage: storageAvatar,
     limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
@@ -46,21 +54,37 @@ const uploadAvatar = multer({
 
 });
 
+const uploadBugReport = multer({
+    storage: storageScreenshotBugReport,
+    limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
+    fileFilter: (req, file, cb) => {
+        const allowedMimeTypes = ['image/png'];
+        if (file.size > 4 * 1024 * 1024) {
+            cb(null, false);
+        }
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
+    },
+});
+
 // Middleware de conversion et compression
-const convertAndCompressAvatar = async (req: Request, res: Response, next: NextFunction) => {
+const convertAndCompress = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.file) {
         return next();
     }
 
     try {
         const inputPath = req.file.path;
-        const originalExtension = path.extname(req.file.originalname).toLowerCase();
+        const originalExtension = extname(req.file.originalname).toLowerCase();
 
         // Ne convertir que si ce n'est pas déjà un JPG
         if (originalExtension !== '.jpg' && req.file.mimetype !== 'image/jpeg') {
-            const outputPath = path.join(
-                path.dirname(inputPath),
-                `${path.basename(inputPath, originalExtension)}.jpg`,
+            const outputPath = join(
+                dirname(inputPath),
+                `${basename(inputPath, originalExtension)}.jpg`,
             );
 
             // Convertir et compresser l'image
@@ -72,11 +96,11 @@ const convertAndCompressAvatar = async (req: Request, res: Response, next: NextF
                 .toFile(outputPath);
 
             // Supprimer le fichier original
-            await fs.unlink(inputPath);
+            await unlink(inputPath);
 
             // Mettre à jour les informations du fichier
             req.file.path = outputPath;
-            req.file.filename = path.basename(outputPath);
+            req.file.filename = basename(outputPath);
             req.file.mimetype = 'image/jpeg';
         }
 
@@ -87,4 +111,4 @@ const convertAndCompressAvatar = async (req: Request, res: Response, next: NextF
     }
 };
 
-export { uploadAvatar, convertAndCompressAvatar };
+export { uploadAvatar, convertAndCompress, uploadBugReport };
