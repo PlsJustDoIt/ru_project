@@ -52,6 +52,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>{
   List<User>? friends;
   List<FriendsRequest>? friendsRequests;
   late ApiService apiService;
+  late UserProvider userProvider;
 
   @override
   bool get wantKeepAlive => true; // Important !
@@ -60,55 +61,14 @@ class _FriendsListSheetState extends State<FriendsListSheet>{
   void initState() {
     super.initState();
     apiService = Provider.of<ApiService>(context, listen: false);
-    // Appelle la fonction pour charger les amis au lancement du widget
-    _loadFriends();
-  }
-
- @override
-  void activate() {
-    super.activate();
-    _loadFriendsRequests(); // Reload when widget is reopened
-  }
-
-  Future<void> _loadFriendsRequests() async {
-    try {
-      Map<String, dynamic> response = await apiService.getFriendsRequests();
-      if (!mounted) return;
-      setState(() {
-        friendsRequests = response['friendsRequests'];
-      });
-    } catch (e) {
-      logger.e('Error loading friend requests: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading friend requests: $e')),
-      );
-    }
+    userProvider = Provider.of<UserProvider>(context, listen: false);
+    friends = userProvider.friends;
   }
 
   static String generatePrivateRoomName(String user1Id, String user2Id) {
     List<String> ids = [user1Id, user2Id];
     ids.sort();
     return ids.join('_');
-  }
-
-  Future<void> _loadFriends() async {
-    try {
-      List<User> fetchedFriends = await apiService.getFriends();
-      logger.i('Amis récupérés: $fetchedFriends');
-      setState(() {
-        friends = fetchedFriends;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      logger.e('Erreur lors du chargement des amis: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du chargement des amis: $e')),
-      );
-      setState(() {
-        friends = null;
-      });
-    }
   }
 
   Future<void> addFriend(String friend) async {
@@ -166,19 +126,24 @@ class _FriendsListSheetState extends State<FriendsListSheet>{
   Widget build(BuildContext context) {
     //super.build(context);
     //recuperer les demandes d'amis
-    //if (friendsRequests == null) _loadFriendsRequests();
     if (friendsRequests == null) {
       () async {
-        logger.i('Chargement des demandes d\'amis');
-        Map<String, dynamic> response = await apiService.getFriendsRequests();
-        setState(() {       
-          friendsRequests = response['friendsRequests'];
-        });
+        try {
+          Map<String, dynamic> response = await apiService.getFriendsRequests();
+          if (!mounted) return;
+          setState(() {
+            friendsRequests = response['friendsRequests'];
+          });
+        } catch (e) {
+          logger.e('Error loading friend requests: $e');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading friend requests: $e')),
+          );
+        }
       }();
     }
     
-
-    final userProvider = Provider.of<UserProvider>(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(

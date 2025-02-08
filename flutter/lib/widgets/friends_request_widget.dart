@@ -29,13 +29,6 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
   void initState() {
     super.initState();
     _friendsRequests = widget.initialFriendsRequests;
-      () async {
-        logger.i('Chargement des demandes d\'amis');
-        Map<String, dynamic> response = await widget.apiService.getFriendsRequests();
-        setState(() {       
-          _friendsRequests = response['friendsRequests'];
-        });
-      }();
   }
 
   void _removeFriendRequest(int index) {
