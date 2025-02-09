@@ -3,8 +3,9 @@ import User, { IUser } from '../models/user.js';
 import FriendsRequest from '../models/friendsRequest.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import { uploadAvatar, convertAndCompressAvatar } from '../services/multer.js';
-import bcrypt from 'bcrypt';
+import { uploadAvatar, convertAndCompress, uploadBugReport } from '../services/multer.js';
+import { compare } from 'bcrypt';
+import BugReport from '../models/bugReport.js';
 const router = Router();
 
 router.get('/me', auth, async (req: Request, res: Response) => {
@@ -132,7 +133,7 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
             return res.status(500).json({ error: 'An error has occured' });
         }
 
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        const isMatch = await compare(oldPassword, user.password);
         if (!isMatch) {
             logger.error('Incorrect old password');
             return res.status(400).json({ error: { message: 'Incorrect old password', field: 'oldPassword' } });
@@ -176,7 +177,7 @@ router.put('/update-status', auth, async (req: Request, res: Response) => {
     }
 });
 
-router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), convertAndCompressAvatar, async (req: Request, res: Response) => {
+router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), convertAndCompress, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id);
 
@@ -514,6 +515,26 @@ router.post('/handle-friend-request', auth, async (req: Request, res: Response) 
     } catch (err: unknown) {
         logger.error('Could not handle friend request : ' + err);
         return res.status(500).json({ error: 'An error has occurred' });
+    }
+});
+router.post('/send-bug-report', auth, uploadBugReport.single('screenshot'), convertAndCompress, async (req: Request, res: Response) => {
+    try {
+        const { description, app_version, platform } = req.body;
+        const screenshot_url = req.file ? 'uploads/bugReport/' + req.file.filename : null;
+        const bugReport = new BugReport({
+            description,
+            screenshot_url: screenshot_url ? screenshot_url : '',
+            app_version,
+            platform,
+            user: req.user.id,
+            status: 'open', // Par défaut, le bug est ouvert
+        });
+
+        await bugReport.save();
+        res.status(201).json({ message: 'Bug report created successfully', bugReport });
+    } catch (error) {
+        logger.error('Error creating bug report : ' + error);
+        res.status(400).json({ message: 'An error has occured' });
     }
 });
 

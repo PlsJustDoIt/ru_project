@@ -93,6 +93,20 @@ db.createUser({
 
 exit()
 ```
+#### create a user with admin role:
+```bash
+# Generate a hashed password
+node -e "console.log(require('bcrypt').hashSync('MySecretPassword', 10))"
+
+# Copy the resulting hash and paste it below
+mongosh
+use ru_project
+db.users.insertOne({
+    username: "adminUser",
+    password: "<PASTE_THE_HASH_HERE>",
+    role: "admin"})
+exit
+```
 
 ##### env file
 

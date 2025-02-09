@@ -1,5 +1,4 @@
 import { Schema, Document, Types, model } from 'mongoose';
-// Assuming you have a User model
 
 interface IRoom extends Document {
     participants?: Types.ObjectId[];
