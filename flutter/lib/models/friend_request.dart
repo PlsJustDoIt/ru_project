@@ -1,19 +1,19 @@
-class FriendsRequest {
+class FriendRequest {
   final String requestId;
   final Map<String,dynamic> sender;
   final String status;
   final String createdAt;
 
-  FriendsRequest({
+  FriendRequest({
     required this.requestId,
     required this.sender,
     required this.status,
     required this.createdAt,
   });
 
-  factory FriendsRequest.fromJson(Map<String, dynamic> json) {
+  factory FriendRequest.fromJson(Map<String, dynamic> json) {
     try {
-      return FriendsRequest(
+      return FriendRequest(
         requestId: json['id'],
         sender: json['sender'],
         status: json['status'],

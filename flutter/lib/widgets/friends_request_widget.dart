@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/color.dart';
-import 'package:ru_project/models/friends_request.dart';
+import 'package:ru_project/models/friend_request.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/models/message.dart';
-import 'package:ru_project/services/logger.dart';
-
 class FriendsRequestWidget extends StatefulWidget {
-  final List<FriendsRequest>? initialFriendsRequests;
+  final List<FriendRequest>? initialFriendsRequests;
   final ApiService apiService;
   final void Function(User friend) onAddFriend;
 
@@ -23,7 +21,7 @@ class FriendsRequestWidget extends StatefulWidget {
 }
 
 class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
-  late List<FriendsRequest>? _friendsRequests;
+  late List<FriendRequest>? _friendsRequests;
 
   @override
   void initState() {
@@ -80,7 +78,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                         IconButton(
                           icon: const Icon(Icons.check),
                           onPressed: () async {
-                            bool res = await widget.apiService.acceptFriendRequest(request.requestId);
+                            bool res = await widget.apiService.handleFriendRequest(request.requestId, true);
                             if (res) {
                               _removeFriendRequest(index);
                               widget.onAddFriend(User(id: request.sender["id"], username: request.sender["username"], status:  'absent', avatarUrl: request.sender["avatarUrl"]));
@@ -101,7 +99,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                         IconButton(
                           icon: const Icon(Icons.close),
                           onPressed: () async {
-                            bool res = await widget.apiService.rejectFriendRequest(request.requestId);
+                            bool res = await widget.apiService.handleFriendRequest(request.requestId, false);
                             if (res) {
                               _removeFriendRequest(index);
                             } else {
@@ -112,7 +110,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                                   const SnackBar(
                                     content: Text('Erreur lors du rejet de la demande d\'amis'),
                                   ),
-                                );
+                                ); 
                             }
                           },
                         ),

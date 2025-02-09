@@ -323,33 +323,6 @@ function levenshteinDistance(str1: string, str2: string): number {
     return dp[m][n];
 }
 
-// router.post('/add-friend', auth, async (req: Request, res: Response) => {
-//     const { username } = req.body;
-//     try {
-//         const friend = await User.findOne({ username: username });
-//         if (!friend) return res.status(404).json({ error: 'Friend not found' });
-//         const user = await User.findById(req.user.id);
-//         if (user === null) {
-//             return res.status(404).json({ error: 'User not found' });
-//         }
-
-//         if (user._id.equals(friend._id)) {
-//             return res.status(400).json({ error: 'Cannot add yourself' });
-//         }
-
-//         if (user.friends.some(f => f._id.equals(friend._id))) {
-//             return res.status(400).json({ error: 'Already friends' });
-//         }
-//         user.friends.push(friend._id);
-//         await user.save();
-//         logger.info('friends list : ' + user.friends);
-//         return res.json({ message: 'Friend added', friend: friend });
-//     } catch (err: unknown) {
-//         logger.error('Could not add friend : ' + err);
-//         return res.status(500).json({ error: 'An error has occured' });
-//     }
-// });
-
 router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
     try {
         const friendId = req.body.friendId;
@@ -368,12 +341,20 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
         }
 
         // Remove user from friend's friends list
-        friend.friends = friend.friends.filter((f: { toString: () => string }) => f.toString() !== user._id.toString());
-        await friend.save();
+        const userIndexInFriendList = friend.friends.findIndex((f: { toString: () => string }) => f.toString() === user._id.toString());
+        if (userIndexInFriendList !== -1) {
+            friend.friends[userIndexInFriendList] = friend.friends[friend.friends.length - 1];
+            friend.friends.pop();
+            await friend.save();
+        }
 
         // Remove friend from user's friends list
-        user.friends = user.friends.filter((f: { toString: () => string }) => f.toString() !== friendId);
-        await user.save();
+        const friendIndexInUserList = user.friends.findIndex((f: { toString: () => string }) => f.toString() === friendId);
+        if (friendIndexInUserList !== -1) {
+            user.friends[friendIndexInUserList] = user.friends[user.friends.length - 1];
+            user.friends.pop();
+            await user.save();
+        }
 
         return res.json({ message: 'Friend removed successfully', user: user });
     } catch (err: unknown) {
@@ -462,11 +443,13 @@ router.post('/send-friend-request', auth, async (req: Request, res: Response) =>
             return res.json({ message: 'Friend request accepted', friend: receiver });
         }
 
-        const friendsRequest = new FriendsRequest({
+        const friendsRequestData = {
             sender: sender._id,
             receiver: receiver._id,
             status: 'pending',
-        });
+        };
+
+        const friendsRequest = new FriendsRequest(friendsRequestData);
         await friendsRequest.save();
         return res.json({ message: 'Friend request sent', friend: receiver });
     } catch (err: unknown) {

@@ -271,7 +271,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     try {
       User? friendAdded = await widget.addFriend(friend);
       if (friendAdded == null) {
-        throw 'Utilisateur non trouvé ou Utilisateur déjà ajouté ou autre';
+        throw 'Utilisateur non trouvé ou Utilisateur déjà ajouté';
       } else {
 
         //if friend has curr user in friendIds

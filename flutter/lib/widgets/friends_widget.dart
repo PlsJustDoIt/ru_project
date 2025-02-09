@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ru_project/models/friends_request.dart';
+import 'package:ru_project/models/friend_request.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -50,7 +50,7 @@ class FriendsListSheet extends StatefulWidget {
 
 class _FriendsListSheetState extends State<FriendsListSheet>{
   List<User>? friends;
-  List<FriendsRequest>? friendsRequests;
+  List<FriendRequest>? friendsRequests;
   late ApiService apiService;
   late UserProvider userProvider;
 
