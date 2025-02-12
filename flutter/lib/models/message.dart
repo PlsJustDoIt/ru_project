@@ -9,7 +9,7 @@ String timeAgo(DateTime date) {
   } else if (difference.inMinutes > 1) {
     return "${difference.inMinutes} minutes";
   } else {
-    return "à l'instant";
+    return "un l'instant";
   }
 }
 

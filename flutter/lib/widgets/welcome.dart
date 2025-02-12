@@ -196,6 +196,13 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           }
                           final User user = response['user'];
                           userProvider.setUser(user);
+                          //set friends in userProvider
+                          List<User> fetchedFriends = await apiService.getFriends();
+                          userProvider.setFriends(fetchedFriends);
+
+                          if (context.mounted == false) {
+                            return;
+                          }
 
                           Navigator.pushReplacement(
                             context,

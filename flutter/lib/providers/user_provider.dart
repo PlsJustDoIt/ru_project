@@ -29,6 +29,11 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void setFriends(List<User> friends) {
+    _friends = friends;
+    notifyListeners();
+  }
+
   // Réinitialise les données utilisateur et notifie les widgets
   void clearUserData() {
     _user = null;
