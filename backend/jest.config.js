@@ -1,22 +1,19 @@
-const config = {
-    preset: 'ts-jest/presets/default-esm',
+/** @type {import('ts-jest').JestConfigWithTsJest} **/
+export default {
     testEnvironment: 'node',
-    moduleNameMapper: {
-        '(.+)\\.js': '$1',
-    },
     transform: {
-        '^.+\\.tsx?$': [
-            'ts-jest',
-            {
-                diagnostics: true,
-                useESM: true,
-                tsconfig: 'tsconfig.json',
-                moduleResolution: 'NodeNext',
+        '^.+\\.tsx?$': ['ts-jest', {
+            useESM: true,
+            tsconfig: {
+                // Surcharge les options spécifiquement pour ts-jest
+                target: 'ES2022',
+                module: 'NodeNext',
             },
-        ],
+        }],
     },
     extensionsToTreatAsEsm: ['.ts'],
-    collectCoverage: true,
+    moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
+    },
+    moduleFileExtensions: ['ts', 'js', 'json', 'node'],
 };
-
-export default config;
