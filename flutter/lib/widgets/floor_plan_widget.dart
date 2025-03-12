@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ru_project/models/user.dart';
 
 class SectorModel {
   final String id;
@@ -7,6 +8,8 @@ class SectorModel {
   final double width;
   final double height;
   final String name;
+  final Color? color;
+  List<User>? friendsInArea;
 
   SectorModel({
     required this.id,
@@ -15,6 +18,8 @@ class SectorModel {
     required this.width,
     required this.height,
     required this.name,
+    required this.color,
+    this.friendsInArea,
   });
 }
 
@@ -122,6 +127,7 @@ class SimpleStatelessWidget extends StatelessWidget {
       width: 60,
       height: 40,
       name: "A",
+      color: Colors.blue,
     ),
     SectorModel(
       id: "S2",
@@ -130,6 +136,7 @@ class SimpleStatelessWidget extends StatelessWidget {
       width: 60,
       height: 40,
       name: "B",
+      color: Colors.green,
     ),
     // Ajoutez d'autres secteurs selon vos besoins
   ];

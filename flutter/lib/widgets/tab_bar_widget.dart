@@ -15,6 +15,7 @@ import 'package:ru_project/widgets/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:liquid_swipe/liquid_swipe.dart';
+import 'package:ru_project/widgets/chat_widget.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -100,7 +101,7 @@ class TabBarWidget extends StatelessWidget {
             SimpleStatelessWidget(),
             const MenuWidget(),
             FriendsListSheet(),
-            ChatWidget(actualUser: userProvider.user!, roomname: "Global"),
+            ChatWidget(roomname: 'Global', actualUser: userProvider.user!),
             ProfileWidget(),
             TransportTimeWidget(),
             DebugWidget(),
