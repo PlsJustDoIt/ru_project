@@ -8,6 +8,7 @@ import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/test_statefull.dart';
 import 'package:video_player/video_player.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/custom_snack_bar.dart';
 
 class WelcomeWidget extends StatefulWidget {
   const WelcomeWidget({super.key});
@@ -24,7 +25,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   final TextEditingController _passwordController = TextEditingController();
   late VideoPlayerController _videoController;
   final _formKey = GlobalKey<FormState>();
-  bool hasSubmitted = false;
+  final Map<String, String> _apiErrors = {};
+  bool _hasSubmitted = false;
 
   @override
   void initState() {
@@ -100,13 +102,16 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextFormField(
-                  autovalidateMode: hasSubmitted
+                  autovalidateMode: _hasSubmitted
                       ? AutovalidateMode.onUserInteraction
                       : AutovalidateMode.disabled,
                   controller: _usernameController,
                   decoration: const InputDecoration(
                       labelText: 'Nom d\'utilisateur (3-32 caractères)'),
                   validator: (value) {
+                    if (_apiErrors.containsKey('username')) {
+                      return _apiErrors['username'];
+                    }
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer un nom d\'utilisateur (3-32 caractères)';
                     }
@@ -126,7 +131,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextFormField(
-                  autovalidateMode: hasSubmitted
+                  autovalidateMode: _hasSubmitted
                       ? AutovalidateMode.onUserInteraction
                       : AutovalidateMode.disabled,
                   controller: _passwordController,
@@ -135,6 +140,9 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                   ),
                   obscureText: true,
                   validator: (value) {
+                    if (_apiErrors.containsKey('password')) {
+                      return _apiErrors['password'];
+                    }
                     if (value == null || value.isEmpty) {
                       return 'Veillez entrer un mot de passe (3-32 caractères)';
                     }
@@ -159,39 +167,56 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     child: ElevatedButton(
                       onPressed: () async {
                         setState(() {
-                          hasSubmitted = true;
+                          _hasSubmitted = true;
                         });
+                        _apiErrors.clear();
                         if (!_formKey.currentState!.validate()) {
-                          setState(() {
-                            hasSubmitted = true;
-                          });
                           return;
                         }
-                        final User? user;
                         try {
-                          user = await apiService.login(
-                              _usernameController.text,
-                              _passwordController.text);
+                          final Map<String, dynamic> response =
+                              await apiService.login(_usernameController.text,
+                                  _passwordController.text);
+
+                          if (context.mounted == false) {
+                            return;
+                          }
+
+                          if (response.containsKey('error')) {
+                            setState(() {
+                              _apiErrors.clear();
+                              _apiErrors[response['errorField']] =
+                                  response['error'];
+                              _formKey.currentState!.validate();
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                CustomSnackBar(
+                                    message: 'Erreur de connexion.'));
+                            return;
+                          }
+                          final User user = response['user'];
+                          userProvider.setUser(user);
+                          //set friends in userProvider
+                          List<User> fetchedFriends = await apiService.getFriends();
+                          userProvider.setFriends(fetchedFriends);
+
+                          if (context.mounted == false) {
+                            return;
+                          }
+
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const TabBarWidget()),
+                          );
                         } catch (e) {
                           if (context.mounted == false) {
                             return;
                           }
                           ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erreur de connexion.')));
+                              CustomSnackBar(message: 'Erreur de connexion.'));
                           return;
                         }
-                        if (context.mounted == false) {
-                          return;
-                        }
-                        userProvider.setUser(user);
-                        if (context.mounted == false) {
-                          return;
-                        }
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const TabBarWidget()),
-                        );
                       },
                       child: const Text('Se connecter'),
                     )
@@ -204,16 +229,42 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     child: ElevatedButton(
                       onPressed: () async {
                         setState(() {
-                          hasSubmitted = true;
+                          _hasSubmitted = true;
                         });
+                        _apiErrors.clear();
                         if (!_formKey.currentState!.validate()) {
                           return;
                         }
-                        final User user;
+
                         try {
-                          user = await apiService.register(
-                              _usernameController.text,
-                              _passwordController.text);
+                          final Map<String, dynamic> response =
+                              await apiService.register(
+                                  _usernameController.text,
+                                  _passwordController.text);
+
+                          if (context.mounted == false) {
+                            return;
+                          }
+
+                          if (response.containsKey('error')) {
+                            setState(() {
+                              _apiErrors.clear();
+                              _apiErrors[response['errorField']] =
+                                  response['error'];
+                              _formKey.currentState!.validate();
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('Erreur d\'inscription.')));
+                            return;
+                          }
+                          final User user = response['user'];
+                          userProvider.setUser(user);
+
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const TabBarWidget()),
+                          );
                         } catch (e) {
                           if (context.mounted == false) {
                             return;
@@ -222,16 +273,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                               content: Text('Erreur d\'inscription.')));
                           return;
                         }
-                        userProvider.setUser(user);
-
-                        if (context.mounted == false) {
-                          return;
-                        }
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const TabBarWidget()),
-                        );
                       },
                       child: const Text('S\'inscrire'),
                     )

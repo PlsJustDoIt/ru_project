@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/logger.dart';
 import '../models/searchResult.dart';
 
@@ -57,6 +59,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   List<SearchResult> _localResults = [];
   bool _isLoading = false;
   Timer? _debounceTimer;
+  late UserProvider userProvider;
 
   // Simuler une base de données locale
   final List<SearchResult> _localDb = [
@@ -66,6 +69,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   @override
   void initState() {
     super.initState();
+    userProvider = Provider.of<UserProvider>(context, listen: false);
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -223,7 +227,7 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.add),
+                                    icon: const Icon(Icons.person_add_alt_1_rounded),
                                     onPressed: () {
                                       showDialog(
                                         context: context,
@@ -262,23 +266,30 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
     );
   }
 
-  // Ajouter un ami, TODO : faire l'implémentation total et voir avec leo pour plein de trucs
+  // Ajouter un ami
   Future<void> addFriend(String friend) async {
     try {
       User? friendAdded = await widget.addFriend(friend);
       if (friendAdded == null) {
         throw 'Utilisateur non trouvé ou Utilisateur déjà ajouté';
       } else {
-        widget.addFriendToFriendsList(friendAdded);
+
+        //if friend has curr user in friendIds
+        if (friendAdded.friendIds != null) {
+          if (friendAdded.friendIds!.contains(userProvider.user!.id)) {
+            widget.addFriendToFriendsList(friendAdded);
+          }
+        }
+          
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ami ajouté: ${friendAdded.username}')),
+          SnackBar(content: Text('Demande d\'ami envoyée à ${friendAdded.username}')),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
+        SnackBar(content: Text('Erreur lors de l\'ajout')),
       );
     }
   }

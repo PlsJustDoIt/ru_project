@@ -1,133 +1,73 @@
 import { Router, Request, Response } from 'express';
-import jwt, { JwtPayload } from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import RefreshToken from '../models/refreshToken.js';
-import { Types } from 'mongoose';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';
-import path from 'path';
-import fs from 'fs';
-import isProduction from '../config.js';
+import { join } from 'path';
+import { unlink } from 'fs';
+import { avatarPath } from '../config.js';
+import { AuthService } from '../services/auth.js';
+
 const router = Router();
 
-const TEXT_MIN_LENGTH = 3;
-const TEXT_MAX_LENGTH = 32;
-
-const generateAccessToken = (id: Types.ObjectId) => {
-    return jwt.sign({ id: id }, process.env.JWT_ACCESS_SECRET as jwt.Secret, { expiresIn: '1h' });
-};
-
-const generateRefreshToken = (id: Types.ObjectId) => {
-    return jwt.sign({ id: id }, process.env.JWT_REFRESH_SECRET as jwt.Secret, { expiresIn: '7d' });
-};
-
 router.post('/register', async (req, res) => {
-    let { username, password } = req.body;
     try {
-        // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
-        if (!username || !password) {
-            logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
+        const { username, password } = req.body;
+
+        // Validate username and password
+        const validation = AuthService.validateCredentials(username, password);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
 
-        username = username.trim();
-        password = password.trim();
-
-        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
-        }
-
-        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
-        }
-
-        let user = await User.findOne({ username });
-        if (user != null) {
+        // Check if user already exists
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
             logger.error('User already exists');
-            return res.status(400).json({ error: 'User already exists' });
+            return res.status(400).json({ error: { message: 'User already exists', field: 'username' } });
         }
-        user = new User({ username,
-            password });
-        await user.save();
-        // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
-        // Générer les tokens
-        const accessToken = generateAccessToken(user._id);
-        const refreshToken = generateRefreshToken(user._id);
 
-        // Sauvegarder le refresh token dans la base (optionnel)
-        const refreshTokenInstance = new RefreshToken({ token: refreshToken,
-            userId: user._id,
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
-        await refreshTokenInstance.save();
-        logger.info(`Engistrement de l'utilisateur ${username}`);
-        return res.status(201).json({ accessToken,
-            refreshToken });
+        // Create new user
+        const user = new User({ username, password });
+        await user.save();
+
+        // Generate tokens
+        const tokens = await AuthService.generateTokens(user._id);
+
+        logger.info(`User ${username} registered successfully`);
+        return res.status(201).json(tokens);
     } catch (err) {
         logger.error(err);
-        return res.status(500).send('Server error' + err);
+        return res.status(500).json({ error: 'An error has occurred' });
     }
 });
 
 router.post('/login', async (req, res) => {
-    let { username, password } = req.body;
-
     try {
-        // test authentification header
-        if (req.headers.authorization && req.headers.authorization.length > 0) {
-            logger.error('User is already connected');
+        const { username, password } = req.body;
+
+        // Vérifier si l'utilisateur est déjà connecté
+        if (req.headers.authorization) {
             return res.status(400).json({ error: 'User is already connected' });
         }
 
-        // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
-
-        if (!username || !password) {
-            logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
+        // Valider les identifiants
+        const validation = AuthService.validateCredentials(username, password);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
 
-        username = username.trim();
-        password = password.trim();
+        // Authentifier l'utilisateur
+        const user = await AuthService.authenticate(username, password);
 
-        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
-        }
-
-        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
-        }
-
-        const user = await User.findOne({ username });
-        if (!user) return res.status(400).json({ error: 'This user does not exists' });
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ error: 'Incorrect password' });
-        // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as jwt.Secret, { expiresIn: '1h' });
         // Générer les tokens
-        const accessToken = generateAccessToken(user._id);
-        const refreshToken = generateRefreshToken(user._id);
+        const tokens = await AuthService.generateTokens(user._id);
 
-        // Sauvegarder le refresh token
-        const refreshTokenInstance = new RefreshToken({ token: refreshToken,
-            userId: user._id,
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
-        const response = await refreshTokenInstance.save();
-
-        if (!response) {
-            logger.error('Error while saving the refresh token');
-            return res.status(500).json({ error: 'Error while saving the refresh token' });
-        }
-
-        logger.info(`Connexion de l'utilisateur ${username}`);
-
-        return res.json({ accessToken,
-            refreshToken });
+        return res.json(tokens);
     } catch (err) {
         logger.error(err);
-        return res.status(500).send('Server error ' + err);
+        return res.status(500).json({ error: 'An error has occurred' });
     }
 });
 
@@ -135,7 +75,7 @@ router.post('/token', auth, async (req, res) => {
     const refreshToken = req.body.refreshToken;
     try {
         const existingToken = await RefreshToken.findOne({ token: refreshToken });
-        logger.info('existingToken found : ' + existingToken);
+        logger.info('existingToken found : ' + existingToken?.token);
         if (!existingToken) {
             logger.error('Invalid refresh token');
             return res.status(403).json({ error: 'Invalid refresh token' });
@@ -150,7 +90,7 @@ router.post('/token', auth, async (req, res) => {
         }
 
         // Vérifier si le refresh token est valide
-        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as JwtPayload;
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as jwt.JwtPayload;
         logger.info(decoded);
 
         const userIdFromToken = decoded.id;
@@ -162,22 +102,25 @@ router.post('/token', auth, async (req, res) => {
         }
 
         // Générer un nouveau access token
-        const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
+        const accessToken = AuthService.generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
 
-        const userUsername = await User.findById(userIdFromToken).select('username');
+        const userUsername: IUser | null = await User.findById(userIdFromToken).select('username');
 
-        logger.info(`Nouveau token créé pour l'utilisateur ${userUsername} :\n accessToken: ${accessToken}`);
+        logger.info(`Nouveau token créé pour l'utilisateur ${userUsername?.username} :\n accessToken: ${accessToken}`);
 
         return res.json({ accessToken });
 
         // });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error: ' + err });
+        if (err instanceof jwt.TokenExpiredError) {
+            return res.status(403).json({ error: 'Token expired' });
+        }
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
-router.post('/logout', auth, async (req, res) => {
+router.post('/logout', auth, async (req, res) => { // TODO : à voir si on doit utiliser le middleware auth
     const refreshToken = req.body.refreshToken;
     try {
         await RefreshToken.findOneAndDelete({ token: refreshToken });
@@ -189,26 +132,24 @@ router.post('/logout', auth, async (req, res) => {
         return res.json({ message: 'Logged out' });
     } catch (err) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error: ' + err });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 
 router.delete('/delete-account', auth, async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     if (!refreshToken) {
-        return res.status(400).json({ error: 'No refresh token provided' });
+        logger.error('No refresh token provided');
+        return res.status(500).json({ error: 'An error has occured' });
     }
     try {
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
         }
-        let dirname = path.resolve();
-        if (isProduction) {
-            dirname = path.join(dirname, 'dist');
-        }
+
         if (user.avatarUrl !== 'uploads/avatar/default.png') {
-            fs.unlink(path.join(dirname, user.avatarUrl), (err) => {
+            unlink(join(avatarPath, user.avatarUrl), (err) => {
                 if (err) {
                     logger.error('Could not delete avatar : ' + err);
                 }
@@ -219,7 +160,7 @@ router.delete('/delete-account', auth, async (req: Request, res: Response) => {
         return res.json({ message: 'User deleted' });
     } catch (err: unknown) {
         logger.error(err);
-        return res.status(500).json({ error: 'Server error : ' + err });
+        return res.status(500).json({ error: 'An error has occured' });
     }
 });
 

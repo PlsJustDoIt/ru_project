@@ -3,10 +3,8 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import logger from '../services/logger.js';
 
-import isProduction from '../config.js';
-
 export default function (req: Request, res: Response, next: NextFunction): void {
-    if (req.url.includes('/token') || ((req.url.includes('/menus') || req.url.includes('/info')) && !isProduction)) {
+    if (req.url.includes('/token')) {
         next();
         return;
     }

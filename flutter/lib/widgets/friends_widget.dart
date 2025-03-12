@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:ru_project/models/friend_request.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/friends_request_widget.dart';
 import 'package:ru_project/widgets/search_user_widget.dart';
+import 'package:ru_project/widgets/chat_widget.dart';
 
 class FriendsListButton extends StatelessWidget {
   const FriendsListButton({super.key});
@@ -44,9 +48,11 @@ class FriendsListSheet extends StatefulWidget {
   State createState() => _FriendsListSheetState();
 }
 
-class _FriendsListSheetState extends State<FriendsListSheet>
-    with AutomaticKeepAliveClientMixin {
+class _FriendsListSheetState extends State<FriendsListSheet>{
   List<User>? friends;
+  List<FriendRequest>? friendsRequests;
+  late ApiService apiService;
+  late UserProvider userProvider;
 
   @override
   bool get wantKeepAlive => true; // Important !
@@ -54,8 +60,9 @@ class _FriendsListSheetState extends State<FriendsListSheet>
   @override
   void initState() {
     super.initState();
-    // Appelle la fonction pour charger les amis au lancement du widget
-    _loadFriends();
+    apiService = Provider.of<ApiService>(context, listen: false);
+    userProvider = Provider.of<UserProvider>(context, listen: false);
+    friends = userProvider.friends;
   }
 
   static String generatePrivateRoomName(String user1Id, String user2Id) {
@@ -64,30 +71,9 @@ class _FriendsListSheetState extends State<FriendsListSheet>
     return ids.join('_');
   }
 
-  Future<void> _loadFriends() async {
-    try {
-      ApiService api = Provider.of<ApiService>(context, listen: false);
-      List<User> fetchedFriends = await api.getFriends();
-      logger.i('Amis récupérés: $fetchedFriends');
-      setState(() {
-        friends = fetchedFriends;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      logger.e('Erreur lors du chargement des amis: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du chargement des amis: $e')),
-      );
-      setState(() {
-        friends = null;
-      });
-    }
-  }
-
   Future<void> addFriend(String friend) async {
     try {
-      ApiService api = Provider.of<ApiService>(context, listen: false);
-      User? friendAdded = await api.addFriend(friend);
+      User? friendAdded = await apiService.addFriend(friend);
       if (friendAdded == null) {
         throw 'peut etre un jour des vrais messages d\'erreurs';
       } else {
@@ -108,7 +94,6 @@ class _FriendsListSheetState extends State<FriendsListSheet>
   }
 
   void _showDeleteConfirmationDialog(String friendId) {
-    ApiService api = Provider.of<ApiService>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -124,7 +109,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>
             child: Text('Supprimer', style: TextStyle(color: Colors.white)),
             onPressed: () {
               // Logique de suppression
-              api.removeFriend(friendId);
+              apiService.removeFriend(friendId);
 
               setState(() {
                 friends?.removeWhere((friend) => friend.id == friendId);
@@ -139,8 +124,26 @@ class _FriendsListSheetState extends State<FriendsListSheet>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    final apiService = Provider.of<ApiService>(context);
+    //super.build(context);
+    //recuperer les demandes d'amis
+    if (friendsRequests == null) {
+      () async {
+        try {
+          Map<String, dynamic> response = await apiService.getFriendsRequests();
+          if (!mounted) return;
+          setState(() {
+            friendsRequests = response['friendsRequests'];
+          });
+        } catch (e) {
+          logger.e('Error loading friend requests: $e');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading friend requests: $e')),
+          );
+        }
+      }();
+    }
+    
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
@@ -174,22 +177,27 @@ class _FriendsListSheetState extends State<FriendsListSheet>
             ),
           ),
 
-          // Barre de recherche
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Rechercher un ami...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[200],
+            // Bouton de demande d'ami
+            Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: IconButton(
+              onPressed: () async {
+                Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return FriendsRequestWidget(
+                  initialFriendsRequests: friendsRequests,
+                  apiService: apiService,
+                  onAddFriend: addFriendToFriendsList,
+                );
+                }));
+              },
+              icon: (friendsRequests != null && friendsRequests!.isNotEmpty)
+                ? Icon(Icons.notifications_active, color: Colors.red)
+                : Icon(Icons.notifications),
               ),
             ),
-          ),
+            ),
 
           // Nombre d'amis
           Padding(
@@ -261,6 +269,18 @@ class _FriendsListSheetState extends State<FriendsListSheet>
                                     icon: Icon(Icons.message_outlined),
                                     onPressed: () {
                                       logger.i('Message à ${friend.username}');
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ChatWidget(
+                                            roomname: generatePrivateRoomName(
+                                                userProvider.user!.id,
+                                                friend.id),
+                                            actualUser: userProvider.user!,
+                                            friends: [friend],
+                                          ),
+                                        ),
+                                      );
                                     },
                                   ),
                                   IconButton(

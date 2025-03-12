@@ -2,7 +2,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import logger from './logger.js';
-import Room, { generatePrivateRoomName } from '../models/room.js';
+import Room, { generatePrivateRoomName, getOrCreatePrivateRoom } from '../models/room.js';
 import User from '../models/user.js';
 import { instrument } from '@socket.io/admin-ui';
 import jwt from 'jsonwebtoken';
@@ -99,17 +99,18 @@ export class SocketService {
                     throw new Error('Global room not found');
                 }
 
-                logger.info('User %s joining global room %s', socket.id, globalRoom._id.toString());
+                logger.info('User %s joining global room %s', socket.id, globalRoom.name);
 
-                await socket.join(globalRoom._id.toString());
-                socket.emit('room_joined', { roomId: globalRoom._id.toString() });
+                await socket.join(globalRoom.name);
+                socket.emit('room_joined', { roomName: globalRoom.name });
             } catch (error) {
                 logger.error('Error joining global room:', error);
                 socket.emit('error', 'Failed to join global room');
             }
         });
 
-        socket.on('join_room', async (friendId: string) => {
+        socket.on('join_friend_room', async (friendId: string) => {
+            logger.info('User %s joining room with friend %s', socket.id, friendId);
             try {
                 if (!friendId) {
                     throw new Error('Friend ID is required');
@@ -140,29 +141,54 @@ export class SocketService {
                     },
                 });
 
-                let roomId: string;
+                let roomName: string;
 
-                if (room) {
-                    roomId = room.name; // très important
-                } else {
-                    const roomName = generatePrivateRoomName(userId, friendId);
-                    const newRoom = await Room.create({
+                if (room) { // cas room deja existante
+                    roomName = room.name; // très important
+                } else { // cas ou la room n'existe pas
+                    roomName = generatePrivateRoomName(userId, friendId);
+                    logger.info('Creating private room %s', roomName);
+                    await Room.create({
                         participants: [userId, friendId],
                         name: roomName,
                     });
-                    roomId = newRoom.name;
                 }
 
-                await socket.join(roomId);
-                socket.emit('room_joined', { roomId }); // très important
+                await socket.join(roomName);
+                socket.emit('room_joined', { roomName }); // très important
             } catch (error) {
                 logger.error('Error joining room:', error);
                 socket.emit('error', 'Failed to join room');
             }
         });
 
-        socket.on('leave_room', async (roomId: string) => {
-            await socket.leave(roomId);
+        // TODO : à finir
+        socket.on('join_room', async (data: any[]) => {
+            logger.info('User %s joining room with data %o', socket.id, data);
+            logger.info(data);
+            try {
+                if (!data) {
+                    throw new Error('data is required');
+                }
+
+                if (data.length !== 2) {
+                    throw new Error('Exactly 2 participants are required, other cases are not supported');
+                }
+
+                const participants = data as string[];
+
+                const room = await getOrCreatePrivateRoom(participants[0], participants[1]);
+
+                await socket.join(room.name);
+                socket.emit('room_joined', { roomName: room.name });
+            } catch (error) {
+                logger.error('Error joining room:', error);
+                socket.emit('error', 'Failed to join room');
+            }
+        });
+
+        socket.on('leave_room', async (roomName: string) => {
+            await socket.leave(roomName);
             // TODO : finir la fonction
         });
 
@@ -190,18 +216,49 @@ export class SocketService {
         }
     }
 
-    public async emitToRoom(event: string, roomId: string, data: unknown): Promise<void> {
+    // public async emitToRoom(event: string, roomName: string, data: unknown): Promise<void> {
+    //     if (!this.io) {
+    //         throw new Error('Socket.IO server not initialized');
+    //     }
+
+    //     if (!roomName) {
+    //         throw new Error('Room name is required');
+    //     }
+
+    //     logger.info('Emitting %s to room %s : %o', event, roomName, data);
+
+    //     this.io.to(roomName).emit(event, data);
+    // }
+
+    public emitToRoomWithSocket(socket: Socket, event: string, roomName: string, data: unknown): void {
+        try {
+            if (!roomName) {
+                throw new Error('Room name is required');
+            }
+            logger.info(socket.data.userId);
+            logger.info('trying to %s to room %s with socket %s: %o', event, roomName, socket.id, data);
+            socket.to(roomName).emit(event, data);
+        } catch (error) {
+            logger.error('Error in emitToRoomWithSocket:', error);
+        }
+    }
+
+    public broadcastToEveryone(event: string, data: unknown): void {
         if (!this.io) {
             throw new Error('Socket.IO server not initialized');
         }
 
-        if (!roomId) {
-            throw new Error('Room ID is required');
-        }
+        this.io.emit(event, data);
 
-        logger.info('Emitting %s to room %s : %o', event, roomId, data);
+        // Optional: log the broadcast for debugging
+        logger.debug(`Broadcasted ${event}`);
+    }
 
-        this.io.to(roomId).emit(event, data);
+    public getSocketFromUserId(userId: string): Socket | undefined {
+        const socketId = this.connectedUsers.get(userId);
+        if (!socketId || !this.io) return undefined;
+        logger.info('Getting socket for user %s: %s', userId, socketId);
+        return this.io.sockets.sockets.get(socketId);
     }
 
     public async emitToRoomWithSocket(socket: Socket, event: string, roomId: string, data: unknown): Promise<void> {

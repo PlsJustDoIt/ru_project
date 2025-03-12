@@ -1,10 +1,10 @@
 import auth from '../middleware/auth.js';
 import { Router, Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import xml2js from 'xml2js';
+import { Parser } from 'xml2js';
 import { MenuResponse, MenuXml } from '../interfaces/menu.js';
 import logger from '../services/logger.js';
-import fs from 'fs';
+import { readFileSync } from 'fs';
 
 const router = Router();
 const ru_lumiere_id = 'r135';
@@ -37,7 +37,8 @@ function decodeHtmlEntities(text: string) {
 }
 
 // Fonction récursive pour décoder les valeurs dans un objet JSON
-function decodeJsonValues(obj: any): any {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function decodeJsonValues(obj: any) {
     const res = JSON.parse(JSON.stringify(obj)); // On crée une copie de l'objet pour éviter de modifier l'original
 
     for (const key in res) {
@@ -116,10 +117,10 @@ async function fetchMenusFromExternalAPI() {
         // // ecrire le contenu du fichier xml dans un fichier menus.xml
         // fs.writeFileSync('menus.xml', xmlData, 'utf-8');
 
-        const xmlData = fs.readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
+        const xmlData = readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
 
         // Conversion du XML en objet JS
-        const parser = new xml2js.Parser({
+        const parser = new Parser({
             explicitArray: false,
             preserveChildrenOrder: true, // Conserve l'ordre des enfants XML
         });
@@ -127,8 +128,10 @@ async function fetchMenusFromExternalAPI() {
         const restaurants = result.root.resto;
         const restoR135 = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_lumiere_id);
         const menus = decodeJsonValues(restoR135.menu);
+        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+        const filteredMenus = menus.filter((menu: MenuXml) => menu.$.date >= today);
 
-        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
+        const transformedMenus: MenuResponse[] = filteredMenus.map((menu: MenuXml) => transformToMenu(menu));
         return transformedMenus;
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
@@ -147,18 +150,20 @@ router.get('/menus', auth, async (req: Request, res: Response) => {
         const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
         if (cachedMenus) {
             logger.info('Les menus sont en cache');
-            return res.json(cachedMenus);
+            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+            const filteredMenus = cachedMenus.filter((menu: MenuResponse) => menu.date >= today);
+            return res.json({ menus: filteredMenus });
         }
 
         // Si les menus ne sont pas en cache, on les récupère de l'API externe
         const menus = await fetchMenusFromExternalAPI();
 
-        // On met les menus en cache pour 1 heure
+        // On met les menus en cache pour une semaine
         cache.set('menus', menus);
-        return res.json(menus);
+        return res.json({ menus: menus });
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
-        return res.status(500).send('Erreur lors de la récupération des menus');
+        return res.status(500).json({ error: 'Erreur lors de la récupération des menus' });
     }
 },
 );

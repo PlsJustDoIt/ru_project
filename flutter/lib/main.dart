@@ -1,24 +1,53 @@
+import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-void main() {
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Config.init();
   runApp(
     MultiProvider(
       providers: [
-        Provider(create: (context) => ApiService()),
         ChangeNotifierProvider(
-          create: (context) => UserProvider(
-              api: Provider.of<ApiService>(context, listen: false)),
+          create: (context) => UserProvider(),
         ),
+        Provider(
+            create: (context) => ApiService(
+                  userProvider:
+                      Provider.of<UserProvider>(context, listen: false),
+                  secureStorage: SecureStorage(),
+                )),
       ],
-      child: const MyApp(),
+      child: BetterFeedback(
+        theme: FeedbackThemeData(
+          feedbackSheetColor: Colors.white,
+          background: Colors.green,
+          drawColors: [
+            Colors.red,
+            Colors.green,
+            Colors.blue,
+            Colors.yellow,
+          ],
+        ),
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalFeedbackLocalizationsDelegate(),
+        ],
+        localeOverride: const Locale('fr', 'FR'),
+        child: MyApp(),
+      ),
     ),
   );
 }
@@ -28,10 +57,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //TODO : à supprimer un jour
-    FlutterSecureStorage storage = const FlutterSecureStorage();
+    UserProvider userProvider =
+        Provider.of<UserProvider>(context, listen: false);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -41,7 +71,9 @@ class MyApp extends StatelessWidget {
         const Locale('fr', 'FR'),
       ],
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
       theme: ThemeData(
+        brightness: Brightness.light,
         colorScheme: const ColorScheme(
           primary: AppColors.primaryColor,
           secondary: Colors.blue,
@@ -52,60 +84,14 @@ class MyApp extends StatelessWidget {
           onSurface: Colors.black,
           onError: Colors.white,
           brightness: Brightness.light,
+          surfaceContainerHigh:
+              Color.fromARGB(255, 196, 201, 202), //TODO a voir si on garde
         ),
         fontFamily: 'Marianne',
       ),
-      home: FutureBuilder(
-          future: storage.read(key: 'accessToken'),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.done) {
-              if (snapshot.data != null) {
-                return const TabBarWidget();
-              } else {
-                return const WelcomeWidget();
-              }
-            } else {
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-          }),
+      home: userProvider.isConnected
+          ? const TabBarWidget()
+          : const WelcomeWidget(),
     );
   }
 }
-
-// class AuthChecker extends StatelessWidget {
-//   const AuthChecker({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // Appel de la méthode isConnected via le UserProvider
-//     // bool isConnected = await UserProvider().isConnected();// await UserProvider().isLoggedIn();  // Vérification synchrone
-//     //
-//     // // Choisir la page selon l'état de connexion
-//     // if (isConnected) {
-//     //   return const TabBarWidget();  // Si connecté, aller à l'écran principal
-//     // } else {
-//     //   return WelcomeWidget2();  // Sinon, afficher l'écran de connexion
-//     // }
-//     return FutureBuilder(
-//         future: UserProvider().isConnected(),
-//         builder: (context, snapshot) {
-//           if (snapshot.connectionState == ConnectionState.done) {
-//             if (snapshot.data == true) {
-//               return const TabBarWidget();
-//             } else {
-//               return const WelcomeWidget();
-//             }
-//           } else {
-//             return const Scaffold(
-//               body: Center(
-//                 child: CircularProgressIndicator(),
-//               ),
-//             );
-//           }
-//         });
-//   }
-// }

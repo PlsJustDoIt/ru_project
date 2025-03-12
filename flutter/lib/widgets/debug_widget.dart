@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
+import 'package:duration/duration.dart';
 
 class DebugWidget extends StatefulWidget {
   @override
@@ -44,11 +45,15 @@ class _DebugWidgetState extends State<DebugWidget> {
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 SelectableText(accessToken ?? 'No Access Token'),
                 Text('isExpired: ${JwtDecoder.isExpired(accessToken ?? '')}'),
+                Text(
+                    'expires in ${prettyDuration(JwtDecoder.getRemainingTime(accessToken ?? ''))}'),
                 SizedBox(height: 16),
                 Text('Refresh Token:',
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 SelectableText(refreshToken ?? 'No Refresh Token'),
                 Text('isExpired: ${JwtDecoder.isExpired(refreshToken ?? '')}'),
+                Text(
+                    'expires in ${prettyDuration(JwtDecoder.getRemainingTime(refreshToken ?? ''))}'),
                 ElevatedButton(
                     onPressed: refreshTokent,
                     child: Text('rafraichir le token')),

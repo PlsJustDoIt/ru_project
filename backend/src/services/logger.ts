@@ -1,39 +1,39 @@
-import path from 'path';
-import winston from 'winston';
-import fs from 'fs';
+import { join } from 'path';
+import { createLogger, format, transports } from 'winston';
+import { existsSync, mkdirSync } from 'fs';
+import { isProduction } from '../config.js';
+import { rootDir } from '../config.js';
 
-import isProduction from '../config.js';
-
-const logger = winston.createLogger({
+const logger = createLogger({
     level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp({ format: 'DD-MM-YYYY HH:mm:ss' }),
-        winston.format.prettyPrint({ colorize: true }),
-        winston.format.splat(),
-        winston.format.json(),
-        winston.format.colorize({ message: true }),
-        winston.format.printf(({ timestamp, level, message }) => {
+    format: format.combine(
+        format.timestamp({ format: 'DD-MM-YYYY HH:mm:ss' }),
+        format.prettyPrint({ colorize: true }),
+        format.json(),
+        format.splat(),
+        format.colorize({ message: true }),
+        format.printf(({ timestamp, level, message }) => {
             return `${timestamp} ${level}: ${message}`;
         }),
     ),
     transports: [
-        new winston.transports.Console(),
+        new transports.Console(),
     ],
 });
 
 if (isProduction) {
-    const __dirname = path.dirname(path.resolve()) + '/logs';
+    const __dirname = join(rootDir, 'logs');
 
     // Vérifie si le dossier 'logs' existe, et le crée s'il n'existe pas
-    if (!fs.existsSync(__dirname)) {
-        fs.mkdirSync(__dirname, { recursive: true });
+    if (!existsSync(__dirname)) {
+        mkdirSync(__dirname, { recursive: true });
     }
 
-    logger.add(new winston.transports.File({ filename: 'server.log',
+    logger.add(new transports.File({ filename: 'server.log',
         dirname: __dirname,
         maxsize: 100000,
         maxFiles: 1 }));
-    logger.add(new winston.transports.File({ filename: 'error.log',
+    logger.add(new transports.File({ filename: 'error.log',
         dirname: __dirname,
         level: 'error',
         maxsize: 100000,
