@@ -1,34 +1,34 @@
 import 'package:flutter/material.dart';
 
-class TableModel {
+class SectorModel {
   final String id;
   final double x;
   final double y;
   final double width;
   final double height;
-  final String sector;
+  final String name;
 
-  TableModel({
+  SectorModel({
     required this.id,
     required this.x,
     required this.y,
     required this.width,
     required this.height,
-    required this.sector,
+    required this.name,
   });
 }
 
 class FloorPlan extends StatefulWidget {
   final double width;
   final double height;
-  final List<TableModel> tables;
+  final List<SectorModel> sectors;
   final Map<String, Color> sectorColors;
 
   const FloorPlan({
     Key? key,
     required this.width,
     required this.height,
-    required this.tables,
+    required this.sectors,
     required this.sectorColors,
   }) : super(key: key);
 
@@ -37,7 +37,7 @@ class FloorPlan extends StatefulWidget {
 }
 
 class _FloorPlanState extends State<FloorPlan> {
-  TableModel? selectedTable;
+  SectorModel? selectedSector;
 
   @override
   Widget build(BuildContext context) {
@@ -50,32 +50,32 @@ class _FloorPlanState extends State<FloorPlan> {
       ),
       child: Stack(
         children: [
-          ...widget.tables.map((table) => Positioned(
-                left: table.x,
-                top: table.y,
+          ...widget.sectors.map((sector) => Positioned(
+                left: sector.x,
+                top: sector.y,
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
-                      selectedTable = table;
+                      selectedSector = sector;
                     });
-                    showTableDetails(context, table);
+                    showSectorDetails(context, sector);
                   },
                   child: Container(
-                    width: table.width,
-                    height: table.height,
+                    width: sector.width,
+                    height: sector.height,
                     decoration: BoxDecoration(
-                      color: widget.sectorColors[table.sector] ?? Colors.grey,
+                      color: widget.sectorColors[sector.name] ?? Colors.grey,
                       border: Border.all(
-                        color: selectedTable?.id == table.id
+                        color: selectedSector?.id == sector.id
                             ? Colors.blue
                             : Colors.black,
-                        width: selectedTable?.id == table.id ? 2 : 1,
+                        width: selectedSector?.id == sector.id ? 2 : 1,
                       ),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Center(
                       child: Text(
-                        table.id,
+                        sector.id,
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -87,18 +87,18 @@ class _FloorPlanState extends State<FloorPlan> {
     );
   }
 
-  void showTableDetails(BuildContext context, TableModel table) {
+  void showSectorDetails(BuildContext context, SectorModel sector) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Table ${table.id}'),
+        title: Text('Sector ${sector.id}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Secteur: ${table.sector}'),
-            Text('Position: (${table.x}, ${table.y})'),
-            Text('Dimensions: ${table.width}x${table.height}'),
+            Text('Secteur: ${sector.name}'),
+            Text('Position: (${sector.x}, ${sector.y})'),
+            Text('Dimensions: ${sector.width}x${sector.height}'),
           ],
         ),
         actions: [
@@ -114,24 +114,24 @@ class _FloorPlanState extends State<FloorPlan> {
 
 class SimpleStatelessWidget extends StatelessWidget {
   SimpleStatelessWidget({Key? key}) : super(key: key);
-  final tables = [
-    TableModel(
-      id: "T1",
+  final sectors = [
+    SectorModel(
+      id: "S1",
       x: 50,
       y: 50,
       width: 60,
       height: 40,
-      sector: "A",
+      name: "A",
     ),
-    TableModel(
-      id: "T2",
+    SectorModel(
+      id: "S2",
       x: 150,
       y: 50,
       width: 60,
       height: 40,
-      sector: "B",
+      name: "B",
     ),
-    // Ajoutez d'autres tables selon vos besoins
+    // Ajoutez d'autres secteurs selon vos besoins
   ];
 
   final sectorColors = {
@@ -149,7 +149,7 @@ class SimpleStatelessWidget extends StatelessWidget {
           child: FloorPlan(
             width: screenSize.width,
             height: screenSize.height,
-            tables: tables,
+            sectors: sectors,
             sectorColors: sectorColors,
           )),
     );
