@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/user.js';
+import User, { IUser } from '../models/user.js';
 import RefreshToken from '../models/refreshToken.js';
 import auth from '../middleware/auth.js';
 import logger from '../services/logger.js';

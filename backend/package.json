@@ -4,7 +4,7 @@
   "type": "module",
   "main": "src/app.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dev": "tsx watch src/app.ts"
   },
   "keywords": [],
@@ -64,6 +64,7 @@
     "eslint-plugin-unused-imports": "^4.1.4",
     "globals": "^15.9.0",
     "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.4",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.6",
     "tsx": "^4.19.0",
