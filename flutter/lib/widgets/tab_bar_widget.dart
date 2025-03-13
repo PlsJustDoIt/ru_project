@@ -4,7 +4,7 @@ import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/widgets/map_widget.dart';
-import 'package:ru_project/widgets/floor_plan_widget.dart';
+import 'package:ru_project/widgets/ru_lumiere_sector_map.dart';
 import 'package:ru_project/widgets/menu_widget.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -98,7 +98,7 @@ class TabBarWidget extends StatelessWidget {
         body: TabBarView(
           children: [
             const CafeteriaLayout(),
-            SimpleStatelessWidget(),
+            SimpleMapWidget(),
             const MenuWidget(),
             FriendsListSheet(),
             ChatWidget(roomname: 'Global', actualUser: userProvider.user!),
