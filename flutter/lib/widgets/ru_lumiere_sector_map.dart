@@ -143,7 +143,7 @@ class SimpleMapWidget extends StatelessWidget {
       width: 60,
       height: 40,
       name: "A",
-      color: Colors.blue,
+      color: Colors.green,
       isClickable: true,
     ),
     SectorModel(
@@ -156,15 +156,94 @@ class SimpleMapWidget extends StatelessWidget {
       color: Colors.green,
       isClickable: true,
     ),
+
     SectorModel(
+      id: "S3",
       x: 250,
       y: 50,
       width: 60,
       height: 40,
+      name: "C",
+      color: Colors.green,
+      isClickable: true,
+    ),
+
+    //mur
+    SectorModel(
+      x: 150,
+      y: 100,
+      width: 60,
+      height: 150,
       color: Colors.red,
       isClickable: false,
     ),
-    // Ajoutez d'autres secteurs selon vos besoins
+
+    SectorModel(
+      id: "S4",
+      x: 50,
+      y: 100,
+      width: 60,
+      height: 40,
+      name: "D",
+      color: Colors.green,
+      isClickable: true,
+    ),
+
+    SectorModel(
+      id: "S5",
+      x: 250,
+      y: 100,
+      width: 60,
+      height: 40,
+      name: "E",
+      color: Colors.green,
+      isClickable: true,
+    ),
+
+    SectorModel(
+      id: "S6",
+      x: 50,
+      y: 150,
+      width: 60,
+      height: 40,
+      name: "G",
+      color: Colors.green,
+      isClickable: true,
+    ),
+
+    SectorModel(
+      id: "S7",
+      x: 250,
+      y: 150,
+      width: 60,
+      height: 40,
+      name: "H",
+      color: Colors.green,
+      isClickable: true,
+    ),
+
+     SectorModel(
+      id: "S8",
+      x: 50,
+      y: 200,
+      width: 60,
+      height: 40,
+      name: "I",
+      color: Colors.green,
+      isClickable: true,
+    ),
+
+    SectorModel(
+      id: "S9",
+      x: 250,
+      y: 200,
+      width: 60,
+      height: 40,
+      name: "J",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    
   ];
 
   @override
