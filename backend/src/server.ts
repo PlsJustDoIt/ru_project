@@ -10,6 +10,7 @@ import { createWriteStream } from 'fs';
 import { join } from 'path';
 import morgan from 'morgan';
 
+console.log('isProduction: ' + isProduction);
 // Database Connection
 if (process.env.MONGO_URI == null) {
     logger.error('MONGO_URI is not defined');
@@ -27,6 +28,7 @@ if (isProduction) {
 }
 
 logger.info('MONGO_URI: ' + process.env.MONGO_URI);
+logger.info('API Key : ' + process.env.GINKO_API_KEY);
 connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB Connected'))
     .catch(err => logger.error('MongoDB connection error:', err));

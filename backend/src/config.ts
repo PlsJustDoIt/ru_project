@@ -15,7 +15,6 @@ const logsPath = join(rootDir, 'logs');
 const avatarPath = join(uploadsPath, 'avatar');
 const bugReportPath = join(uploadsPath, 'bugReport');
 let componentsPath: string;
-console.log('isProduction: ' + isProduction);
 if (!isProduction) {
     componentsPath = join(rootDir, 'src/components');
 } else {

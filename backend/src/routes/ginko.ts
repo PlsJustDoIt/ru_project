@@ -16,8 +16,6 @@ if (!apiKey) {
 }
 const apiUrl = 'https://api.ginko.voyage';
 
-logger.info('API Key : ' + apiKey);
-
 router.get('/info', auth, async (req: Request, res: Response) => {
     try {
         if (!isProduction) {
