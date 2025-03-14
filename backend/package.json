@@ -5,7 +5,7 @@
   "main": "src/app.ts",
   "scripts": {
     "test": "vitest",
-    "dev": "tsx watch src/app.ts"
+    "dev": "tsx watch src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +38,7 @@
     "socket.io": "^4.8.1",
     "swagger-ui-dist": "^5.18.2",
     "swagger-ui-express": "^5.0.1",
+    "ts-node": "^10.9.2",
     "winston": "^3.17.0",
     "xml2js": "^0.6.2",
     "yaml": "^2.6.1"
@@ -69,7 +70,6 @@
     "ts-jest": "^29.2.6",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
-    "typescript-eslint": "^8.5.0",
-    "vitest": "^3.0.8"
+    "typescript-eslint": "^8.5.0"
   }
 }

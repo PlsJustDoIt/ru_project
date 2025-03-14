@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import { join, resolve } from 'path';
+
 config();
 
 const isProduction = process.env.NODE_ENV === 'production';
