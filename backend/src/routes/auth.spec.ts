@@ -2,10 +2,12 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../app.js';
+import logger from '../services/logger.js';
 
 let mongoServer: MongoMemoryServer;
 describe('auth routes', () => {
     beforeAll(async () => {
+        logger.info = jest.fn(); // pour mute les logs
         mongoServer = await MongoMemoryServer.create();
         await mongoose.connect(mongoServer.getUri());
     });
@@ -14,6 +16,7 @@ describe('auth routes', () => {
         await mongoose.disconnect();
         await mongoose.connection.close();
         await mongoServer.stop();
+        jest.restoreAllMocks();
     });
 
     it('should create a new user', async () => {

@@ -3,6 +3,7 @@ import app from '../app.js';
 import axios from 'axios';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import logger from '../services/logger.js';
 
 jest.mock('axios'); // Mock the axios library
 
@@ -38,6 +39,7 @@ describe('Ginko Router Tests', () => {
 
     beforeAll(async () => {
         process.env.GINKO_API_KEY = 'test-api-key';
+        logger.info = jest.fn(); // pour mute les logs
         mongoServer = await MongoMemoryServer.create();
         await mongoose.connect(mongoServer.getUri());
         const res = await request(app)
@@ -60,10 +62,7 @@ describe('Ginko Router Tests', () => {
         const testLieu = 'TestStop';
         (axios.post as jest.Mock).mockResolvedValueOnce(mockApiResponse);
         // First call to populate cache
-        await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`); // Ajouter le token dans l'en-tête;
-
-        // Second call should use cached data
-        const response = await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`);
+        const response = await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`); // Ajouter le token dans l'en-tête;
 
         expect(response.status).toBe(200);
         expect(response.body.nomExact).toBe('Crous Université');
