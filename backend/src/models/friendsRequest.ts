@@ -10,13 +10,13 @@ interface IFriendsRequest {
     createdAt: Date;
 }
 
-const friendsRequestSchema = new Schema<IFriendsRequest>({
+const FriendsRequestSchema = new Schema<IFriendsRequest>({
     sender: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
     receiver: { type: Schema.Types.ObjectId, required: true, ref: 'User' },
     status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
 }, { timestamps: true });
 
-const FriendsRequest = model<IFriendsRequest>('FriendsRequest', friendsRequestSchema);
+const FriendsRequest = model<IFriendsRequest>('FriendsRequest', FriendsRequestSchema);
 
 export default FriendsRequest;
 export { IFriendsRequest, Status };

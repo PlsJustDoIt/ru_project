@@ -62,16 +62,30 @@ export const AuthService = {
     },
 
     /**
-   * Génère un access token
-   */
-    generateAccessToken(userId: Types.ObjectId) {
+     * Generates an access token for the given user ID.
+     *
+     * @param userId The ID of the user to generate the token for.
+     * @returns A string representing the access token.
+     */
+    async generateAccessToken(userId: Types.ObjectId) {
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
         return generateAccessToken(userId);
     },
 
     /**
-   * Génère et sauvegarde un refresh token
-   */
+        * Generates a new refresh token for the given user ID, saves it to the database, and returns the token.
+        *
+        * @param userId The ID of the user for whom to generate the refresh token.
+        * @returns A promise that resolves with the generated refresh token.
+        */
     async generateAndSaveRefreshToken(userId: Types.ObjectId) {
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
         const refreshToken = generateRefreshToken(userId);
 
         const refreshTokenInstance = new RefreshToken({
@@ -86,10 +100,18 @@ export const AuthService = {
     },
 
     /**
-   * Génère les tokens et sauvegarde le refresh token
-   */
+     * Generates a new access token and refresh token for the given user ID.
+     * The refresh token is saved to the database.
+     *
+     * @param userId The ID of the user to generate tokens for.
+     * @returns An object containing the access token and refresh token.
+     */
     async generateTokens(userId: Types.ObjectId) {
-        const accessToken = this.generateAccessToken(userId);
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        const accessToken = await this.generateAccessToken(userId);
         const refreshToken = await this.generateAndSaveRefreshToken(userId);
 
         return { accessToken, refreshToken };

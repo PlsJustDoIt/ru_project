@@ -4,8 +4,10 @@
   "type": "module",
   "main": "src/app.ts",
   "scripts": {
-    "test": "vitest",
-    "dev": "tsx watch src/server.ts"
+    "test": "jest",
+    "dev": "tsx watch src/server.ts",
+    "test:unit": "jest --config jest.unit.config.js",
+    "test:e2e": "jest --config jest.e2e.config.js"
   },
   "keywords": [],
   "author": "",
@@ -38,7 +40,6 @@
     "socket.io": "^4.8.1",
     "swagger-ui-dist": "^5.18.2",
     "swagger-ui-express": "^5.0.1",
-    "ts-node": "^10.9.2",
     "winston": "^3.17.0",
     "xml2js": "^0.6.2",
     "yaml": "^2.6.1"
