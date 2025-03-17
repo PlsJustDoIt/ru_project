@@ -163,6 +163,7 @@ export class SocketService {
         });
 
         // TODO : à finir
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         socket.on('join_room', async (data: any[]) => {
             logger.info('User %s joining room with data %o', socket.id, data);
             logger.info(data);
