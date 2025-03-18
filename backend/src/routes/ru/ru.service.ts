@@ -1,34 +1,12 @@
-import auth from '../middleware/auth.js';
-import { Router, Request, Response } from 'express';
-import NodeCache from 'node-cache';
 import { Parser } from 'xml2js';
-import { MenuResponse, MenuXml } from '../interfaces/menu.js';
-import logger from '../services/logger.js';
+import { MenuResponse, MenuXml } from '../../interfaces/menu.js';
 import { readFileSync } from 'fs';
-
-const router = Router();
+import Restaurant from '../../models/restaurant.js';
+import { ObjectId } from 'mongoose';
 const ru_lumiere_id = 'r135';
-const api_url = 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/menu.xml';
-const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
-const apiDoc = {
-    message: 'API pour récupérer les prochains repas du ru lumière',
-    author: {
-        name: 'Léo Maugeri',
-        email: 'leomaugeri25@gmail.com',
-    },
-    version: '1.0.0',
-    data: {
-        static: [
-            {
-                name: 'Menus',
-                description: 'Récupère les menus du RU Lumière',
-                method: 'GET',
-                endpoint: '/menus',
-            },
-        ],
-    },
-};
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars
+const api_url = 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/menu.xml';
 
 function decodeHtmlEntities(text: string) {
     return text.replace(/&lt;/g, '<')
@@ -106,7 +84,7 @@ function transformToMenu(menu: MenuXml): MenuResponse {
 }
 
 // Fonction pour récupérer les menus de l'API externe
-async function fetchMenusFromExternalAPI() {
+async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise<MenuResponse[]> {
     try {
         // // L'URL de l'API qui retourne le document XML des menus
         // const response: AxiosResponse = await axios.get(api_url);
@@ -126,8 +104,8 @@ async function fetchMenusFromExternalAPI() {
         });
         const result = await parser.parseStringPromise(xmlData);
         const restaurants = result.root.resto;
-        const restoR135 = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_lumiere_id);
-        const menus = decodeJsonValues(restoR135.menu);
+        const resto = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_id);
+        const menus = decodeJsonValues(resto.menu);
         const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
         const filteredMenus = menus.filter((menu: MenuXml) => menu.$.date >= today);
 
@@ -139,33 +117,12 @@ async function fetchMenusFromExternalAPI() {
     }
 }
 
-router.get('/', (req: Request, res: Response) => {
-    return res.send(apiDoc);
-},
-);
+const findRestaurant = async (id: string) => {
+    return await Restaurant.findOne({ id: id }).populate('sectors');
+};
 
-router.get('/menus', auth, async (req: Request, res: Response) => {
-    try {
-        // On vérifie si les menus sont en cache
-        const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
-        if (cachedMenus) {
-            logger.info('Les menus sont en cache');
-            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-            const filteredMenus = cachedMenus.filter((menu: MenuResponse) => menu.date >= today);
-            return res.json({ menus: filteredMenus });
-        }
+const createRestaurant = async (restaurant: { id: string; name: string; sectors?: ObjectId[] }) => {
+    return await Restaurant.create(restaurant);
+};
 
-        // Si les menus ne sont pas en cache, on les récupère de l'API externe
-        const menus = await fetchMenusFromExternalAPI();
-
-        // On met les menus en cache pour une semaine
-        cache.set('menus', menus);
-        return res.json({ menus: menus });
-    } catch (error) {
-        console.error('Erreur lors de la récupération des menus:', error);
-        return res.status(500).json({ error: 'Erreur lors de la récupération des menus' });
-    }
-},
-);
-
-export default router;
+export { fetchMenusFromExternalAPI, findRestaurant, createRestaurant };

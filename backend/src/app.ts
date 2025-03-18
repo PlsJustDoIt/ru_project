@@ -3,7 +3,7 @@ import express, { Request, Response } from 'express';
 import { set, connect } from 'mongoose';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
-import ruRoutes from './routes/ru.js';
+import ruRoutes from './routes/ru/ru.routes.js';
 import ginkoRoutes from './routes/ginko.js';
 import cors from 'cors';
 import { createWriteStream, readFileSync } from 'fs';
