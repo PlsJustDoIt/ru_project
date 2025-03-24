@@ -261,33 +261,6 @@ export class SocketService {
         return this.io.sockets.sockets.get(socketId);
     }
 
-    public async emitToRoomWithSocket(socket: Socket, event: string, roomId: string, data: unknown): Promise<void> {
-        if (!roomId) {
-            throw new Error('Room ID is required');
-        }
-
-        logger.info('trying to %s to room %s with socket %s: %o', event, roomId, socket.id, data);
-        socket.to(roomId).emit(event, data);
-    }
-
-    public broadcastToEveryone(event: string, data: unknown): void {
-        if (!this.io) {
-            throw new Error('Socket.IO server not initialized');
-        }
-
-        this.io.emit(event, data);
-
-        // Optional: log the broadcast for debugging
-        logger.debug(`Broadcasted ${event}`);
-    }
-
-    public getSocketFromUserId(userId: string): Socket | undefined {
-        const socketId = this.connectedUsers.get(userId);
-        if (!socketId || !this.io) return undefined;
-        logger.info('Getting socket for user %s: %s', userId, socketId);
-        return this.io.sockets.sockets.get(socketId);
-    }
-
     getIO(): SocketIOServer {
         if (!this.io) {
             throw new Error('Socket.IO is not initialized!');
