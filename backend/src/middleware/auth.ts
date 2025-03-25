@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 import { Request, Response, NextFunction } from 'express';
-import logger from '../services/logger.js';
+import logger from '../utils/logger.js';
 
 export default function (req: Request, res: Response, next: NextFunction): void {
     if (req.url.includes('/token')) {
