@@ -1,23 +1,20 @@
-import { isProduction, uploadsPath, rootDir, componentsPath } from './config.js';
+import { isProduction, rootDir, componentsPath } from './config.js';
 import express, { Request, Response } from 'express';
 import { set, connect } from 'mongoose';
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
 import ruRoutes from './routes/ru.js';
-import ginkoRoutes from './routes/ginko.js';
+
 import cors from 'cors';
 import { createWriteStream, readFileSync } from 'fs';
 // import https from 'https';
 import morgan from 'morgan';
-import logger from './services/logger.js';
+import logger from './utils/logger.js';
 import { exit } from 'process';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import helmet from 'helmet';
 import { serve, setup } from 'swagger-ui-express';
 import YAML from 'yaml';
-import { socketService } from './services/socket.js';
-import socketRoute from './routes/socket.js';
+import { socketService } from './routes/socket/socket.service.js';
 import { join } from 'path';
 import AdminJS, { CurrentAdmin, DefaultAuthenticatePayload, DefaultAuthProvider } from 'adminjs';
 import BugReport from './models/bugReport.js';
@@ -25,7 +22,8 @@ import * as AdminJSMongoose from '@adminjs/mongoose';
 import User from './models/user.js';
 import { ComponentLoader } from 'adminjs';
 import AdminJSExpress from '@adminjs/express';
-import { AuthService } from './services/auth.js';
+import { authenticate } from './routes/auth/auth.service.js';
+import api from './routes/routes.js';
 
 const app = express();
 
@@ -68,15 +66,9 @@ connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB Connected'))
     .catch(err => logger.error('MongoDB connection error:', err));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/ru', ruRoutes);
-app.use('/api/ginko', ginkoRoutes);
-app.use('/api/socket', socketRoute);
-app.get('/api/health', (res: Response) => {
-    res.status(200).json({ message: 'API is alive !' });
-});
-app.use('/api/uploads', express.static(uploadsPath));
+
+app.use(api);
 
 // Configurer AdminJS
 
@@ -175,9 +167,9 @@ customRouter.get('/api/resources/uploads/*', handleImageRequest);
 
 // VA TE FAIRE ENCULER ADMIN JS
 
-const authenticate = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin | null> => {
+const authenticateAdmin = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin | null> => {
     return new Promise((resolve) => {
-        AuthService.authenticate(payload.email, payload.password)
+        authenticate(payload.email, payload.password)
             .then((user) => {
                 if (user.role === 'admin') {
                     resolve({ email: user.username });
@@ -194,7 +186,7 @@ const authenticate = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin
 
 const authProvider = new DefaultAuthProvider({
     componentLoader,
-    authenticate,
+    authenticate: authenticateAdmin,
 });
 
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
