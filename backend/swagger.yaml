@@ -17,7 +17,7 @@ servers:
 tags:
   - name: auth
     description: Opérations d'authentification
-  - name : ginko
+  - name: ginko
     description: Opérations sur les données de Ginko
   - name: ru
     description: Opérations sur les données de RU
@@ -71,22 +71,21 @@ components:
         error:
           type: string
 
-
 paths:
   ##  auth
   /auth/register:
     post:
       tags: [auth]
       summary: Inscription d'un nouvel utilisateur
-      description: 'Créer un nouvel utilisateur'
+      description: "Créer un nouvel utilisateur"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/userAuth'
+              $ref: "#/components/schemas/userAuth"
       responses:
-        '201': 
+        "201":
           description: OK
           content:
             application/json:
@@ -97,19 +96,19 @@ paths:
                     type: string
                   refreshToken:
                     type: string
-        '400':
+        "400":
           description: Erreur de validation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
 
-        '500':
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /auth/login:
     post:
       tags: [auth]
@@ -120,9 +119,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/userAuth'
+              $ref: "#/components/schemas/userAuth"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -133,24 +132,24 @@ paths:
                     type: string
                   refreshToken:
                     type: string
-        '400':
+        "400":
           description: Erreur de validation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
 
-        '500':
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-                
+                $ref: "#/components/schemas/errorResponse"
+
   /auth/token:
     post:
       tags: [auth]
-      description: 'Récupérer un nouveau token'
+      description: "Récupérer un nouveau token"
       summary: Obtenir un nouveau token d'accès en utilisant un refresh token valide
       security:
         - bearerAuth: []
@@ -167,7 +166,7 @@ paths:
                   type: string
                   description: Token de rafraîchissement précédemment émis
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -176,99 +175,45 @@ paths:
                 properties:
                   accessToken:
                     type: string
-        '401':
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '403':
+                $ref: "#/components/schemas/errorResponse"
+        "403":
           description: Erreurs liées au refresh token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /auth/logout:
     post:
       tags: [auth]
       summary: Déconnexion de l'utilisateur
       description: Invalide le refresh token et déconnecte l'utilisateur
       security:
-       - bearerAuth: []
-      requestBody:
-       required: true
-       content:
-         application/json:
-           schema:
-             type: object
-             required:
-               - refreshToken
-             properties:
-               refreshToken:
-                 type: string
-                 description: Token de rafraîchissement à invalider
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties: 
-                  message:
-                    type: string
-                    example: 'Logged out'
-        '401':
-          description: Erreur d'authentification
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/errorResponse'
-        '403':
-          description: Erreur de token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
-          description: Problème avec le middleware d'authentification
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
-          description: Erreur interne du serveur
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/errorResponse'
-  /auth/delete-account :
-    delete:
-      tags: [auth]
-      summary: "Supprimer le compte"
-      description: "Supprimer le compte de l'utilisateur connecté via le token d'authentification"
-      security:
         - bearerAuth: []
       requestBody:
-       required: true
-       content:
-         application/json:
-           schema:
-             type: object
-             required:
-               - refreshToken
-             properties:
-               refreshToken:
-                 type: string
-                 description: Token de rafraîchissement de l'utilisateur
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Token de rafraîchissement à invalider
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -277,30 +222,84 @@ paths:
                 properties:
                   message:
                     type: string
-        '400':
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401' :
+                    example: "Logged out"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
-          description: Utilisateur non trouvé
+                $ref: "#/components/schemas/errorResponse"
+        "403":
+          description: Erreur de token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Problème avec le middleware d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
+  /auth/delete-account:
+    delete:
+      tags: [auth]
+      summary: "Supprimer le compte"
+      description: "Supprimer le compte de l'utilisateur connecté via le token d'authentification"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Token de rafraîchissement de l'utilisateur
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
   ## ginko
   /ginko/info:
     get:
@@ -308,7 +307,7 @@ paths:
       summary: Récupérer les horaires de transport pour un lieu
       description: Obtient les informations de temps de transport pour un lieu spécifique
       security:
-       - bearerAuth: []
+        - bearerAuth: []
       parameters:
         - in: query
           name: lieu
@@ -318,7 +317,7 @@ paths:
           description: Nom du lieu pour lequel récupérer les horaires
           example: "crous"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -337,40 +336,40 @@ paths:
                             type: array
                             items:
                               type: string
-                          
-        '400':
+
+        "400":
           description: Erreur de requête
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401':
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '403':
+                $ref: "#/components/schemas/errorResponse"
+        "403":
           description: Erreur de token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   ## ru
   /ru:
     get:
       tags: [ru]
       summary: Récupérer les informations de l'API doc Ru
-      description: 'Récupérer API doc Ru'
+      description: "Récupérer API doc Ru"
       parameters: []
       responses: #TODO faire un exemple de réponse pour toutes les routes comme ici
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -379,19 +378,19 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: 'API pour récupérer les prochains repas du ru lumière'
-                  author: 
+                    example: "API pour récupérer les prochains repas du ru lumière"
+                  author:
                     type: object
                     properties:
                       name:
                         type: string
-                        example: 'Léo Maugeri'
+                        example: "Léo Maugeri"
                       email:
                         type: string
-                        example: 'leomaugeri25@gmail.com'
+                        example: "leomaugeri25@gmail.com"
                   version:
                     type: string
-                    example: '1.0.0'
+                    example: "1.0.0"
                   data:
                     type: object
                     properties:
@@ -402,26 +401,26 @@ paths:
                           properties:
                             name:
                               type: string
-                              example: 'Menus'
+                              example: "Menus"
                             description:
                               type: string
-                              example: 'Récupère les menus du RU Lumière'
-                            method: 
+                              example: "Récupère les menus du RU Lumière"
+                            method:
                               type: string
-                              example: 'GET'
+                              example: "GET"
                             endpoint:
                               type: string
-                              example: '/menus'
+                              example: "/menus"
   /ru/menus:
     get:
       tags: [ru]
       summary: Récupérer les menus de RU
-      description: 'Récupérer les repas de RU'
+      description: "Récupérer les repas de RU"
       security:
         - bearerAuth: []
       parameters: []
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -435,7 +434,7 @@ paths:
                       items:
                         type: string
                     "Cuisine traditionnelle":
-                      type: array 
+                      type: array
                       items:
                         type: string
                     "Menu végétalien":
@@ -456,25 +455,25 @@ paths:
                         type: string
                     "date":
                       type: string
-                          
-        '401' :
+
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '403':
+                $ref: "#/components/schemas/errorResponse"
+        "403":
           description: Erreur de token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   ## users
   /users/me:
     get:
@@ -485,24 +484,24 @@ paths:
         - bearerAuth: []
       parameters: []
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/userDB'
-        '401' :
+                $ref: "#/components/schemas/userDB"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/update-username:
     put:
       tags: [users]
@@ -521,11 +520,11 @@ paths:
               properties:
                 username:
                   type: string
-                  minLength: 3 
+                  minLength: 3
                   maxLength: 32
                   description: Nouveau nom d'utilisateur
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -534,30 +533,30 @@ paths:
                 properties:
                   message:
                     type: string
-        '400':
+        "400":
           description: Erreur de validation'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401' :
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: Utilisateur non trouvé'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/update-password:
     put:
       tags: [users]
@@ -577,16 +576,16 @@ paths:
               properties:
                 password:
                   type: string
-                  minLength: 3 
+                  minLength: 3
                   maxLength: 32
                   description: Nouveau mot de passe
                 oldPassword:
                   type: string
-                  minLength: 3 
+                  minLength: 3
                   maxLength: 32
                   description: Ancien mot de passe
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -595,30 +594,30 @@ paths:
                 properties:
                   message:
                     type: string
-        '400':
+        "400":
           description: Erreur de validation'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401' :
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: Utilisateur non trouvé'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/update-status:
     put:
       tags: [users]
@@ -639,7 +638,7 @@ paths:
                   type: string
                   description: Nouveau statut de l'utilisateur (doit être 'en ligne', 'au ru' ou 'absent')
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -648,30 +647,30 @@ paths:
                 properties:
                   statut:
                     type: string
-        '400':
+        "400":
           description: Erreur de validation'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401' :
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: Utilisateur non trouvé'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/update-profile-picture:
     put:
       tags: [users]
@@ -691,7 +690,7 @@ paths:
                   format: binary
                   description: Fichier image à télécharger comme avatar
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -700,18 +699,18 @@ paths:
                 properties:
                   avatarUrl:
                     type: string
-        '401' :
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/friends:
     get:
       tags: [users]
@@ -721,7 +720,7 @@ paths:
         - bearerAuth: []
       parameters: []
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -736,20 +735,20 @@ paths:
                       type: string
                     avatarUrl:
                       type: string
-                    id: 
+                    id:
                       type: string
-        '401' :
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/friends-requests:
     get:
       tags: [users]
@@ -758,14 +757,14 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  friendsRequests:
+                  friendRequests:
                     type: array
                     items:
                       type: object
@@ -784,24 +783,24 @@ paths:
                         createdAt:
                           type: string
                           format: date-time
-        '401':
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: Utilisateur non trouvé
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/handle-friend-request:
     post:
       tags: [users]
@@ -821,7 +820,7 @@ paths:
                 isAccepted:
                   type: boolean
       responses:
-        '200':
+        "200":
           description: "Friend request handled successfully"
           content:
             application/json:
@@ -830,30 +829,30 @@ paths:
                 properties:
                   message:
                     type: string
-        '400':
+        "400":
           description: "Invalid input"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401':
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: "Authentication error"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: "Friend request not found"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: "Internal server error"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/send-friend-request:
     post:
       tags: [users]
@@ -871,7 +870,7 @@ paths:
                 receiverId:
                   type: string
       responses:
-        '200':
+        "200":
           description: "Friend request sent successfully"
           content:
             application/json:
@@ -880,30 +879,30 @@ paths:
                 properties:
                   message:
                     type: string
-        '400':
+        "400":
           description: "Invalid input"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401':
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: "Authentication error"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: "User not found"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: "Internal server error"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/search:
     get:
       tags: [users]
@@ -919,7 +918,7 @@ paths:
             type: string
           description: Nom d'utilisateur à rechercher
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -937,23 +936,23 @@ paths:
                           type: string
                         avatarUrl:
                           type: string
-                        id: 
+                        id:
                           type: string
                     relevanceScore:
                       type: number
-                  
-        '401' :
+
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/add-friend:
     post:
       tags: [users]
@@ -974,24 +973,24 @@ paths:
               required:
                 - username
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/userDB'
-        '401' :
+                $ref: "#/components/schemas/userDB"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /users/remove-friend:
     delete:
       tags: [users]
@@ -1006,36 +1005,36 @@ paths:
             schema:
               type: object
               properties:
-                friendId :
+                friendId:
                   type: string
                   description: Id de l'ami à supprimer
               required:
                 - friendId
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/userDB'
-        '400':
+                $ref: "#/components/schemas/userDB"
+        "400":
           description: Erreur de validation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401' :
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   ## socket
   /socket/send:
     post:
@@ -1061,7 +1060,7 @@ paths:
                   type: string
                   description: Contenu du message
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -1070,25 +1069,25 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: 'Message envoyé'
-        '400':
+                    example: "Message envoyé"
+        "400":
           description: Erreur de validation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401':
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
 
   /socket/messages:
     get:
@@ -1106,7 +1105,7 @@ paths:
           description: Nom de la room
           example: "Global"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -1122,18 +1121,18 @@ paths:
                     timestamp:
                       type: string
                       format: date-time
-        '401':
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /socket/chat-room:
     get:
       tags: [socket]
@@ -1142,7 +1141,7 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -1158,18 +1157,18 @@ paths:
                     timestamp:
                       type: string
                       format: date-time
-        '401':
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
   /socket/send-chat-room:
     post:
       tags: [socket]
@@ -1190,7 +1189,7 @@ paths:
                   type: string
                   description: Contenu du message
       responses:
-        '201':
+        "201":
           description: Created
           content:
             application/json:
@@ -1206,27 +1205,27 @@ paths:
                     type: string
                   id:
                     type: string
-        '400':
+        "400":
           description: Erreur de validation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '401':
+                $ref: "#/components/schemas/errorResponse"
+        "401":
           description: Erreur d'authentification
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '404':
+                $ref: "#/components/schemas/errorResponse"
+        "404":
           description: Room ou utilisateur non trouvé
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
-        '500':
+                $ref: "#/components/schemas/errorResponse"
+        "500":
           description: Erreur interne du serveur
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/errorResponse'
+                $ref: "#/components/schemas/errorResponse"
