@@ -48,9 +48,9 @@ class FriendsListSheet extends StatefulWidget {
   State createState() => _FriendsListSheetState();
 }
 
-class _FriendsListSheetState extends State<FriendsListSheet>{
+class _FriendsListSheetState extends State<FriendsListSheet> {
   List<User>? friends;
-  List<FriendRequest>? friendsRequests;
+  List<FriendRequest>? friendRequests;
   late ApiService apiService;
   late UserProvider userProvider;
 
@@ -126,13 +126,13 @@ class _FriendsListSheetState extends State<FriendsListSheet>{
   Widget build(BuildContext context) {
     //super.build(context);
     //recuperer les demandes d'amis
-    if (friendsRequests == null) {
+    if (friendRequests == null) {
       () async {
         try {
-          Map<String, dynamic> response = await apiService.getFriendsRequests();
+          Map<String, dynamic> response = await apiService.getFriendRequests();
           if (!mounted) return;
           setState(() {
-            friendsRequests = response['friendsRequests'];
+            friendRequests = response['friendRequests'];
           });
         } catch (e) {
           logger.e('Error loading friend requests: $e');
@@ -143,7 +143,7 @@ class _FriendsListSheetState extends State<FriendsListSheet>{
         }
       }();
     }
-    
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
@@ -177,27 +177,27 @@ class _FriendsListSheetState extends State<FriendsListSheet>{
             ),
           ),
 
-            // Bouton de demande d'ami
-            Align(
+          // Bouton de demande d'ami
+          Align(
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: IconButton(
-              onPressed: () async {
-                Navigator.push(context, MaterialPageRoute(builder: (context) {
-                return FriendsRequestWidget(
-                  initialFriendsRequests: friendsRequests,
-                  apiService: apiService,
-                  onAddFriend: addFriendToFriendsList,
-                );
-                }));
-              },
-              icon: (friendsRequests != null && friendsRequests!.isNotEmpty)
-                ? Icon(Icons.notifications_active, color: Colors.red)
-                : Icon(Icons.notifications),
+                onPressed: () async {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                    return FriendsRequestWidget(
+                      initialFriendsRequests: friendRequests,
+                      apiService: apiService,
+                      onAddFriend: addFriendToFriendsList,
+                    );
+                  }));
+                },
+                icon: (friendRequests != null && friendRequests!.isNotEmpty)
+                    ? Icon(Icons.notifications_active, color: Colors.red)
+                    : Icon(Icons.notifications),
               ),
             ),
-            ),
+          ),
 
           // Nombre d'amis
           Padding(

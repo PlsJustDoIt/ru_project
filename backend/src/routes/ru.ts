@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 import NodeCache from 'node-cache';
 import { Parser } from 'xml2js';
 import { MenuResponse, MenuXml } from '../interfaces/menu.js';
-import logger from '../services/logger.js';
+import logger from '../utils/logger.js';
 import { readFileSync } from 'fs';
 
 const router = Router();
