@@ -3,12 +3,15 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 import { join } from 'path';
-import { rootDir, uploadsPath } from './config.js';
-import logger from './services/logger.js';
+import { rootDir } from './config.js';
+import logger from './utils/logger.js';
 import rateLimit from 'express-rate-limit';
 import routes from './routes/routes.js';
 
 import { handleImageRequest } from './middleware/imageHandler.js'; // Import image request handler
+import ruRoutes from './routes/ru.js';
+
+import api from './routes/routes.js';
 
 const app = express();
 
@@ -32,8 +35,9 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// Static files
-app.use('/api/uploads', express.static(uploadsPath));
+app.use('/api/ru', ruRoutes);
+
+app.use(api);
 
 // Routes
 app.use('/api', routes);
@@ -48,7 +52,6 @@ app.use('/admin/api/resources/uploads/*', handleImageRequest);
 app.use('/resources/uploads/*', handleImageRequest);
 app.use('/api/resources/uploads/*', handleImageRequest);
 
-// Test socket route
 app.get('/test-socket', (req, res) => {
     return res.sendFile(join(rootDir, 'public', 'socket-test.html'));
 });

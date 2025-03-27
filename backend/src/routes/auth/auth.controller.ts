@@ -1,22 +1,19 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
+import User, { IUser } from '../../models/user.js';
+import logger from '../../utils/logger.js';
+import { validateCredentials, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
 import jwt from 'jsonwebtoken';
-import User, { IUser } from '../models/user.js';
-import RefreshToken from '../models/refreshToken.js';
-import auth from '../middleware/auth.js';
-import logger from '../services/logger.js';
+import RefreshToken from '../../models/refreshToken.js';
 import { join } from 'path';
 import { unlink } from 'fs';
-import { avatarPath } from '../config.js';
-import { AuthService } from '../services/auth.js';
+import { avatarPath } from '../../config.js';
 
-const router = Router();
-
-router.post('/register', async (req, res) => {
+const registerUser = async (req: Request, res: Response) => {
     try {
         const { username, password } = req.body;
 
         // Validate username and password
-        const validation = AuthService.validateCredentials(username, password);
+        const validation = validateCredentials(username, password);
         if (!validation.valid) {
             return res.status(400).json({ error: validation.error });
         }
@@ -33,7 +30,7 @@ router.post('/register', async (req, res) => {
         await user.save();
 
         // Generate tokens
-        const tokens = await AuthService.generateTokens(user._id);
+        const tokens = await generateTokens(user._id);
 
         logger.info(`User ${username} registered successfully`);
         return res.status(201).json(tokens);
@@ -41,9 +38,9 @@ router.post('/register', async (req, res) => {
         logger.error(err);
         return res.status(500).json({ error: 'An error has occurred' });
     }
-});
+};
 
-router.post('/login', async (req, res) => {
+const loginUser = async (req: Request, res: Response) => {
     try {
         const { username, password } = req.body;
 
@@ -53,25 +50,25 @@ router.post('/login', async (req, res) => {
         }
 
         // Valider les identifiants
-        const validation = AuthService.validateCredentials(username, password);
+        const validation = validateCredentials(username, password);
         if (!validation.valid) {
             return res.status(400).json({ error: validation.error });
         }
 
         // Authentifier l'utilisateur
-        const user = await AuthService.authenticate(username, password);
+        const user = await authenticate(username, password);
 
         // Générer les tokens
-        const tokens = await AuthService.generateTokens(user._id);
+        const tokens = await generateTokens(user._id);
 
         return res.json(tokens);
     } catch (err) {
         logger.error(err);
         return res.status(500).json({ error: 'An error has occurred' });
     }
-});
+};
 
-router.post('/token', auth, async (req, res) => {
+const refreshUserToken = async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     try {
         const existingToken = await RefreshToken.findOne({ token: refreshToken });
@@ -102,7 +99,7 @@ router.post('/token', auth, async (req, res) => {
         }
 
         // Générer un nouveau access token
-        const accessToken = AuthService.generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
+        const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
 
         const userUsername: IUser | null = await User.findById(userIdFromToken).select('username');
 
@@ -118,9 +115,9 @@ router.post('/token', auth, async (req, res) => {
         }
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-router.post('/logout', auth, async (req, res) => { // TODO : à voir si on doit utiliser le middleware auth
+const logoutUser = async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     try {
         await RefreshToken.findOneAndDelete({ token: refreshToken });
@@ -134,9 +131,9 @@ router.post('/logout', auth, async (req, res) => { // TODO : à voir si on doit 
         logger.error(err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-router.delete('/delete-account', auth, async (req: Request, res: Response) => {
+const deleteUser = async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     if (!refreshToken) {
         logger.error('No refresh token provided');
@@ -162,6 +159,6 @@ router.delete('/delete-account', auth, async (req: Request, res: Response) => {
         logger.error(err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-export default router;
+export { registerUser, loginUser, refreshUserToken, logoutUser, deleteUser };
