@@ -1,14 +1,12 @@
-import { Router, Request, Response } from 'express';
-import User, { IUser } from '../models/user.js';
-import FriendsRequest from '../models/friendsRequest.js';
-import auth from '../middleware/auth.js';
-import logger from '../services/logger.js';
-import { uploadAvatar, convertAndCompress, uploadBugReport } from '../services/multer.js';
+import User, { IUser } from '../../models/user.js';
+import { Request, Response } from 'express';
+import logger from '../../utils/logger.js';
 import { compare } from 'bcrypt';
-import BugReport from '../models/bugReport.js';
-const router = Router();
+import { getUserByUsername, levenshteinDistance } from './user.service.js';
+import FriendRequest from '../../models/friendsRequest.js';
+import BugReport from '../../models/bugReport.js';
 
-router.get('/me', auth, async (req: Request, res: Response) => {
+const getUserInformation = async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id).populate('friends', 'username status');
         return res.json({ user: user });
@@ -16,63 +14,12 @@ router.get('/me', auth, async (req: Request, res: Response) => {
         logger.error('Could not retrieve user : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
 const TEXT_MIN_LENGTH = 3;
 const TEXT_MAX_LENGTH = 32;
 
-router.put('/update', auth, async (req: Request, res: Response) => {
-    try {
-        let username = req.body.username;
-        let password = req.body.password;
-
-        // username and password : min 3 caractères, max 32 char and not empty and not null and not only spaces
-
-        if (!username || !password) {
-            logger.error('Username or password field dosn\'t exists');
-            return res.status(400).json({ error: 'Username or password dosn\'t exists' });
-        }
-
-        username = username.trim();
-        password = password.trim();
-
-        if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
-        }
-
-        if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
-            logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
-            return res.status(400).json({ error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
-        }
-
-        // check if new username already exists
-        const testUser = await User.findOne({ username });
-        if (testUser) return res.status(400).json({ error: 'User already exists' });
-
-        const user = await User.findById(req.user.id);
-        if (user === null) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const user_updated = req.body;
-
-        user.password = user_updated.password;
-        user.username = user_updated.username;
-        user.status = user_updated.status;
-        user.friends = user_updated.friends;
-
-        await user.save();
-
-        return res.json({ message: 'User updated' });
-    } catch (err: unknown) {
-        logger.error(`Could not update user : ${err}`);
-        return res.status(500).json({ error: `Could not update user : ${err} ` });
-    }
-});
-
-// update only username, we need username
-router.put('/update-username', auth, async (req: Request, res: Response) => {
+const updateUsername = async (req: Request, res: Response) => {
     try {
         // test validation username
         let username = req.body.username;
@@ -84,7 +31,7 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
             return res.status(400).json({ error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)` });
         }
 
-        const testUser = await User.findOne({ username });
+        const testUser = await getUserByUsername(username);
         if (testUser) return res.status(400).json({ error: 'A user with this username already exists' });
 
         const user = await User.findById(req.user.id);
@@ -102,10 +49,10 @@ router.put('/update-username', auth, async (req: Request, res: Response) => {
         logger.error(`Could not update username : ${err}`);
         return res.status(500).json({ error: `An error has occured` });
     }
-});
+};
 
-// update only password, we need password
-router.put('/update-password', auth, async (req: Request, res: Response) => {
+// TODO : à refaire parce que c'est pas propre
+const updatePassword = async (req: Request, res: Response) => {
     try {
         // test validation password
         let password = req.body.password;
@@ -148,10 +95,9 @@ router.put('/update-password', auth, async (req: Request, res: Response) => {
         logger.error(`Could not update password : ${err}`);
         return res.status(500).json({ error: `An error has occured` });
     }
-});
+};
 
-// update only status, we need status
-router.put('/update-status', auth, async (req: Request, res: Response) => {
+const updateStatus = async (req: Request, res: Response) => {
     try {
         const status = req.body.status;
 
@@ -175,9 +121,9 @@ router.put('/update-status', auth, async (req: Request, res: Response) => {
         logger.error(`Could not update status : ${err}`);
         return res.status(500).json({ error: `An error has occured` });
     }
-});
+};
 
-router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), convertAndCompress, async (req: Request, res: Response) => {
+const updateProfilePicture = async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id);
 
@@ -200,9 +146,9 @@ router.put('/update-profile-picture', auth, uploadAvatar.single('avatar'), conve
         logger.error('Could not update profile picture : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-router.get('/friends', auth, async (req: Request, res: Response) => {
+const getUserFriends = async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl id');
         if (user == null) {
@@ -216,16 +162,15 @@ router.get('/friends', auth, async (req: Request, res: Response) => {
             _id: friend._id,
         }));
 
-        logger.info('User friends : ' + friends);
+        logger.info('User friends : %o', friends);
         return res.json({ friends: friends });
     } catch (err: unknown) {
         logger.error('Could not retrieve friends : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-// search for users
-router.get('/search', auth, async (req: Request, res: Response) => {
+const searchUsers = async (req: Request, res: Response) => {
     try {
         const query = req.query.query;
         if (!query || typeof query !== 'string' || query.trim().length < 3) {
@@ -248,7 +193,7 @@ router.get('/search', auth, async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'No users found' });
         }
 
-        const existingRequests = await FriendsRequest.find({
+        const existingRequests = await FriendRequest.find({
             sender: req.user.id,
             status: 'pending',
         }).select('receiver');
@@ -291,39 +236,9 @@ router.get('/search', auth, async (req: Request, res: Response) => {
         logger.error('Could not search for user: ' + err);
         return res.status(500).json({ Error: 'An error has occured' });
     }
-});
+};
 
-// Fonction utilitaire pour calculer la distance de Levenshtein
-function levenshteinDistance(str1: string, str2: string): number {
-    const m = str1.length;
-    const n = str2.length;
-    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-    for (let i = 0; i <= m; i++) {
-        dp[i][0] = i;
-    }
-    for (let j = 0; j <= n; j++) {
-        dp[0][j] = j;
-    }
-
-    for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-            if (str1[i - 1] === str2[j - 1]) {
-                dp[i][j] = dp[i - 1][j - 1];
-            } else {
-                dp[i][j] = Math.min(
-                    dp[i - 1][j - 1] + 1,
-                    dp[i - 1][j] + 1,
-                    dp[i][j - 1] + 1,
-                );
-            }
-        }
-    }
-
-    return dp[m][n];
-}
-
-router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
+const removeFriend = async (req: Request, res: Response) => {
     try {
         const friendId = req.body.friendId;
         if (!friendId) {
@@ -361,19 +276,19 @@ router.delete('/remove-friend', auth, async (req: Request, res: Response) => {
         logger.error('Could not remove friend : ' + err);
         return res.status(500).json({ error: 'An error has occurred' });
     }
-});
+};
 
-router.get('/friends-requests', auth, async (req: Request, res: Response) => {
+const getFriendRequests = async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const resFriendsRequests = await FriendsRequest.find({ receiver: user._id }).populate<{ sender: IUser }>('sender', 'username avatarUrl');
+        const resFriendRequests = await FriendRequest.find({ receiver: user._id }).populate<{ sender: IUser }>('sender', 'username avatarUrl');
 
-        logger.info('res : %o', resFriendsRequests);
+        logger.info('res : %o', resFriendRequests);
 
-        const friendsRequests = resFriendsRequests.map(request => ({
+        const friendRequests = resFriendRequests.map(request => ({
             id: request._id,
             sender: {
                 username: request.sender.username,
@@ -384,14 +299,14 @@ router.get('/friends-requests', auth, async (req: Request, res: Response) => {
             status: request.status,
         }));
 
-        return res.json({ friendsRequests: friendsRequests });
+        return res.json({ friendRequests });
     } catch (err: unknown) {
         logger.error('Could not retrieve friends requests : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-router.post('/send-friend-request', auth, async (req: Request, res: Response) => {
+const sendFriendRequest = async (req: Request, res: Response) => {
     try {
         const { username } = req.body;
         const sender = await User.findById(req.user.id);
@@ -416,7 +331,7 @@ router.post('/send-friend-request', auth, async (req: Request, res: Response) =>
             return res.status(400).json({ error: 'Already friends' });
         }
 
-        const existingRequest = await FriendsRequest.findOne({
+        const existingRequest = await FriendRequest.findOne({
             sender: sender._id,
             receiver: receiver._id,
             status: 'pending',
@@ -426,7 +341,7 @@ router.post('/send-friend-request', auth, async (req: Request, res: Response) =>
             return res.status(400).json({ error: 'Friend request already exists' });
         }
 
-        const existingReverseRequest = await FriendsRequest.findOne({
+        const existingReverseRequest = await FriendRequest.findOne({
             sender: receiver._id,
             receiver: sender._id,
             status: 'pending',
@@ -443,70 +358,88 @@ router.post('/send-friend-request', auth, async (req: Request, res: Response) =>
             return res.json({ message: 'Friend request accepted', friend: receiver });
         }
 
-        const friendsRequestData = {
+        const friendRequestData = {
             sender: sender._id,
             receiver: receiver._id,
             status: 'pending',
         };
 
-        const friendsRequest = new FriendsRequest(friendsRequestData);
+        const friendsRequest = new FriendRequest(friendRequestData);
         await friendsRequest.save();
         return res.json({ message: 'Friend request sent', friend: receiver });
     } catch (err: unknown) {
         logger.error('Could not send friend request : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
     }
-});
+};
 
-router.post('/handle-friend-request', auth, async (req: Request, res: Response) => {
+const acceptFriendRequest = async (req: Request, res: Response) => {
     try {
-        const { requestId, isAccepted } = req.body;
+        const { requestId } = req.body;
 
         if (!requestId) {
             return res.status(400).json({ error: 'No requestId provided' });
         }
 
-        if (typeof isAccepted !== 'boolean') {
-            return res.status(400).json({ error: 'isAccepted must be a boolean' });
-        }
-
-        const friendRequest = await FriendsRequest.findById(requestId);
+        const friendRequest = await FriendRequest.findById(requestId);
         if (friendRequest === null) {
             return res.status(404).json({ error: 'Friend request not found' });
         }
 
-        if (isAccepted) {
-            // Add each user to the other's friends list
-            const sender = await User.findById(friendRequest.sender);
-            const receiver = await User.findById(friendRequest.receiver);
+        // Add each user to the other's friends list
+        const sender = await User.findById(friendRequest.sender);
+        const receiver = await User.findById(friendRequest.receiver);
 
-            if (sender && receiver) {
-                sender.friends.push(receiver._id);
-                receiver.friends.push(sender._id);
+        if (sender && receiver) {
+            sender.friends.push(receiver._id);
+            receiver.friends.push(sender._id);
 
-                await sender.save();
-                await receiver.save();
-            }
-        } else {
-            // TODO géré cas refus : notifier l'user qui a fait la demande d'ami
+            await sender.save();
+            await receiver.save();
         }
 
         // Temp delete the friend request for now (TODO : use status field)
         await friendRequest.deleteOne();
 
-        return res.json({ message: `Friend request ${isAccepted ? 'accepted' : 'declined'}` });
+        return res.json({ message: `Friend request accepted ` });
     } catch (err: unknown) {
         logger.error('Could not handle friend request : ' + err);
         return res.status(500).json({ error: 'An error has occurred' });
     }
-});
-router.post('/send-bug-report', auth, uploadBugReport.single('screenshot'), convertAndCompress, async (req: Request, res: Response) => {
+};
+
+const declineFriendRequest = async (req: Request, res: Response) => {
+    try {
+        const { requestId } = req.body;
+
+        if (!requestId) {
+            return res.status(400).json({ error: 'No requestId provided' });
+        }
+
+        const friendRequest = await FriendRequest.findById(requestId);
+        if (friendRequest === null) {
+            return res.status(404).json({ error: 'Friend request not found' });
+        }
+
+        // TODO géré cas refus : notifier l'user qui a fait la demande d'ami
+
+        // Temp delete the friend request for now (TODO : use status field)
+        await friendRequest.deleteOne();
+
+        return res.json({ message: `Friend request declined ` });
+    } catch (err: unknown) {
+        logger.error('Could not handle friend request : ' + err);
+        return res.status(500).json({ error: 'An error has occurred' });
+    }
+};
+
+const sendBugReport = async (req: Request, res: Response) => {
     try {
         const { description, app_version, platform } = req.body;
-        const screenshot_url = req.file ? 'uploads/bugReport/' + req.file.filename : null;
+        const screenshot_url = req.file ? 'uploads/bugReport/' + req.file.filename : '';
         const bugReport = new BugReport({
             description,
-            screenshot_url: screenshot_url ? screenshot_url : '',
+            screenshot_url: screenshot_url,
             app_version,
             platform,
             user: req.user.id,
@@ -519,6 +452,6 @@ router.post('/send-bug-report', auth, uploadBugReport.single('screenshot'), conv
         logger.error('Error creating bug report : ' + error);
         res.status(400).json({ message: 'An error has occured' });
     }
-});
+};
 
-export default router;
+export { getUserInformation, updateUsername, updatePassword, updateStatus, updateProfilePicture, getUserFriends, searchUsers, removeFriend, getFriendRequests, sendFriendRequest, acceptFriendRequest, declineFriendRequest, sendBugReport };

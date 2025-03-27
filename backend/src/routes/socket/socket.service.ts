@@ -1,11 +1,15 @@
 // services/socket.service.ts
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import logger from './logger.js';
-import Room, { generatePrivateRoomName, getOrCreatePrivateRoom } from '../models/room.js';
-import User from '../models/user.js';
+import logger from '../../utils/logger.js';
+import Room, { generatePrivateRoomName, getOrCreatePrivateRoom } from '../../models/room.js';
+import User from '../../models/user.js';
 import { instrument } from '@socket.io/admin-ui';
 import jwt from 'jsonwebtoken';
+import { messageChat } from '../../interfaces/messageChat.js';
+import MessageResponse from '../../interfaces/messageResponse.js';
+import Message from '../../models/message.js';
+import { Types } from 'mongoose';
 
 export class SocketService {
     private io: SocketIOServer | null = null;
@@ -163,6 +167,7 @@ export class SocketService {
         });
 
         // TODO : à finir
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         socket.on('join_room', async (data: any[]) => {
             logger.info('User %s joining room with data %o', socket.id, data);
             logger.info(data);
@@ -241,6 +246,54 @@ export class SocketService {
         } catch (error) {
             logger.error('Error in emitToRoomWithSocket:', error);
         }
+    }
+
+    public sendMessageToRoom(userId: string, roomName: string, message: messageChat) {
+        const socket: Socket | undefined = this.getSocketFromUserId(userId);
+        if (!socket) {
+            throw Error('Socket not found for user : ' + userId);
+        }
+
+        this.emitToRoomWithSocket(socket, 'receive_message', roomName, { message });
+        return true;
+    }
+
+    public async getMessagesByRoomId(roomId: string): Promise<MessageResponse[]> {
+        const messages = await Message.find({ room: roomId })
+            .populate<{ user: { username: string } }>('user', 'username')
+            // .populate('room')
+            .sort({ createdAt: 1 })
+            .limit(50);
+
+        return messages.map((message) => {
+            return {
+                content: message.content,
+                createdAt: message.createdAt,
+                username: message.user.username,
+                id: message._id.toString(),
+            };
+        });
+    }
+
+    public async deleteMessageFromRoom(userId: string, roomName: string, messageId: string) {
+        await Message.deleteOne({ _id: messageId });
+
+        const socket: Socket | undefined = this.getSocketFromUserId(userId);
+        if (!socket) {
+            throw Error('Socket not found for user : ' + userId);
+        }
+        this.emitToRoomWithSocket(socket, 'receive_delete_message', roomName, { messageId });
+        return true;
+    }
+
+    public async deleteAllMessagesFromRoom(userId: string, roomId: Types.ObjectId, roomName: string) {
+        await Message.deleteMany({ room: roomId });
+        const socket: Socket | undefined = this.getSocketFromUserId(userId);
+        if (!socket) {
+            throw Error('Socket not found for user : ' + userId);
+        }
+        this.emitToRoomWithSocket(socket, 'receive_delete_all_messages', roomName, {});
+        return true;
     }
 
     public broadcastToEveryone(event: string, data: unknown): void {
