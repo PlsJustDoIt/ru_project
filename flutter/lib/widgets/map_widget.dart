@@ -49,20 +49,30 @@ class _FloorPlanState extends State<FloorPlan> {
 
   @override
   Widget build(BuildContext context) {
-    ApiService apiService = Provider.of<ApiService>(context, listen: false); //temp
+    ApiService apiService = Provider.of<ApiService>(context, listen: false);
 
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black),
-        color: Colors.grey[200],
-      ),
-      child: Stack(
-        children: [
-          ...widget.sectors.map((sector) => Positioned(
-                left: sector.x * widget.width / 100, // Convert percentage to actual width
-                top: sector.y * widget.height / 100, // Convert percentage to actual height
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final containerWidth = constraints.maxWidth;
+        final containerHeight = constraints.maxHeight;
+
+        return Container(
+          width: containerWidth,
+          height: containerHeight,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.black),
+            color: Colors.grey[200],
+          ),
+          child: Stack(
+            children: widget.sectors.map((sector) {
+              final sectorWidth = sector.width * containerWidth / 100;
+              final sectorHeight = sector.height * containerHeight / 100;
+              final sectorLeft = sector.x * containerWidth / 100;
+              final sectorTop = sector.y * containerHeight / 100;
+
+              return Positioned(
+                left: sectorLeft,
+                top: sectorTop,
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
@@ -71,8 +81,8 @@ class _FloorPlanState extends State<FloorPlan> {
                     showSectorDetails(context, sector, apiService);
                   },
                   child: Container(
-                    width: sector.width * widget.width / 100, // Convert percentage to actual width
-                    height: sector.height * widget.height / 100, // Convert percentage to actual height
+                    width: sectorWidth,
+                    height: sectorHeight,
                     decoration: BoxDecoration(
                       color: sector.color ?? Colors.grey,
                       border: Border.all(
@@ -91,9 +101,11 @@ class _FloorPlanState extends State<FloorPlan> {
                     ),
                   ),
                 ),
-              )),
-        ],
-      ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 
