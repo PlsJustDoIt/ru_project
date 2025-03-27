@@ -1,331 +1,326 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ru_project/models/user.dart';
+import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/logger.dart';
 
-class RoomLayout extends StatefulWidget {
-  const RoomLayout({Key? key}) : super(key: key);
+class SectorModel {
+  final String? id;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final String? name;
+  final Color? color;
+  final bool isClickable;
+  List<User>? friendsInArea;
 
-  @override
-  State<RoomLayout> createState() => _RoomLayoutState();
+  SectorModel({
+    this.id,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    this.name,
+    required this.color,
+    required this.isClickable,
+    this.friendsInArea,
+  });
 }
 
-class _RoomLayoutState extends State<RoomLayout>
-    with SingleTickerProviderStateMixin {
-  Sector? selectedSector;
-  late AnimationController _controller;
-  late Animation<double> _animation;
+class FloorPlan extends StatefulWidget {
+  final double width;
+  final double height;
+  final List<SectorModel> sectors;
+
+  const FloorPlan({
+    Key? key,
+    required this.width,
+    required this.height,
+    required this.sectors,
+  }) : super(key: key);
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
+  State<FloorPlan> createState() => _FloorPlanState();
+}
 
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _FloorPlanState extends State<FloorPlan> {
+  SectorModel? selectedSector;
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final roomSize = Size(screenSize.width * 0.9, screenSize.height * 0.9);
+    ApiService apiService = Provider.of<ApiService>(context, listen: false); //temp
 
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: SizedBox(
-            child: Stack(
-              children: [
-                // Vue principale
-                AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      painter: RoomPainter(
-                        sectors: getSectorData(),
-                        selectedSector: selectedSector,
-                        animationValue: _animation.value,
-                      ),
-                      size: roomSize,
-                    );
-                  },
-                ),
-
-                // Gestion des clics
-                if (selectedSector == null)
-                  ...getSectorData().map(
-                    (sector) => Positioned(
-                      left: sector.dx * roomSize.width,
-                      top: sector.dy * roomSize.height,
-                      width: sector.width * roomSize.width,
-                      height: sector.height * roomSize.height,
-                      child: GestureDetector(
-                        onTap: () => _selectSector(sector),
-                        child: Container(
-                          color: Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Tables du secteur sélectionné
-                if (selectedSector != null)
-                  ...selectedSector!.tables.map(
-                    (table) => AnimatedBuilder(
-                      animation: _animation,
-                      builder: (context, child) {
-                        final relativeX = (table.dx - selectedSector!.dx) /
-                            selectedSector!.width;
-                        final relativeY = (table.dy - selectedSector!.dy) /
-                            selectedSector!.height;
-
-                        return Positioned(
-                          left: (selectedSector!.dx +
-                                  relativeX * selectedSector!.width) *
-                              roomSize.width,
-                          top: (selectedSector!.dy +
-                                  relativeY * selectedSector!.height) *
-                              roomSize.height,
-                          width:
-                              table.width * roomSize.width * _animation.value,
-                          height:
-                              table.height * roomSize.height * _animation.value,
-                          child: GestureDetector(
-                            onTap: () => _showTableDetails(table),
-                            child: Opacity(
-                              opacity: _animation.value,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.brown,
-                                  border: Border.all(color: Colors.black),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    table.name,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
+    return Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black),
+        color: Colors.grey[200],
       ),
-      // Bouton retour quand un secteur est sélectionné
-      floatingActionButton: selectedSector != null
-          ? FloatingActionButton(
-              onPressed: _unselectSector,
-              child: const Icon(Icons.arrow_back),
-            )
-          : null,
+      child: Stack(
+        children: [
+          ...widget.sectors.map((sector) => Positioned(
+                left: sector.x * widget.width / 100, // Convert percentage to actual width
+                top: sector.y * widget.height / 100, // Convert percentage to actual height
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedSector = sector;
+                    });
+                    showSectorDetails(context, sector, apiService);
+                  },
+                  child: Container(
+                    width: sector.width * widget.width / 100, // Convert percentage to actual width
+                    height: sector.height * widget.height / 100, // Convert percentage to actual height
+                    decoration: BoxDecoration(
+                      color: sector.color ?? Colors.grey,
+                      border: Border.all(
+                        color: selectedSector?.id == sector.id
+                            ? Colors.blue
+                            : Colors.black,
+                        width: selectedSector?.id == sector.id ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: Text(
+                        sector.name ?? "",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              )),
+        ],
+      ),
     );
   }
 
-  void _selectSector(Sector sector) {
-    setState(() {
-      selectedSector = sector;
-    });
-    _controller.forward(from: 0);
-  }
-
-  void _unselectSector() {
-    _controller.reverse().then((_) {
-      setState(() {
-        selectedSector = null;
-      });
-    });
-  }
-
-  void _showTableDetails(Table table) {
+  void showSectorDetailsDialog(BuildContext context, SectorModel sector) {
+    if (!sector.isClickable) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(table.name),
-        content: const Text('Détails de la table'),
+        title: Text('Sector ${sector.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('id: ${sector.id}'),
+            Text('Position: (${sector.x}, ${sector.y})'),
+            Text('Dimensions: ${sector.width}x${sector.height}'),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('Fermer'),
           ),
         ],
       ),
     );
   }
-}
 
-class RoomPainter extends CustomPainter {
-  final List<Sector> sectors;
-  final Sector? selectedSector;
-  final double animationValue;
-
-  RoomPainter({
-    required this.sectors,
-    this.selectedSector,
-    required this.animationValue,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Dessiner les murs
-    final wallPaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawRect(Offset.zero & size, wallPaint);
-
-    // Dessiner les secteurs
-    for (final sector in sectors) {
-      final isSelected = sector == selectedSector;
-      final sectorPaint = Paint()
-        ..color = isSelected
-            ? sector.color.withOpacity(0.1 + (0.2 * animationValue))
-            : sector.color.withOpacity(selectedSector != null ? 0.1 : 0.3)
-        ..style = PaintingStyle.fill;
-
-      final rect = Rect.fromLTWH(
-        sector.dx * size.width,
-        sector.dy * size.height,
-        sector.width * size.width,
-        sector.height * size.height,
-      );
-
-      canvas.drawRect(rect, sectorPaint);
-
-      // Afficher le nom du secteur seulement si aucun secteur n'est sélectionné
-      // ou si c'est le secteur sélectionné
-      if (selectedSector == null || isSelected) {
-        final textPainter = TextPainter(
-          text: TextSpan(
-            text: sector.name,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: isSelected ? 20 : 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        );
-
-        textPainter.layout();
-        final textOffset = Offset(
-          rect.left + (rect.width - textPainter.width) / 2,
-          rect.top + (rect.height - textPainter.height) / 2,
-        );
-        textPainter.paint(canvas, textOffset);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(RoomPainter oldDelegate) {
-    return oldDelegate.selectedSector != selectedSector ||
-        oldDelegate.animationValue != animationValue;
+  void showSectorDetails(BuildContext context, SectorModel sector, ApiService apiService) {
+    if (!sector.isClickable) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SectorInfoWidget(sector: sector, apiService: apiService),
+      ),
+    );
   }
 }
 
-// Les classes Sector et Table restent les mêmes
-class Sector {
-  final String name;
-  final double dx;
-  final double dy;
-  final double width;
-  final double height;
-  final Color color;
-  final List<Table> tables;
-
-  Sector({
-    required this.name,
-    required this.dx,
-    required this.dy,
-    required this.width,
-    required this.height,
-    required this.color,
-    required this.tables,
-  });
-}
-
-class Table {
-  final double dx;
-  final double dy;
-  final double width;
-  final double height;
-  final String name;
-
-  Table({
-    required this.dx,
-    required this.dy,
-    required this.width,
-    required this.height,
-    required this.name,
-  });
-}
-
-// Données de test
-List<Sector> getSectorData() {
-  return [
-    Sector(
-      name: 'Secteur A',
-      dx: 0.1,
-      dy: 0.1,
-      width: 0.4,
-      height: 0.3,
-      color: Colors.blue,
-      tables: [
-        Table(
-          dx: 0.15,
-          dy: 0.15,
-          width: 0.08,
-          height: 0.12,
-          name: 'A1',
-        ),
-        Table(
-          dx: 0.35,
-          dy: 0.15,
-          width: 0.08,
-          height: 0.12,
-          name: 'A2',
-        ),
-      ],
-    ),
-    Sector(
-      name: 'Secteur B',
-      dx: 0.1,
-      dy: 0.5,
-      width: 0.4,
-      height: 0.3,
+class SimpleMapWidget extends StatelessWidget {
+  SimpleMapWidget({Key? key}) : super(key: key);
+  final sectors = [
+    SectorModel(
+      id: "S1",
+      x: 10, // Percentage of the width
+      y: 10, // Percentage of the height
+      width: 20, // Percentage of the width
+      height: 15, // Percentage of the height
+      name: "A",
       color: Colors.green,
-      tables: [
-        Table(
-          dx: 0.15,
-          dy: 0.55,
-          width: 0.08,
-          height: 0.12,
-          name: 'B1',
-        ),
-        Table(
-          dx: 0.35,
-          dy: 0.55,
-          width: 0.08,
-          height: 0.12,
-          name: 'B2',
-        ),
-      ],
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S2",
+      x: 40,
+      y: 10,
+      width: 20,
+      height: 15,
+      name: "B",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S3",
+      x: 70,
+      y: 10,
+      width: 20,
+      height: 15,
+      name: "C",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    // Wall
+    SectorModel(
+      x: 40,
+      y: 30,
+      width: 20,
+      height: 50,
+      color: Colors.red,
+      isClickable: false,
+    ),
+    SectorModel(
+      id: "S4",
+      x: 10,
+      y: 30,
+      width: 20,
+      height: 15,
+      name: "D",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S5",
+      x: 70,
+      y: 30,
+      width: 20,
+      height: 15,
+      name: "E",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S6",
+      x: 10,
+      y: 50,
+      width: 20,
+      height: 15,
+      name: "G",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S7",
+      x: 70,
+      y: 50,
+      width: 20,
+      height: 15,
+      name: "H",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S8",
+      x: 10,
+      y: 70,
+      width: 20,
+      height: 15,
+      name: "I",
+      color: Colors.green,
+      isClickable: true,
+    ),
+    SectorModel(
+      id: "S9",
+      x: 70,
+      y: 70,
+      width: 20,
+      height: 15,
+      name: "J",
+      color: Colors.green,
+      isClickable: true,
     ),
   ];
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(20.0),
+        child: AspectRatio(
+          aspectRatio: 1, // Maintain a square aspect ratio
+          child: FloorPlan(
+            width: screenSize.width * 0.8, // 80% of screen width
+            height: screenSize.height * 0.8, // 80% of screen height
+            sectors: sectors,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SectorInfoWidget extends StatelessWidget {
+  final SectorModel sector;
+  final ApiService apiService;
+
+  const SectorInfoWidget({Key? key, required this.sector, required this.apiService}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text('Détails du secteur'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Sector ${sector.name ?? "N/A"}'),
+            Text('id: ${sector.id ?? "N/A"}'),
+            Text('Position: (${sector.x}, ${sector.y})'),
+            Text('Dimensions: ${sector.width}x${sector.height}'),
+            ElevatedButton(
+              onPressed: () {
+                logger.d('S\'assoir dans le secteur ${sector.name}');
+                // Do something with api service etc
+              },
+              child: const Text('S\'assoir ici?'),
+            ),
+            const SizedBox(height: 20),
+            if (sector.friendsInArea != null && sector.friendsInArea!.isNotEmpty)
+              Column(
+                children: [
+                  const Text('Amis dans le secteur:'),
+                  SizedBox(
+                    height: 200,
+                    width: 300,
+                    child: ListView.builder(
+                      itemCount: sector.friendsInArea!.length,
+                      itemBuilder: (context, index) {
+                        final friend = sector.friendsInArea![index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              radius: 28,
+                              backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
+                            ),
+                            title: Text(friend.username),
+                            subtitle: Text(friend.status),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              )
+            else
+              const Text('Aucun ami dans ce secteur.'),
+          ],
+        ),
+      ),
+    );
+  }
 }
