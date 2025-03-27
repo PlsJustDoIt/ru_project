@@ -29,7 +29,8 @@ const SectorSchema = new Schema({
 
 SectorSchema.index({ participants: 1, name: 1 }, { unique: true });
 
-const Sector = model<ISector>('Room', SectorSchema);
+const Sector = model<ISector>('Sector', SectorSchema);
 
 export default Sector;
+
 export { ISector };

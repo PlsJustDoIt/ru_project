@@ -1,22 +1,10 @@
 import { Request, Response } from 'express';
 import { MenuResponse } from '../../interfaces/menu.js';
-import logger from '../../services/logger.js';
+import logger from '../../utils/logger.js';
 import { fetchMenusFromExternalAPI, findRestaurant } from './ru.service.js';
 import NodeCache from 'node-cache';
-import { createRestaurant } from '../ru/ru.service.js';
 
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
-
-const resto_lumiere = await findRestaurant('r135');
-if (!resto_lumiere) {
-    await createRestaurant({
-        id: 'r135',
-        name: 'RU Lumière',
-        sectors: [],
-    });
-
-    logger.info('Restaurant RU Lumière créé');
-}
 
 const apiDoc = {
     message: 'API pour récupérer les prochains repas du ru lumière',

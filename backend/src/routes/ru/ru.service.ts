@@ -2,7 +2,9 @@ import { Parser } from 'xml2js';
 import { MenuResponse, MenuXml } from '../../interfaces/menu.js';
 import { readFileSync } from 'fs';
 import Restaurant from '../../models/restaurant.js';
-import { ObjectId } from 'mongoose';
+import logger from '../../utils/logger.js';
+import { restaurant } from '../../interfaces/restaurant.js';
+import Sector from '../../models/sector.js';
 const ru_lumiere_id = 'r135';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars
@@ -121,8 +123,29 @@ const findRestaurant = async (id: string) => {
     return await Restaurant.findOne({ id: id }).populate('sectors');
 };
 
-const createRestaurant = async (restaurant: { id: string; name: string; sectors?: ObjectId[] }) => {
+const createRestaurant = async (restaurant: restaurant) => {
     return await Restaurant.create(restaurant);
 };
 
-export { fetchMenusFromExternalAPI, findRestaurant, createRestaurant };
+const setupRestaurant = async () => {
+    // TODO : à voir
+    const secteur = await Sector.findOne({ name: 'secteur 1' });
+    if (!secteur) {
+        await Sector.create({ name: 'secteur 1', position: { x: 2, y: 2 }, size: { width: 2, height: 2 } });
+    }
+
+    const resto_lumiere = await findRestaurant('r135');
+    if (!resto_lumiere) {
+        await createRestaurant({
+            id: 'r135',
+            name: 'RU Lumière',
+            sectors: [],
+            address: '42 avenue de l\'Observatoire 25003 Besançon',
+            description: 'Restaurant universitaire situé à proximité de la place de la Bourse',
+        });
+
+        logger.info('Restaurant RU Lumière créé');
+    }
+};
+
+export { fetchMenusFromExternalAPI, findRestaurant, createRestaurant, setupRestaurant };

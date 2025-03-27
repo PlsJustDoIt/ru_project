@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import { join, resolve } from 'path';
+
 config();
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -14,7 +15,6 @@ const logsPath = join(rootDir, 'logs');
 const avatarPath = join(uploadsPath, 'avatar');
 const bugReportPath = join(uploadsPath, 'bugReport');
 let componentsPath: string;
-console.log('isProduction: ' + isProduction);
 if (!isProduction) {
     componentsPath = join(rootDir, 'src/components');
 } else {

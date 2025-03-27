@@ -232,10 +232,11 @@ class ApiService {
     }
   }
 
-  // Fonction pour ajouter un ami 
+  // Fonction pour ajouter un ami
   Future<User?> addFriend(String friendUsername) async {
     try {
-      final Response response = await _dio.post('/users/send-friend-request', data: {
+      final Response response =
+          await _dio.post('/users/send-friend-request', data: {
         'username': friendUsername,
       });
 
@@ -300,62 +301,71 @@ class ApiService {
   }
 
   // Fonction pour récupérer les demandes d'amis
-  Future<Map<String, dynamic>> getFriendsRequests() async {
+  Future<Map<String, dynamic>> getFriendRequests() async {
     try {
-      final Response response = await _dio.get('/users/friends-requests');
+      final Response response = await _dio.get('/users/friend-requests');
 
-      List<dynamic> rawFriendsRequests = response.data['friendsRequests'];
+      List<dynamic> rawFriendRequests = response.data['friendRequests'];
 
       if (response.statusCode == 200 && response.data != null) {
-        List<FriendRequest> friendsRequests = rawFriendsRequests.map((request) {
+        List<FriendRequest> friendRequests = rawFriendRequests.map((request) {
           return FriendRequest.fromJson(request);
         }).toList();
-        logger.i('Processed friends requests: $friendsRequests');
-        
-        return {
-          'friendsRequests': friendsRequests,
-          'success': true
-        };
+        logger.i('Processed friends requests: $friendRequests');
+
+        return {'friendRequests': friendRequests, 'success': true};
       }
-      
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data?['error']}');
+
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data?['error']}');
       return {
         'error': response.data?['error'] ?? 'An error occurred',
         'success': false
       };
     } catch (e) {
       logger.e('Failed to get friend requests: $e');
-      return {
-        'error': 'Failed to get friend requests: $e',
-        'success': false
-      };
+      return {'error': 'Failed to get friend requests: $e', 'success': false};
     }
   }
 
-
-// Fonction pour gérer une demande d'ami
-  Future<bool> handleFriendRequest(String requestId, bool isAccepted) async {
+  Future<bool> acceptFriendRequest(String requestId) async {
     try {
-      final Response response = await _dio.post('/users/handle-friend-request', 
-        data: {
-          'requestId': requestId,
-          'isAccepted': isAccepted
-        }
-      );
+      final Response response = await _dio
+          .post('/users/accept-friend-request', data: {'requestId': requestId});
 
       if (response.statusCode == 200) {
-        logger.i('Friend request ${isAccepted ? 'accepted' : 'rejected'}');
+        logger.i('Friend request accepted');
         return true;
       }
-      
-      logger.e('Invalid response from server: ${response.statusCode} ${response.data['error']}');
+
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
       return false;
     } catch (e) {
       logger.e('Failed to handle friend request: $e');
       return false;
     }
   }
-    
+
+  Future<bool> declineFriendRequest(String requestId) async {
+    try {
+      final Response response = await _dio.post('/users/decline-friend-request',
+          data: {'requestId': requestId});
+
+      if (response.statusCode == 200) {
+        logger.i('Friend request declined');
+        return true;
+      }
+
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to handle friend request: $e');
+      return false;
+    }
+  }
+
   //get menus from the API
   Future<List<Menu>> getMenus() async {
     try {
@@ -385,23 +395,6 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       logger.e('Failed to logout: $e');
-      return false;
-    }
-  }
-
-  //update user profile (all fields)
-  Future<bool> updateUser(Map<String, dynamic> user) async {
-    try {
-      final Response response = await _dio.put('/users/update', data: user);
-      if (response.statusCode == 200) {
-        logger.i('User updated: ${user['username']}');
-        return true;
-      }
-      logger.e(
-          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return false;
-    } catch (e) {
-      logger.e('Failed to update user: $e');
       return false;
     }
   }

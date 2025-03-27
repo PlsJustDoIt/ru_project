@@ -48,6 +48,10 @@ async function getOrCreatePrivateRoom(user1Id: string, user2Id: string) {
     });
 }
 
+async function createRoom(room: { name: string }) {
+    return await Room.create(room);
+}
+
 // Fonction utilitaire pour trouver toutes les rooms privées d'un utilisateur
 async function getUserRooms(userId: Types.ObjectId) {
     return await Room.find({
@@ -56,4 +60,4 @@ async function getUserRooms(userId: Types.ObjectId) {
 }
 
 export default Room;
-export { IRoom, getOrCreatePrivateRoom, getUserRooms, generatePrivateRoomName };
+export { IRoom, getOrCreatePrivateRoom, getUserRooms, generatePrivateRoomName, createRoom };

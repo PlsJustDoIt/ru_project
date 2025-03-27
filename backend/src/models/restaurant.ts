@@ -10,7 +10,7 @@ interface IRestaurant extends Document {
 }
 
 const RestaurantSchema = new Schema({
-    sectors: [{ type: Schema.Types.ObjectId, ref: 'SectorArea' }],
+    sectors: [{ type: Schema.Types.ObjectId, ref: 'Sector' }],
     id: { type: String, required: true },
     name: { type: String, required: true },
     address: { type: String, required: true },
@@ -23,3 +23,4 @@ const RestaurantSchema = new Schema({
 const Restaurant = model<IRestaurant>('Restaurant', RestaurantSchema);
 
 export default Restaurant;
+export { IRestaurant };
