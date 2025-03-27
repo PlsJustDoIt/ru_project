@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import app from '../app.js';
-import logger from '../utils/logger.js';
+import app, { setupRoutes } from '../../app.js';
+import logger from '../../utils/logger.js';
 
 let mongoServer: MongoMemoryServer;
 describe('auth routes', () => {
@@ -10,6 +10,7 @@ describe('auth routes', () => {
         logger.info = jest.fn(); // pour mute les logs
         mongoServer = await MongoMemoryServer.create();
         await mongoose.connect(mongoServer.getUri());
+        setupRoutes(app);
     });
 
     afterAll(async () => {

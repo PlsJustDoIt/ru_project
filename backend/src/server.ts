@@ -9,6 +9,7 @@ import { isProduction, rootDir } from './config.js';
 import { createWriteStream } from 'fs';
 import { join } from 'path';
 import morgan from 'morgan';
+import { setupRestaurant } from './routes/ru/ru.service.js';
 
 console.log('isProduction: ' + isProduction);
 // Database Connection
@@ -34,6 +35,8 @@ logger.info('API Key : ' + process.env.GINKO_API_KEY);
 connect(process.env.MONGO_URI)
     .then(() => logger.info('MongoDB Connected'))
     .catch(err => logger.error('MongoDB connection error:', err));
+
+setupRestaurant();
 
 swaggerSetup(app);
 adminJsSetup(app);

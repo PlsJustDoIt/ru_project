@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/app.ts",
+  "main": "src/server.ts",
   "scripts": {
     "test": "jest",
     "dev": "tsx watch src/server.ts",

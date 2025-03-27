@@ -474,6 +474,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/errorResponse"
+  /ru/{ruId}/sectors:
+    get:
+      tags: [ru]
+      summary: Récupérer les secteurs d'un restaurant universitaire
+      description: "Récupérer les secteurs d'un restaurant universitaire en fonction de son ID"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: ruId
+          required: true
+          schema:
+            type: string
+          description: ID du restaurant universitaire
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sectors:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "403":
+          description: Erreur de token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Restaurant non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+
   ## users
   /users/me:
     get:

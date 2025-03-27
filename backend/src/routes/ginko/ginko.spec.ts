@@ -1,9 +1,9 @@
 import request from 'supertest';
-import app from '../app.js';
+import app, { setupRoutes } from '../../app.js';
 import axios from 'axios';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import logger from '../utils/logger.js';
+import logger from '../../utils/logger.js';
 
 jest.mock('axios'); // Mock the axios library
 
@@ -40,6 +40,7 @@ describe('Ginko Router Tests', () => {
     beforeAll(async () => {
         process.env.GINKO_API_KEY = 'test-api-key';
         logger.info = jest.fn(); // pour mute les logs
+        setupRoutes(app);
         mongoServer = await MongoMemoryServer.create();
         await mongoose.connect(mongoServer.getUri());
         const res = await request(app)
