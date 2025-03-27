@@ -3,7 +3,7 @@ import app from '../app.js';
 import axios from 'axios';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import logger from '../services/logger.js';
+import logger from '../utils/logger.js';
 
 jest.mock('axios'); // Mock the axios library
 

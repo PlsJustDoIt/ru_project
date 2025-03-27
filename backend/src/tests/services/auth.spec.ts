@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import logger from '../../services/logger.js';
-import { AuthService } from '../../services/auth.js';
+import logger from '../../utils/logger.js';
 import RefreshToken from '../../models/refreshToken.js';
 import User from '../../models/user.js';
+import { generateAccessToken, generateTokens, authenticate, generateAndSaveRefreshToken } from '../../routes/auth/auth.service.js';
 
 let mongoServer: MongoMemoryServer;
 
@@ -38,19 +38,19 @@ describe('auth service', () => {
     });
 
     it('should generate a new access token', async () => {
-        const token = await AuthService.generateAccessToken(user._id);
+        const token = await generateAccessToken(user._id);
         expect(token).toBeDefined();
         expect(typeof token).toBe('string');
     });
 
     it('should throw an error because of unknown userId', async () => {
-        await expect(AuthService.generateAccessToken(new mongoose.Types.ObjectId())).rejects.toThrow('User not found');
-        await expect(AuthService.generateAndSaveRefreshToken(new mongoose.Types.ObjectId())).rejects.toThrow('User not found');
-        await expect(AuthService.generateTokens(new mongoose.Types.ObjectId())).rejects.toThrow(Error);
+        await expect(generateAccessToken(new mongoose.Types.ObjectId())).rejects.toThrow('User not found');
+        await expect(generateAndSaveRefreshToken(new mongoose.Types.ObjectId())).rejects.toThrow('User not found');
+        await expect(generateTokens(new mongoose.Types.ObjectId())).rejects.toThrow(Error);
     });
 
     it('should generate a new refresh token', async () => {
-        const token = await AuthService.generateAndSaveRefreshToken(user._id);
+        const token = await generateAndSaveRefreshToken(user._id);
         expect(token).toBeDefined();
         expect(typeof token).toBe('string');
         expect(await RefreshToken.findOne({ userId: user._id })).toBeDefined();
@@ -58,7 +58,7 @@ describe('auth service', () => {
 
     it('should generate an access token and a refresh token', async () => {
         const userId = user._id;
-        const { accessToken, refreshToken } = await AuthService.generateTokens(userId);
+        const { accessToken, refreshToken } = await generateTokens(userId);
         expect(accessToken).toBeDefined();
         expect(typeof accessToken).toBe('string');
         expect(refreshToken).toBeDefined();
@@ -67,16 +67,16 @@ describe('auth service', () => {
     });
 
     it('should authenticate a user', async () => {
-        const authenticatedUser = await AuthService.authenticate('testuser', 'password123');
+        const authenticatedUser = await authenticate('testuser', 'password123');
         expect(authenticatedUser).toBeDefined();
         expect(authenticatedUser.username).toBe('testuser');
     });
 
     it('should throw an error because of invalid credentials', async () => {
-        await expect(AuthService.authenticate('testuser', 'wrongpassword')).rejects.toThrow('Invalid credentials');
+        await expect(authenticate('testuser', 'wrongpassword')).rejects.toThrow('Invalid credentials');
     });
 
     it('should throw an error if the user does not exist', async () => {
-        await expect(AuthService.authenticate('not_existing', 'password123')).rejects.toThrow('User not found');
+        await expect(authenticate('not_existing', 'password123')).rejects.toThrow('User not found');
     });
 });

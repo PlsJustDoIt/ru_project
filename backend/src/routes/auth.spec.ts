@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../app.js';
-import logger from '../services/logger.js';
+import logger from '../utils/logger.js';
 
 let mongoServer: MongoMemoryServer;
 describe('auth routes', () => {

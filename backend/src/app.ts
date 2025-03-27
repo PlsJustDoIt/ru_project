@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
@@ -35,13 +35,6 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-app.use('/api/ru', ruRoutes);
-
-app.use(api);
-
-// Routes
-app.use('/api', routes);
-
 // Image handling routes
 app.use('/admin/resources/:model/records/:recordId/uploads/*', handleImageRequest);
 app.use('/admin/api/resources/:model/records/:recordId/uploads/*', handleImageRequest);
@@ -56,4 +49,14 @@ app.get('/test-socket', (req, res) => {
     return res.sendFile(join(rootDir, 'public', 'socket-test.html'));
 });
 
+const setupRoutes = (app: Express) => {
+    app.use('/api/ru', ruRoutes);
+
+    app.use(api);
+
+    // Routes
+    app.use('/api', routes);
+};
+
 export default app;
+export { setupRoutes };

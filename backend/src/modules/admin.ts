@@ -6,9 +6,10 @@ import { join } from 'path';
 import { componentsPath, isProduction, rootDir } from '../config.js';
 import BugReport from '../models/bugReport.js';
 import User from '../models/user.js';
-import { AuthService } from '../services/auth.js';
+import { authenticate } from '../routes/auth/auth.service.js';
+
 import express from 'express';
-import logger from '../services/logger.js';
+import logger from '../utils/logger.js';
 import { Express } from 'express';
 
 AdminJS.registerAdapter({
@@ -75,9 +76,9 @@ const admin = new AdminJS({
 
 const customRouter = express.Router();
 
-const authenticate = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin | null> => {
+const authenticateAdmin = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin | null> => {
     return new Promise((resolve) => {
-        AuthService.authenticate(payload.email, payload.password)
+        authenticate(payload.email, payload.password)
             .then((user) => {
                 if (user.role === 'admin') {
                     resolve({ email: user.username });
@@ -94,7 +95,7 @@ const authenticate = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin
 
 const authProvider = new DefaultAuthProvider({
     componentLoader,
-    authenticate,
+    authenticate: authenticateAdmin,
 });
 
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {

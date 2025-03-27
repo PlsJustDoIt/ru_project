@@ -2,7 +2,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { io, Socket } from 'socket.io-client';
 import { createServer, Server as HTTPServer } from 'http';
 import { Server } from 'socket.io';
-import { socketService } from '../../services/socket.js';
+import { socketService } from '../../routes/socket/socket.service.js';
 import { IUser, generateUser, createUser } from '../../models/user.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';

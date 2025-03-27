@@ -1,4 +1,4 @@
-import logger from '../../services/logger.js';
+import logger from '../../utils/logger.js';
 
 jest.mock('../../services/logger.js', () => ({
     info: jest.fn(),

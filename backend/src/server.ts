@@ -1,7 +1,7 @@
-import app from './app.js';
+import app, { setupRoutes } from './app.js';
 import { connect } from 'mongoose';
-import logger from './services/logger.js';
-import { socketService } from './services/socket.js';
+import logger from './utils/logger.js';
+import { socketService } from './routes/socket/socket.service.js';
 import swaggerSetup from './modules/swagger.js';
 import adminJsSetup from './modules/admin.js';
 import { exit } from 'process';
@@ -26,6 +26,8 @@ if (isProduction) {
     console.log('lancement en dev');
     app.use(morgan('dev'));
 }
+
+setupRoutes(app);
 
 logger.info('MONGO_URI: ' + process.env.MONGO_URI);
 logger.info('API Key : ' + process.env.GINKO_API_KEY);

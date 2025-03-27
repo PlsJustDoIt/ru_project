@@ -81,13 +81,21 @@ const generateAndSaveRefreshToken = async (userId: Types.ObjectId) => {
 };
 
 /**
- * Génère les tokens et sauvegarde le refresh token
- */
+     * Generates a new access token and refresh token for the given user ID.
+     * The refresh token is saved to the database.
+     *
+     * @param userId The ID of the user to generate tokens for.
+     * @returns An object containing the access token and refresh token.
+     */
 const generateTokens = async (userId: Types.ObjectId) => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('User not found');
+    }
     const accessToken = generateAccessToken(userId);
     const refreshToken = await generateAndSaveRefreshToken(userId);
 
     return { accessToken, refreshToken };
 };
 
-export { validateCredentials, authenticate, generateTokens, generateAccessToken };
+export { validateCredentials, authenticate, generateTokens, generateAccessToken, generateAndSaveRefreshToken };

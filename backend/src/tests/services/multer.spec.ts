@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { convertAndCompress } from '../../services/multer.js';
+import { convertAndCompress } from '../../utils/multer.js';
 import sharp from 'sharp';
 import { unlink } from 'fs/promises';
-import logger from '../../services/logger.js';
+import logger from '../../utils/logger.js';
 
 jest.mock('sharp', () => {
     const mockSharp = {
