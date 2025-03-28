@@ -62,6 +62,10 @@ class _FloorPlanState extends State<FloorPlan> {
           decoration: BoxDecoration(
             border: Border.all(color: Colors.black),
             color: Colors.grey[200],
+            image: const DecorationImage(
+              image: AssetImage('assets/images/map_Ru_Lumiere.jpg'), // Path to your image
+              fit: BoxFit.fill,
+            ),
           ),
           child: Stack(
             children: widget.sectors.map((sector) {
@@ -177,15 +181,15 @@ class SimpleMapWidget extends StatelessWidget {
       color: Colors.green,
       isClickable: true,
     ),
-    // Wall
-    SectorModel(
-      x: 40,
-      y: 30,
-      width: 20,
-      height: 50,
-      color: Colors.red,
-      isClickable: false,
-    ),
+    // // Wall TODO : i need to remove wall and isClickable things
+    // SectorModel(
+    //   x: 40,
+    //   y: 30,
+    //   width: 20,
+    //   height: 50,
+    //   color: Colors.red,
+    //   isClickable: false,
+    // ),
     SectorModel(
       id: "S4",
       x: 10,
