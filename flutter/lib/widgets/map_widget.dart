@@ -287,37 +287,71 @@ class SectorInfoWidget extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-        title: const Text('Détails du secteur'),
+        title: Text('Détails du secteur: ${sector.name ?? "N/A"}'),
       ),
-      body: Center(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Sector ${sector.name ?? "N/A"}'),
-            Text('id: ${sector.id ?? "N/A"}'),
-            Text('Position: (${sector.x}, ${sector.y})'),
-            Text('Dimensions: ${sector.width}x${sector.height}'),
-            ElevatedButton(
-              onPressed: () {
-                logger.d('S\'assoir dans le secteur ${sector.name}');
-                // Do something with api service etc
-              },
-              child: const Text('S\'assoir ici?'),
+            // Sector Details Section
+            Center(
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Informations du secteur',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Nom: ${sector.name ?? "N/A"}'),
+                      Text('ID: ${sector.id ?? "N/A"}'),
+                      Text('Position: (${sector.x}, ${sector.y})'),
+                      Text('Dimensions: ${sector.width}x${sector.height}'),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // Action Button
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  logger.d('S\'assoir dans le secteur ${sector.name}');
+                  _showTimeSelector(context);
+                },
+                icon: const Icon(Icons.chair),
+                label: const Text('S\'assoir ici?'),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Friends in Area Section
             if (sector.friendsInArea != null && sector.friendsInArea!.isNotEmpty)
               Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Amis dans le secteur:'),
+                  Text(
+                    'Amis dans le secteur:',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
                   SizedBox(
                     height: 200,
-                    width: 300,
                     child: ListView.builder(
                       itemCount: sector.friendsInArea!.length,
                       itemBuilder: (context, index) {
                         final friend = sector.friendsInArea![index];
                         return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           child: ListTile(
                             leading: CircleAvatar(
                               radius: 28,
@@ -333,10 +367,55 @@ class SectorInfoWidget extends StatelessWidget {
                 ],
               )
             else
-              const Text('Aucun ami dans ce secteur.'),
+              const Center(
+                child: Text(
+                  'Aucun ami dans ce secteur.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showTimeSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Sélectionnez la durée',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 16),
+              ListView.builder(
+                shrinkWrap: true,
+                itemCount: 6, // 5, 10, 15, 20, 25, 30 minutes
+                itemBuilder: (context, index) {
+                  final duration = (index + 1) * 5; // Calculate duration in minutes
+                  return ListTile(
+                    leading: const Icon(Icons.timer),
+                    title: Text('$duration minutes'),
+                    onTap: () {
+                      Navigator.pop(context); // Close the bottom sheet
+                      logger.d('Durée sélectionnée: $duration minutes dans le secteur ${sector.name}');
+                      // Add your logic here for the selected duration
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
