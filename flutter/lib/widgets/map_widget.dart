@@ -3,31 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
-
-class SectorModel {
-  final String? id;
-  final double x;
-  final double y;
-  final double width;
-  final double height;
-  final String? name;
-  final Color? color;
-  final bool isClickable;
-  List<User>? friendsInArea;
-
-  SectorModel({
-    this.id,
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.height,
-    this.name,
-    required this.color,
-    required this.isClickable,
-    this.friendsInArea,
-  });
-}
-
+import 'package:ru_project/models/sectorModel.dart';
 class FloorPlan extends StatefulWidget {
   final double width;
   final double height;
@@ -50,6 +26,7 @@ class _FloorPlanState extends State<FloorPlan> {
   @override
   Widget build(BuildContext context) {
     ApiService apiService = Provider.of<ApiService>(context, listen: false);
+    //TODO get info from the api to fill sectors data
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -181,15 +158,7 @@ class SimpleMapWidget extends StatelessWidget {
       color: Colors.green,
       isClickable: true,
     ),
-    // // Wall TODO : i need to remove wall and isClickable things
-    // SectorModel(
-    //   x: 40,
-    //   y: 30,
-    //   width: 20,
-    //   height: 50,
-    //   color: Colors.red,
-    //   isClickable: false,
-    // ),
+    
     SectorModel(
       id: "S4",
       x: 10,
@@ -325,7 +294,7 @@ class SectorInfoWidget extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   logger.d('S\'assoir dans le secteur ${sector.name}');
-                  _showTimeSelector(context);
+                  _showTimeSelector(context, apiService);
                 },
                 icon: const Icon(Icons.chair),
                 label: const Text('S\'assoir ici?'),
@@ -379,7 +348,7 @@ class SectorInfoWidget extends StatelessWidget {
     );
   }
 
-  void _showTimeSelector(BuildContext context) {
+  void _showTimeSelector(BuildContext context, ApiService apiService) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -408,6 +377,7 @@ class SectorInfoWidget extends StatelessWidget {
                       Navigator.pop(context); // Close the bottom sheet
                       logger.d('Durée sélectionnée: $duration minutes dans le secteur ${sector.name}');
                       // Add your logic here for the selected duration
+                      apiService.sitInSector(duration, sector.id!);
                     },
                   );
                 },

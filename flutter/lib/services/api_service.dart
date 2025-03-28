@@ -12,6 +12,7 @@ import 'package:ru_project/main.dart';
 import 'package:ru_project/models/friend_request.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/message.dart';
+import 'package:ru_project/models/sectorModel.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/logger.dart';
@@ -649,7 +650,44 @@ class ApiService {
     }
   }
 
-  //TODO : a voir si ya mieux
+  //Restaurant map sectors
+  Future<List<SectorModel>> getRestaurantsSectors() async {
+    try {
+      final Response response = await _dio.get('/ru/sectors');
+      if (response.statusCode == 200 && response.data != null) {
+        List<SectorModel> sectors = [
+          for (Map<String, dynamic> sector in response.data['sectors'])
+            SectorModel.fromJson(sector)
+        ];
+        return sectors;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return [];
+    } catch (e) {
+      logger.e('Failed to get sectors: $e');
+      return [];
+    }
+  }
+
+  Future<bool> sitInSector(int durationMin, String sectorId) async {
+    try {
+      final Response response = await _dio.post('/ru/sit-in-sector', data: {
+        'durationMin': durationMin,
+        'sectorId': sectorId,
+      });
+      if (response.statusCode == 200) {
+        return true;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to sit in sector: $e');
+      return false;
+    }
+  }
+
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';
   }
