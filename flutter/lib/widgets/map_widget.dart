@@ -51,7 +51,7 @@ class _FloorPlanState extends State<FloorPlan> {
                 border: Border.all(color: Colors.black),
                 color: Colors.grey[200],
                 image: const DecorationImage(
-                  image: AssetImage('assets/images/map_Ru_Lumiere.jpg'),
+                  image: AssetImage('assets/images/map_r135.jpg'),
                   fit: BoxFit.fill,
                 ),
               ),
