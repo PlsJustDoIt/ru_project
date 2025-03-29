@@ -129,10 +129,16 @@ const createRestaurant = async (restaurant: restaurant) => {
 
 const setupRestaurant = async () => {
     // TODO : à voir
-    const secteur = await Sector.findOne({ name: 'secteur 1' });
-    if (!secteur) {
-        await Sector.create({ name: 'secteur 1', position: { x: 2, y: 2 }, size: { width: 2, height: 2 } });
-    }
+    // const secteur = await Sector.findOne({ name: 'secteur 1' });
+    // if (!secteur) {
+    //     await Sector.create({ name: 'secteur 1', position: { x: 2, y: 2 }, size: { width: 2, height: 2 } });
+    // }
+
+    // TEMP
+    // // clear sector
+    // await Sector.deleteMany({});
+    // // clear restaurant
+    // await Restaurant.deleteMany({});
 
     const resto_lumiere = await findRestaurant('r135');
     if (!resto_lumiere) {
@@ -143,8 +149,29 @@ const setupRestaurant = async () => {
             address: '42 avenue de l\'Observatoire 25003 Besançon',
             description: 'Restaurant universitaire situé à proximité de la place de la Bourse',
         });
-
         logger.info('Restaurant RU Lumière créé');
+    }
+    // si resto lumiere na pas de secteur, on lui en ajoute
+    const resto = await findRestaurant('r135');
+    if (resto && resto.sectors.length === 0) {
+        const sectors = [
+            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: 'A', color: '#00FF00' },
+            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: 'B', color: '#00FF00' },
+            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: 'C', color: '#00FF00' },
+            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: 'D', color: '#00FF00' },
+            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: 'E', color: '#00FF00' },
+            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: 'F', color: '#00FF00' },
+            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: 'G', color: '#00FF00' },
+            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: 'H', color: '#00FF00' },
+            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: 'I', color: '#00FF00' },
+        ];
+        const sectorIds = await Promise.all(sectors.map(async (sector) => {
+            const newSector = await Sector.create(sector);
+            return newSector._id;
+        }));
+        resto.sectors = sectorIds;
+        await resto.save();
+        logger.info('Sectors created and added to RU Lumière');
     }
 };
 

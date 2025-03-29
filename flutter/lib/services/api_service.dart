@@ -651,9 +651,10 @@ class ApiService {
   }
 
   //Restaurant map sectors
-  Future<List<SectorModel>> getRestaurantsSectors() async {
+  Future<List<SectorModel>> getRestaurantsSectors({String idResto = "r135"}) async {
     try {
-      final Response response = await _dio.get('/ru/sectors');
+      final Response response = await _dio.get('/ru/$idResto/sectors');
+      logger.i('Response from server: ${response.data}');
       if (response.statusCode == 200 && response.data != null) {
         List<SectorModel> sectors = [
           for (Map<String, dynamic> sector in response.data['sectors'])
@@ -672,7 +673,7 @@ class ApiService {
 
   Future<bool> sitInSector(int durationMin, String sectorId) async {
     try {
-      final Response response = await _dio.post('/ru/sit-in-sector', data: {
+      final Response response = await _dio.post('/ru/sit', data: {
         'durationMin': durationMin,
         'sectorId': sectorId,
       });

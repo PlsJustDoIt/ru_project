@@ -4,16 +4,15 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/models/sectorModel.dart';
+
 class FloorPlan extends StatefulWidget {
   final double width;
   final double height;
-  final List<SectorModel> sectors;
 
   const FloorPlan({
     Key? key,
     required this.width,
     required this.height,
-    required this.sectors,
   }) : super(key: key);
 
   @override
@@ -26,97 +25,86 @@ class _FloorPlanState extends State<FloorPlan> {
   @override
   Widget build(BuildContext context) {
     ApiService apiService = Provider.of<ApiService>(context, listen: false);
-    //TODO get info from the api to fill sectors data
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final containerWidth = constraints.maxWidth;
-        final containerHeight = constraints.maxHeight;
+    return FutureBuilder<List<SectorModel>>(
+      future: apiService.getRestaurantsSectors(), // Fetch sectors dynamically
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator()); // Show loading indicator
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Erreur: ${snapshot.error}')); // Show error message
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Aucun secteur disponible.')); // Show empty state
+        }
 
-        return Container(
-          width: containerWidth,
-          height: containerHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.black),
-            color: Colors.grey[200],
-            image: const DecorationImage(
-              image: AssetImage('assets/images/map_Ru_Lumiere.jpg'), // Path to your image
-              fit: BoxFit.fill,
-            ),
-          ),
-          child: Stack(
-            children: widget.sectors.map((sector) {
-              final sectorWidth = sector.width * containerWidth / 100;
-              final sectorHeight = sector.height * containerHeight / 100;
-              final sectorLeft = sector.x * containerWidth / 100;
-              final sectorTop = sector.y * containerHeight / 100;
+        final sectors = snapshot.data!;
 
-              return Positioned(
-                left: sectorLeft,
-                top: sectorTop,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedSector = sector;
-                    });
-                    showSectorDetails(context, sector, apiService);
-                  },
-                  child: Container(
-                    width: sectorWidth,
-                    height: sectorHeight,
-                    decoration: BoxDecoration(
-                      color: sector.color ?? Colors.grey,
-                      border: Border.all(
-                        color: selectedSector?.id == sector.id
-                            ? Colors.blue
-                            : Colors.black,
-                        width: selectedSector?.id == sector.id ? 2 : 1,
-                      ),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Center(
-                      child: Text(
-                        sector.name ?? "",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final containerWidth = constraints.maxWidth;
+            final containerHeight = constraints.maxHeight;
+
+            return Container(
+              width: containerWidth,
+              height: containerHeight,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black),
+                color: Colors.grey[200],
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/map_Ru_Lumiere.jpg'),
+                  fit: BoxFit.fill,
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+              child: Stack(
+                children: sectors.map((sector) {
+                  final sectorWidth = sector.width * containerWidth / 100;
+                  final sectorHeight = sector.height * containerHeight / 100;
+                  final sectorLeft = sector.x * containerWidth / 100;
+                  final sectorTop = sector.y * containerHeight / 100;
+
+                  return Positioned(
+                    left: sectorLeft,
+                    top: sectorTop,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedSector = sector;
+                        });
+                        showSectorDetails(context, sector, apiService);
+                      },
+                      child: Container(
+                        width: sectorWidth,
+                        height: sectorHeight,
+                        decoration: BoxDecoration(
+                          color: sector.color ?? Colors.grey,
+                          border: Border.all(
+                            color: selectedSector?.id == sector.id
+                                ? Colors.blue
+                                : Colors.black,
+                            width: selectedSector?.id == sector.id ? 2 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Center(
+                          child: Text(
+                            sector.name ?? "",
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  void showSectorDetailsDialog(BuildContext context, SectorModel sector) {
-    if (!sector.isClickable) return;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Sector ${sector.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('id: ${sector.id}'),
-            Text('Position: (${sector.x}, ${sector.y})'),
-            Text('Dimensions: ${sector.width}x${sector.height}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void showSectorDetails(BuildContext context, SectorModel sector, ApiService apiService) {
-    if (!sector.isClickable) return;
+    // if (!sector.isClickable) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SectorInfoWidget(sector: sector, apiService: apiService),
@@ -126,113 +114,20 @@ class _FloorPlanState extends State<FloorPlan> {
 }
 
 class SimpleMapWidget extends StatelessWidget {
-  SimpleMapWidget({Key? key}) : super(key: key);
-  final sectors = [
-    SectorModel(
-      id: "S1",
-      x: 10, // Percentage of the width
-      y: 10, // Percentage of the height
-      width: 20, // Percentage of the width
-      height: 15, // Percentage of the height
-      name: "A",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S2",
-      x: 40,
-      y: 10,
-      width: 20,
-      height: 15,
-      name: "B",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S3",
-      x: 70,
-      y: 10,
-      width: 20,
-      height: 15,
-      name: "C",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    
-    SectorModel(
-      id: "S4",
-      x: 10,
-      y: 30,
-      width: 20,
-      height: 15,
-      name: "D",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S5",
-      x: 70,
-      y: 30,
-      width: 20,
-      height: 15,
-      name: "E",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S6",
-      x: 10,
-      y: 50,
-      width: 20,
-      height: 15,
-      name: "G",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S7",
-      x: 70,
-      y: 50,
-      width: 20,
-      height: 15,
-      name: "H",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S8",
-      x: 10,
-      y: 70,
-      width: 20,
-      height: 15,
-      name: "I",
-      color: Colors.green,
-      isClickable: true,
-    ),
-    SectorModel(
-      id: "S9",
-      x: 70,
-      y: 70,
-      width: 20,
-      height: 15,
-      name: "J",
-      color: Colors.green,
-      isClickable: true,
-    ),
-  ];
+  const SimpleMapWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20.0),
         child: AspectRatio(
           aspectRatio: 1, // Maintain a square aspect ratio
           child: FloorPlan(
             width: screenSize.width * 0.8, // 80% of screen width
             height: screenSize.height * 0.8, // 80% of screen height
-            sectors: sectors,
           ),
         ),
       ),
@@ -373,11 +268,35 @@ class SectorInfoWidget extends StatelessWidget {
                   return ListTile(
                     leading: const Icon(Icons.timer),
                     title: Text('$duration minutes'),
-                    onTap: () {
-                      Navigator.pop(context); // Close the bottom sheet
+                    onTap: () async {
                       logger.d('Durée sélectionnée: $duration minutes dans le secteur ${sector.name}');
                       // Add your logic here for the selected duration
-                      apiService.sitInSector(duration, sector.id!);
+                      bool succes = await apiService.sitInSector(duration, sector.id!);
+                      // Handle the response
+                      if (succes) {
+                        logger.d('Vous êtes assis dans le secteur ${sector.name} pour $duration minutes.');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Vous êtes assis dans le secteur ${sector.name} pour $duration minutes.'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } else {
+                        logger.e('Erreur lors de la réservation du secteur ${sector.name}.');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Erreur lors de la réservation du secteur.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                      if (context.mounted) {
+                        Navigator.pop(context); // Close the bottom sheet
+                      }
                     },
                   );
                 },
