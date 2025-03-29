@@ -1,5 +1,5 @@
 import User from '../../models/user.js';
-import logger from '../../services/logger.js';
+import logger from '../../utils/logger.js';
 import { findSectorById } from './sector.service.js';
 import { Request, Response } from 'express';
 

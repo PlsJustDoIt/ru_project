@@ -654,11 +654,13 @@ class ApiService {
   Future<List<SectorModel>> getRestaurantsSectors({String idResto = "r135"}) async {
     try {
       final Response response = await _dio.get('/ru/$idResto/sectors');
+      logger.i('Response from server: ${response.data}');
       if (response.statusCode == 200 && response.data != null) {
         List<SectorModel> sectors = [
           for (Map<String, dynamic> sector in response.data['sectors'])
             SectorModel.fromJson(sector)
         ];
+        logger.i('Processed sectors: $sectors');
         return sectors;
       }
       logger.e(

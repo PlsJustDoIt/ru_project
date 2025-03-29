@@ -7,10 +7,12 @@ import { componentsPath, isProduction, rootDir } from '../config.js';
 import BugReport from '../models/bugReport.js';
 import User from '../models/user.js';
 import { authenticate } from '../routes/auth/auth.service.js';
+import Sector from '../models/sector.js';
 
 import express from 'express';
 import logger from '../utils/logger.js';
 import { Express } from 'express';
+import Restaurant from '../models/restaurant.js';
 
 AdminJS.registerAdapter({
     Resource: AdminJSMongoose.Resource,
@@ -68,6 +70,12 @@ const admin = new AdminJS({
                     },
                 },
             },
+        },
+        {
+            resource: Restaurant,
+        },
+        {
+            resource: Sector,
         },
     ],
     rootPath: '/admin',

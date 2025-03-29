@@ -151,7 +151,7 @@ class SectorInfoWidget extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-        title: Text('Détails du secteur: ${sector.name ?? "N/A"}'),
+        title: Text('Détails du secteur : ${sector.name ?? "N/A"}'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -173,10 +173,10 @@ class SectorInfoWidget extends StatelessWidget {
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
-                      Text('Nom: ${sector.name ?? "N/A"}'),
-                      Text('ID: ${sector.id ?? "N/A"}'),
-                      Text('Position: (${sector.x}, ${sector.y})'),
-                      Text('Dimensions: ${sector.width}x${sector.height}'),
+                      Text('Nom : ${sector.name ?? "N/A"}'),
+                      Text('ID : ${sector.id ?? "N/A"}'),
+                      Text('Position : (${sector.x}, ${sector.y})'),
+                      Text('Dimensions : ${sector.width}x${sector.height}'),
                     ],
                   ),
                 ),
@@ -192,7 +192,7 @@ class SectorInfoWidget extends StatelessWidget {
                   _showTimeSelector(context, apiService);
                 },
                 icon: const Icon(Icons.chair),
-                label: const Text('S\'assoir ici?'),
+                label: const Text('S\'assoir ici ?'),
               ),
             ),
             const SizedBox(height: 16),
@@ -203,7 +203,7 @@ class SectorInfoWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Amis dans le secteur:',
+                    'Amis dans le secteur :',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 8),
@@ -269,7 +269,7 @@ class SectorInfoWidget extends StatelessWidget {
                     leading: const Icon(Icons.timer),
                     title: Text('$duration minutes'),
                     onTap: () async {
-                      logger.d('Durée sélectionnée: $duration minutes dans le secteur ${sector.name}');
+                      logger.d('Durée sélectionnée : $duration minutes dans le secteur ${sector.name}');
                       // Add your logic here for the selected duration
                       bool succes = await apiService.sitInSector(duration, sector.id!);
                       // Handle the response

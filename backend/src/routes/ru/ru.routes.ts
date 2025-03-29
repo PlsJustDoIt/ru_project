@@ -9,7 +9,6 @@ router.get('/:ruId/sectors', auth, getSectors);
 
 router.get('/menus', auth, getMenus);
 
-// TODO : add a route to sit at a spécific sector
 router.post('/sit', auth, sitAtSector);
 
 export default router;
