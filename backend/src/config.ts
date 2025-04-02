@@ -4,6 +4,10 @@ import { join, resolve } from 'path';
 config();
 
 const isProduction = process.env.NODE_ENV === 'production';
+const ginkoApiKey = process.env.GINKO_API_KEY;
+if (!ginkoApiKey) {
+    throw new Error('Ginko API Key not found');
+}
 
 // Calcul dynamique du chemin
 const rootDir = isProduction
@@ -29,5 +33,6 @@ export {
     avatarPath,
     bugReportPath,
     componentsPath,
+    ginkoApiKey,
 
 };
