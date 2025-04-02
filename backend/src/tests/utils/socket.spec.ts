@@ -6,6 +6,7 @@ import { socketService } from '../../routes/socket/socket.service.js';
 import { IUser, generateUser, createUser } from '../../models/user.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import logger from '../../utils/logger.js';
 
 let mongoServer: MongoMemoryServer;
 
@@ -37,11 +38,14 @@ describe('socket service', () => {
                 credentials: true,
             },
         });
+
+        logger.info = jest.fn(); // pour mute les logs
+        // logger.error = jest.fn(); // pour mute les logs
         socketService.initialize(httpServer);
 
         port = 5001;
         httpServer.listen(port, () => {
-            console.log(`listening on *:${port}`);
+            // console.log(`listening on *:${port}`);
         });
 
         user1 = await createUser(generateUser('tata', 'toto'));

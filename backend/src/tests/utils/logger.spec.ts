@@ -1,6 +1,6 @@
 import logger from '../../utils/logger.js';
 
-jest.mock('../../services/logger.js', () => ({
+jest.mock('../../utils/logger.js', () => ({
     info: jest.fn(),
     error: jest.fn(),
 }));
