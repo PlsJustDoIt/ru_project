@@ -1,4 +1,4 @@
-import { compare } from 'bcrypt';
+import bcrypt from 'bcrypt';
 import User from '../../models/user.js';
 import RefreshToken from '../../models/refreshToken.js';
 import { Types } from 'mongoose';
@@ -44,10 +44,6 @@ const validateCredentials = (username: string, password: string): { valid: boole
     return { valid: true };
 };
 
-// const validateUsername = (username:string) {
-//     if (username)
-// }
-
 /**
  * Authentifie un utilisateur
  */
@@ -55,7 +51,7 @@ const authenticate = async (username: string, password: string) => {
     const user = await User.findOne({ username });
     if (!user) throw new Error('User not found');
 
-    const isMatch = await compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error('Invalid credentials');
 
     logger.info(`User ${username} authenticated successfully`);
