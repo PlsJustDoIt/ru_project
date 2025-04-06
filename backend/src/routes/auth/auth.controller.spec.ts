@@ -12,54 +12,66 @@ import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import RefreshToken from '../../models/refreshToken.js';
 import User from '../../models/user.js';
-import logger from '../../utils/logger.js';
 import * as fsPromises from 'fs/promises';
+import refreshToken from '../../models/refreshToken.js';
+import logger from '../../utils/logger.js';
 
-jest.spyOn(authService, 'generateAccessToken').mockReturnValue('newAccessToken');
+// Common test state
+type TestContext = {
+    req: Partial<Request>;
+    res: Partial<Response>;
+    statusMock: jest.Mock;
+    jsonMock: jest.Mock;
+};
+
+// Setup common test environment
+function setupTest(): TestContext {
+    const jsonMock = jest.fn();
+    const statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+
+    return {
+        req: {
+            body: {},
+            headers: {},
+            user: {},
+        },
+        res: {
+            status: statusMock,
+            json: jsonMock,
+        },
+        statusMock,
+        jsonMock,
+    };
+}
+
+beforeAll(async () => {
+    logger.info = jest.fn(); // pour mute les logs
+    logger.error = jest.fn(); // pour mute les logs
+    jest.spyOn(authService, 'generateAccessToken').mockReturnValue('newAccessToken');
+});
 
 describe('auth controller tests', () => {
-    let req: Partial<Request>;
-    let res: Partial<Response>;
-    let statusMock: jest.Mock;
-    let jsonMock: jest.Mock;
+    // let req: Partial<Request>;
+    // let res: Partial<Response>;
+    // let statusMock: jest.Mock;
+    // let jsonMock: jest.Mock;
+    let testContext: TestContext;
 
     describe('registerUser tests', () => {
-        beforeAll(() => {
-            logger.info = jest.fn(); // pour mute les logs
-            logger.error = jest.fn(); // pour mute les logs
-        });
-
         beforeEach(() => {
-            jsonMock = jest.fn();
-            statusMock = jest.fn().mockReturnValue({ json: jsonMock });
-            res = { status: statusMock, json: jsonMock };
-            req = {
-                body: {
-                },
-            };
-        });
-
-        afterEach(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
-        });
-
-        afterAll(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
+            testContext = setupTest();
+            (User.findOne as jest.Mock).mockReset();
+            jest.spyOn(authService, 'validateCredentials').mockReset();
+            jest.spyOn(authService, 'generateTokens').mockReset();
         });
 
         it('should register the user with a 200 status code', async () => {
-            const mockUser = {
-                username: 'testuser',
-                password: 'password123',
-            };
+            const { req, res, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'password123';
             jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
 
             (User.findOne as jest.Mock).mockResolvedValue(null);
-            (User.prototype.save as jest.Mock).mockResolvedValue(mockUser);
             jest.spyOn(authService, 'generateTokens').mockResolvedValue({
                 accessToken: 'testAccessToken',
                 refreshToken: 'testRefreshToken',
@@ -71,6 +83,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 400 if creds are invalid', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
             jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: false, error: 'Invalid credentials' });
@@ -80,6 +93,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 400 if user already exists', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
             jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
@@ -90,6 +104,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 500 if an error occurs', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
             jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
@@ -101,34 +116,17 @@ describe('auth controller tests', () => {
     });
 
     describe('loginUser tests', () => {
-        beforeAll(() => {
-            logger.info = jest.fn(); // pour mute les logs
-            logger.error = jest.fn(); // pour mute les logs
-        });
-
+        let testContext: TestContext;
         beforeEach(() => {
-            jsonMock = jest.fn();
-            statusMock = jest.fn().mockReturnValue({ json: jsonMock });
-            res = { status: statusMock, json: jsonMock };
-            req = {
-                body: {
-                },
-                headers: {
-                },
-            };
-        });
-
-        afterEach(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
-        });
-
-        afterAll(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
+            testContext = setupTest();
+            (User.findOne as jest.Mock).mockReset();
+            (authService.authenticate as jest.Mock).mockReset();
+            jest.spyOn(authService, 'validateCredentials').mockReset();
+            jest.spyOn(authService, 'generateTokens').mockReset();
         });
 
         it('should login the user with a 200 status code', async () => {
+            const { req, res, jsonMock } = testContext;
             const mockUser = {
                 username: 'testuser',
                 password: 'password123',
@@ -151,6 +149,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 400 if user is already connected', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
             req.headers!.authorization = 'Bearer token';
@@ -161,6 +160,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 400 if creds are invalid', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
             jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: false, error: 'Invalid credentials' });
@@ -171,6 +171,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 500 if an error occurs', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
             jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
@@ -183,35 +184,17 @@ describe('auth controller tests', () => {
     });
 
     describe('logoutUser tests', () => {
-        beforeAll(() => {
-            logger.info = jest.fn(); // pour mute les logs
-            // logger.error = jest.fn(); // pour mute les logs
-        });
-
+        let testCtx: TestContext;
         beforeEach(() => {
-            jsonMock = jest.fn();
-            statusMock = jest.fn().mockReturnValue({ json: jsonMock });
-            res = { status: statusMock, json: jsonMock };
-            req = {
-                body: {
-                },
-                user: {
+            testCtx = setupTest();
 
-                },
-            };
-        });
-
-        afterEach(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
-        });
-
-        afterAll(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
+            // Reset specific mocks relevant to this test group
+            (User.findById as jest.Mock).mockReset();
+            (RefreshToken.findOneAndDelete as jest.Mock).mockReset();
         });
 
         it('should logout the user with a 200 status code', async () => {
+            const { req, res, jsonMock } = testCtx;
             const mockUser = {
                 username: 'testuser',
                 password: 'password123',
@@ -228,6 +211,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if no refresh token is provided', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             req.body.refreshToken = null;
 
             await logoutUser(req as Request, res as Response);
@@ -236,6 +220,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 404 if user is not found', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             req.body.refreshToken = 'testRefreshToken';
             (RefreshToken.findOneAndDelete as jest.Mock).mockResolvedValue('testRefreshToken');
             (User.findById as jest.Mock).mockResolvedValue(null);
@@ -245,6 +230,7 @@ describe('auth controller tests', () => {
         });
 
         it('shoud return 500 if an error occurs', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             req.body.refreshToken = 'testRefreshToken';
             (RefreshToken.findOneAndDelete as jest.Mock).mockRejectedValue(new Error('Database error'));
 
@@ -255,35 +241,21 @@ describe('auth controller tests', () => {
     });
 
     describe('deleteUser tests', () => {
-        beforeAll(() => {
-            logger.info = jest.fn(); // pour mute les logs
-            logger.error = jest.fn(); // pour mute les logs
-        });
-
+        let testCtx: TestContext;
         beforeEach(() => {
-            jsonMock = jest.fn();
-            statusMock = jest.fn().mockReturnValue({ json: jsonMock });
-            res = { status: statusMock, json: jsonMock };
-            req = {
-                body: {
-                },
-                user: {
+            testCtx = setupTest();
 
-                },
-            };
+            // Reset specific mocks relevant to this test group
+            (User.findById as jest.Mock).mockReset();
+            (fsPromises.unlink as jest.Mock).mockReset();
         });
 
         afterEach(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
-        });
-
-        afterAll(() => {
-            jest.clearAllMocks();
             jest.resetAllMocks();
         });
 
         it('should delete the user with a 200 status code', async () => {
+            const { req, res, jsonMock } = testCtx;
             const mockUser = {
                 username: 'testuser',
                 password: 'password123',
@@ -294,6 +266,7 @@ describe('auth controller tests', () => {
             req.user!.id = 'userId';
             req.body.refreshToken = 'testRefreshToken';
             (User.findById as jest.Mock).mockResolvedValue(mockUser);
+            (refreshToken.findOneAndDelete as jest.Mock).mockResolvedValue('testRefreshToken');
 
             await deleteUser(req as Request, res as Response);
 
@@ -301,6 +274,7 @@ describe('auth controller tests', () => {
         });
 
         it('should delete the user with a 200 status code and delete the custom avatar', async () => {
+            const { req, res, jsonMock } = testCtx;
             const mockUser = {
                 username: 'testuser',
                 password: 'password123',
@@ -319,6 +293,7 @@ describe('auth controller tests', () => {
         });
 
         it('should get an error if the custom avatar cannot be deleted', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             const mockUser = {
                 username: 'testuser',
                 password: 'password123',
@@ -338,6 +313,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if no refresh token is provided', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             req.body.refreshToken = null;
 
             await deleteUser(req as Request, res as Response);
@@ -345,6 +321,7 @@ describe('auth controller tests', () => {
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Access not authorized' });
         });
         it('should return 404 if user is not found', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             req.body.refreshToken = 'testRefreshToken';
             (User.findById as jest.Mock).mockResolvedValue(null);
             await deleteUser(req as Request, res as Response);
@@ -354,26 +331,21 @@ describe('auth controller tests', () => {
     });
 
     describe('refreshUserToken tests', () => {
-        beforeAll(() => {
-            logger.info = jest.fn(); // pour mute les logs
-            logger.error = jest.fn(); // pour mute les logs
-        });
-
+        let testCtx: TestContext;
         beforeEach(() => {
-            req = {
-                body: { refreshToken: 'testRefreshToken' },
-            };
-            jsonMock = jest.fn();
-            statusMock = jest.fn().mockReturnValue({ json: jsonMock });
-            res = { status: statusMock, json: jsonMock };
-        });
+            testCtx = setupTest();
+            testCtx.req.body.refreshToken = 'testRefreshToken';
 
-        afterEach(() => {
-            jest.clearAllMocks();
-            jest.resetAllMocks();
+            // Reset specific mocks relevant to this test group
+            (RefreshToken.findOne as jest.Mock).mockReset();
+            (RefreshToken.findOneAndDelete as jest.Mock).mockReset();
+            (jwt.verify as jest.Mock).mockReset();
+            (User.findById as jest.Mock).mockReset();
+            (authService.generateAccessToken as jest.Mock).mockReset();
         });
 
         it('should refresh access token with a 200 status code', async () => {
+            const { req, res, jsonMock, statusMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue({
                 token: 'testRefreshToken',
                 userId: 'userId',
@@ -396,6 +368,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if no refresh token is provided', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             req.body.refreshToken = null;
 
             await refreshUserToken(req as Request, res as Response);
@@ -406,6 +379,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if refresh token is invalid', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue(null);
 
             await refreshUserToken(req as Request, res as Response);
@@ -415,6 +389,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if refresh token is expired', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue({
                 token: 'testRefreshToken',
                 userId: 'userId',
@@ -430,6 +405,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if refresh token does not belong to the user', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue({
                 token: 'testRefreshToken',
                 userId: 'userId',
@@ -446,6 +422,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 500 if an error occurs during token verification', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue({
                 token: 'testRefreshToken',
                 userId: 'userId',
@@ -464,6 +441,7 @@ describe('auth controller tests', () => {
         });
 
         it('should return 403 if the token has expired', async () => {
+            const { req, res, statusMock, jsonMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue({
                 token: 'testRefreshToken',
                 userId: 'userId',

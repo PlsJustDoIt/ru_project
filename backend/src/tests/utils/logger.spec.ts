@@ -6,7 +6,7 @@ jest.mock('../../utils/logger.js', () => ({
 }));
 describe('logger service', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        jest.resetAllMocks(); // Reset all mocks before each test
     });
     it('should log an info message', () => {
         const message = 'This is an info message';

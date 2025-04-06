@@ -2,18 +2,9 @@ import multer from 'multer';
 import { dirname, join, extname, basename } from 'path';
 import logger from './logger.js';
 import sharp from 'sharp';
-import { mkdir, unlink } from 'fs/promises';
+import { unlink } from 'fs/promises';
 import { NextFunction, Request, Response } from 'express';
 import { uploadsPath, bugReportPath } from '../config.js';
-
-(async () => {
-    try {
-        await mkdir(uploadsPath, { recursive: true });
-        await mkdir(bugReportPath, { recursive: true });
-    } catch (error) {
-        logger.error('Error creating upload directory:', error);
-    }
-})();
 
 const storageAvatar = multer.diskStorage({
 

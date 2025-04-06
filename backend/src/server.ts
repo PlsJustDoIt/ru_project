@@ -1,7 +1,8 @@
 import app, { setupRoutes } from './app.js';
 import { connect } from 'mongoose';
 import logger from './utils/logger.js';
-import { socketService } from './routes/socket/socket.service.js';
+import { setupSocketApplicationEvents } from './routes/socket/socket.service.js';
+import { socketHandler } from './utils/socket.js';
 import swaggerSetup from './modules/swagger.js';
 import adminJsSetup from './modules/admin.js';
 import { exit } from 'process';
@@ -9,6 +10,7 @@ import { isProduction, rootDir } from './config.js';
 import { createWriteStream } from 'fs';
 import { join } from 'path';
 import morgan from 'morgan';
+import { setupUploadDirectories } from './utils/fileSystem.js';
 
 console.log('isProduction: ' + isProduction);
 // Database Connection
@@ -27,6 +29,7 @@ if (isProduction) {
     app.use(morgan('dev'));
 }
 
+await setupUploadDirectories();
 setupRoutes(app);
 
 logger.info('MONGO_URI: ' + process.env.MONGO_URI);
@@ -56,6 +59,7 @@ const server = app.listen(PORT, () => {
 // }
 
 // Attach Socket.IO to the existing server
-socketService.initialize(server);
+socketHandler.initialize(server, isProduction);
+setupSocketApplicationEvents();
 
 export default server;

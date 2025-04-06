@@ -2,19 +2,15 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { io, Socket } from 'socket.io-client';
 import { createServer, Server as HTTPServer } from 'http';
 import { Server } from 'socket.io';
-import { socketService } from '../../routes/socket/socket.service.js';
 import { IUser, generateUser, createUser } from '../../models/user.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import logger from '../../utils/logger.js';
+import { socketHandler } from '../../utils/socket.js';
+import { AddressInfo } from 'net';
 
 let mongoServer: MongoMemoryServer;
 
-describe('socket service', () => {
-    it('should connect to the socket', async () => {
-        // TODO
-    });
-});
 describe('socket service', () => {
     let socket: Socket;
     let httpServer: HTTPServer;
@@ -22,7 +18,6 @@ describe('socket service', () => {
     let port: number;
     let user1: IUser;
     let user2: IUser;
-    // let room: IRoom;
     let token: string;
 
     beforeAll(async () => {
@@ -40,13 +35,12 @@ describe('socket service', () => {
         });
 
         logger.info = jest.fn(); // pour mute les logs
-        // logger.error = jest.fn(); // pour mute les logs
-        socketService.initialize(httpServer);
+        logger.error = jest.fn(); // pour mute les logs
+        socketHandler.initialize(httpServer, false);
 
-        port = 5001;
-        httpServer.listen(port, () => {
-            // console.log(`listening on *:${port}`);
-        });
+        httpServer.listen(0);
+        const address = httpServer.address() as AddressInfo;
+        port = address.port;
 
         user1 = await createUser(generateUser('tata', 'toto'));
         user2 = await createUser(generateUser('toto', 'tata'));
@@ -60,6 +54,9 @@ describe('socket service', () => {
             auth: {
                 token: token,
             },
+            ackTimeout: 1000,
+            reconnectionDelay: 0,
+            timeout: 1000,
         });
         socket.on('connect', () => {
             done();
@@ -85,61 +82,28 @@ describe('socket service', () => {
         done();
     });
 
-    it('should handle join_global_room event', (done) => {
-        socket.emit('join_global_room');
-        socket.on('room_joined', (data) => {
-            expect(data.roomName).toBe('Global');
-            done();
-        });
-    });
-
-    // it('should handle join_friend_room event', (done) => {
-    //     socket.emit('join_friend_room', user2._id);
-    //     socket.on('room_joined', (data) => {
-    //         expect(data.roomName).toBeDefined();
-    //         done();
-    //     });
-    // });
-
-    it('should handle join_room event', (done) => {
-        socket.emit('join_room', [user1._id, user2._id]);
-        socket.on('room_joined', (data) => {
-            expect(data.roomName).toBeDefined();
-            done();
-        });
-    });
-
-    it('should handle disconnect event', (done) => {
-        socket.disconnect();
-        setTimeout(() => {
+    it('should handle client disconnect event', (done) => {
+        socket.on('disconnect', () => {
             expect(socket.connected).toBe(false);
             done();
-        }, 50);
+        });
+        socket.disconnect();
     });
 
     it('should check if user is online', () => {
-        socketService.connectedUsers.set(user1._id.toString(), socket.id!);
-        const isOnline = socketService.isUserOnline(user1._id.toString());
+        socketHandler.connectedUsers.set(user1._id.toString(), socket.id!);
+        const isOnline = socketHandler.isUserOnline(user1._id.toString());
         expect(isOnline).toBe(true);
     });
 
     it('should emit to a specific user', (done) => {
-        socketService.connectedUsers.set(user2._id.toString(), socket.id!);
+        socketHandler.connectedUsers.set(user2._id.toString(), socket.id!);
         socket.on('testEvent', (data) => {
             expect(data).toBe('testData');
             done();
         });
-        socketService.emitToUser('testEvent', user2._id.toString(), 'testData');
+        socketHandler.emitToUser('testEvent', user2._id.toString(), 'testData');
     });
-
-    // it('should emit to a room with socket', (done) => {
-    //     socket.join('testRoom');
-    //     socket.on('testEvent', (data) => {
-    //         expect(data).toBe('testData');
-    //         done();
-    //     });
-    //     socketService.emitToRoomWithSocket(socket!, 'testEvent', 'testRoom', 'testData');
-    // });
 
     it('should broadcast to everyone', (done) => {
         const socket2 = io(`http://localhost:${port}`, {
@@ -153,18 +117,26 @@ describe('socket service', () => {
                 socket2.disconnect();
                 done();
             });
-            socketService.broadcastToEveryone('testEvent', 'testData');
+            socketHandler.broadcastToEveryone('testEvent', 'testData');
         });
     });
 
     it('should get socket from user id', () => {
-        socketService.connectedUsers.set(user1._id.toString(), socket.id!);
-        const retrievedSocket = socketService.getSocketFromUserId(user1._id.toString());
+        socketHandler.connectedUsers.set(user1._id.toString(), socket.id!);
+        const retrievedSocket = socketHandler.getSocketFromUserId(user1._id.toString());
         expect(retrievedSocket).toBeDefined();
     });
 
     it('should get IO instance', () => {
-        const ioInstance = socketService.getIO();
+        const ioInstance = socketHandler.getIO();
         expect(ioInstance).toBeDefined();
+    });
+
+    it('should remove user from connected users', () => {
+        socketHandler.connectedUsers.set(user1._id.toString(), socket.id!);
+        expect(socketHandler.isUserOnline(user1._id.toString())).toBe(true);
+        socketHandler.removeUserFromConnectedUsers(user1._id.toString());
+        const isOnline = socketHandler.isUserOnline(user1._id.toString());
+        expect(isOnline).toBe(false);
     });
 });

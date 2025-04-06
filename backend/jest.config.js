@@ -1,6 +1,6 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
-    collectCoverage: true,
+    collectCoverage: false,
     collectCoverageFrom: ['src/**/*.ts'],
     verbose: true,
     testEnvironment: 'node',

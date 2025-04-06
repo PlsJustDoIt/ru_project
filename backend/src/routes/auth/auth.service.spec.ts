@@ -14,6 +14,7 @@ let mongoServer: MongoMemoryServer;
 describe('auth service tests', () => {
     beforeAll(async () => {
         logger.info = jest.fn(); // pour mute les logs
+        logger.error = jest.fn(); // pour mute les logs
         mongoServer = await MongoMemoryServer.create();
         await mongoose.connect(mongoServer.getUri());
 
