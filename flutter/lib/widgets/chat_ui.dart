@@ -81,12 +81,15 @@ class ChatUiState extends State<ChatUi> {
         logger.i('Participants: $participants');
         socket?.emit("join_room", {participants});
       }
-      socket?.on('receive_message', (response) {
+      socket?.on('receive_message', (response, [ack]) {
         try {
           Map<String, dynamic> data = response[0];
           logger.i('Received_message: $data');
           ru_project.Message message =
               ru_project.Message.fromJson(data['message']);
+          if (ack != null) {
+            ack({'status': 'ok'});
+          }
           if (mounted) {
             setState(() {
               _chatController?.insert(Message.text(
@@ -104,27 +107,39 @@ class ChatUiState extends State<ChatUi> {
         }
       });
 
-      socket?.on('userOnline', (response) {
+      socket?.on('userOnline', (response, [ack]) {
         Map<String, dynamic> data = response[0] ?? {};
+        if (ack != null) {
+          ack({'status': 'ok'});
+        }
         logger.i('User online: $data');
       });
 
-      socket?.on('room_joined', (response) {
+      socket?.on('room_joined', (response, [ack]) {
         Map<String, dynamic> data = response[0];
+        if (ack != null) {
+          ack({'status': 'ok'});
+        }
         logger.i("room joined, data: $data");
         logger.i('Room joined: ${data['roomName']}');
       });
 
-      socket?.on('receive_delete_all_messages', (response) {
+      socket?.on('receive_delete_all_messages', (response, [ack]) {
         logger.i('All messages deleted');
+        if (ack != null) {
+          ack({'status': 'ok'});
+        }
         if (mounted) {
           _chatController?.set([]);
         }
       });
 
-      socket?.on('receive_delete_message', (response) {
+      socket?.on('receive_delete_message', (response, [ack]) {
         Map<String, dynamic> data = response[0];
         logger.i('Message deleted: ${data['messageId']}');
+        if (ack != null) {
+          ack({'status': 'ok'});
+        }
         if (mounted) {
           Message? message = _chatController?.messages.firstWhere(
             (element) => element.id == data['messageId'],
