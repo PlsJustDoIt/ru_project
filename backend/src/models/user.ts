@@ -2,6 +2,7 @@ import { CallbackError, Schema, Types, model } from 'mongoose';
 import { genSalt, hash } from 'bcrypt';
 
 type Status = 'en ligne' | 'au ru' | 'absent';
+type role = 'user' | 'admin' | 'moderator';
 interface IUser extends Document {
     username: string;
     password: string;
@@ -9,7 +10,16 @@ interface IUser extends Document {
     friends: Types.ObjectId[];
     avatarUrl: string;
     _id: Types.ObjectId;
-    role: 'user' | 'admin' | 'moderator';
+    role: role;
+}
+
+interface baseUser {
+    username: string;
+    password: string;
+    friends: Types.ObjectId[];
+    status?: Status;
+    avatarUrl?: string;
+    role?: role;
 }
 
 const UserSchema = new Schema({
@@ -34,5 +44,21 @@ UserSchema.pre('save', async function (next): Promise<void> {
 
 const User = model<IUser>('User', UserSchema);
 
+const createUser = async (user: baseUser) => {
+    try {
+        return await User.create(user);
+    } catch (error: unknown) {
+        throw new Error(error as string);
+    }
+};
+
+const generateUser = (username: string, password: string): baseUser => {
+    return {
+        username,
+        password,
+        friends: [],
+    };
+};
+
 export default User;
-export { IUser, Status };
+export { IUser, Status, createUser, generateUser };

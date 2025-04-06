@@ -4,7 +4,7 @@ import Room from '../../models/room.js';
 import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
 import { Request, Response } from 'express';
-import { socketService } from './socket.service.js';
+import * as socketService from './socket.service.js';
 import { Types } from 'mongoose';
 
 const sendMessage = async (req: Request, res: Response) => {
@@ -24,7 +24,7 @@ const sendMessage = async (req: Request, res: Response) => {
         const room = await Room.findOne({ name: roomName });
         if (!room) {
             logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'An error has occured' });
+            return res.status(404).json({ error: 'Room not found' });
         }
 
         const message = new Message({
@@ -41,8 +41,6 @@ const sendMessage = async (req: Request, res: Response) => {
             username: user.username,
             id: message._id.toString(),
         };
-
-        console.log(response);
 
         socketService.sendMessageToRoom(userId, room.name, response);
         return res.status(201).json({ message: response });
@@ -83,22 +81,8 @@ const deleteMessageFromRoom = async (req: Request, res: Response) => {
         const roomName = req.query.roomName as string;
         const messageId = req.query.messageId as string;
 
-        const user = await User.findById(req.user.id);
-
-        const room = await Room.findOne({ name: roomName });
-
-        if (!user) {
-            logger.error('User not found : ' + req.user.id);
-            return res.status(404).json({ error: 'An error has occured' });
-        }
-
-        if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'An error has occured' });
-        }
-
-        if (!messageId) {
-            return res.status(400).json({ error: 'Message ID is required' });
+        if (!roomName || !messageId) {
+            return res.status(400).json({ error: 'Room name and message ID are required' });
         }
 
         if (!Types.ObjectId.isValid(messageId)) {
@@ -106,7 +90,20 @@ const deleteMessageFromRoom = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Invalid message ID' });
         }
 
-        socketService.deleteMessageFromRoom(user._id.toString(), room.name, messageId);
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            logger.error('User not found : ' + req.user.id);
+            return res.status(404).json({ error: 'An error has occured' });
+        }
+
+        const room = await Room.findOne({ name: roomName });
+
+        if (!room) {
+            logger.error('Room not found : ' + roomName);
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        await socketService.deleteMessageFromRoom(user._id.toString(), room.name, messageId);
         return res.json({ message: 'Message deleted' });
     } catch (err) {
         logger.error('Error in /delete-message:', err);
@@ -119,22 +116,25 @@ const deleteMessageFromRoom = async (req: Request, res: Response) => {
 const deleteAllMessagesFromRoom = async (req: Request, res: Response) => {
     try {
         const roomName = req.query.roomName as string;
-
-        const room = await Room.findOne({ name: roomName });
+        if (!roomName) {
+            return res.status(400).json({ error: 'Room name is required' });
+        }
 
         const user = await User.findById(req.user.id);
-
-        if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'An error has occured' });
-        }
 
         if (!user) {
             logger.error('User not found : ' + req.user.id);
             return res.status(404).json({ error: 'An error has occured' });
         }
 
-        socketService.deleteAllMessagesFromRoom(user._id.toString(), room._id, room.name);
+        const room = await Room.findOne({ name: roomName });
+
+        if (!room) {
+            logger.error('Room not found : ' + roomName);
+            return res.status(404).json({ error: 'An error has occured' });
+        }
+
+        await socketService.deleteAllMessagesFromRoom(user._id.toString(), room._id.toString(), room.name);
         return res.json({ message: 'Messages deleted' });
     } catch (err) {
         logger.error('Error in /delete-messages:', err);

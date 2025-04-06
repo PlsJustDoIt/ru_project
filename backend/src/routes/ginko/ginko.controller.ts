@@ -3,12 +3,11 @@ import NodeCache from 'node-cache';
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import logger from '../../utils/logger.js';
-import { isProduction } from '../../config.js';
 import { getTempsLieu } from './ginko.service.js';
 
-const cache = new NodeCache({ stdTTL: 60 }); // 1 minute
+const cache = new NodeCache({ stdTTL: 60 }); // 1 minute // TODO : faire un service de cache
 
-const getSchedules = async (req: Request, res: Response) => {
+const getSchedules = async (req: Request, res: Response, isProduction: boolean) => {
     try {
         if (!isProduction) {
             const data = readFileSync(join(resolve(), 'horaires.json'));
@@ -27,7 +26,7 @@ const getSchedules = async (req: Request, res: Response) => {
             return res.json(cachedData);
         }
 
-        const result = getTempsLieu(lieu);
+        const result = await getTempsLieu(lieu);
         cache.set(lieu, result);
         return res.json(result);
     } catch (err: unknown) {

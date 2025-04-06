@@ -2,9 +2,10 @@ import User, { IUser } from '../../models/user.js';
 import { Request, Response } from 'express';
 import logger from '../../utils/logger.js';
 import { compare } from 'bcrypt';
-import { getUserByUsername, levenshteinDistance } from './user.service.js';
+import { getUserByUsername, levenshteinDistance, TEXT_MAX_LENGTH, TEXT_MIN_LENGTH } from './user.service.js';
 import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
+import { join } from 'path';
 
 const getUserInformation = async (req: Request, res: Response) => {
     try {
@@ -15,9 +16,6 @@ const getUserInformation = async (req: Request, res: Response) => {
         return res.status(500).json({ error: 'An error has occured' });
     }
 };
-
-const TEXT_MIN_LENGTH = 3;
-const TEXT_MAX_LENGTH = 32;
 
 const updateUsername = async (req: Request, res: Response) => {
     try {
@@ -67,6 +65,7 @@ const updatePassword = async (req: Request, res: Response) => {
             logger.error('Password field dosn\'t exists');
             return res.status(400).json({ error: { message: 'Password dosn\'t exists', field: 'password' } });
         }
+
         password = password.trim();
         if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
             logger.error(`Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`);
@@ -136,7 +135,7 @@ const updateProfilePicture = async (req: Request, res: Response) => {
         }
 
         logger.info(req.file);
-        const avatarUrl = 'uploads/avatar/' + req.file.filename;
+        const avatarUrl = join('uploads/avatar/', req.file.filename);
         user.avatarUrl = avatarUrl;
 
         await user.save();
@@ -150,7 +149,7 @@ const updateProfilePicture = async (req: Request, res: Response) => {
 
 const getUserFriends = async (req: Request, res: Response) => {
     try {
-        const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl id');
+        const user = await User.findById(req.user.id).populate<{ friends: IUser[] }>('friends', 'username status avatarUrl');
         if (user == null) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -170,10 +169,10 @@ const getUserFriends = async (req: Request, res: Response) => {
     }
 };
 
-const searchUsers = async (req: Request, res: Response) => {
+const searchUsers = async (req: Request, res: Response) => { // TODO : factoriser ce code dans le service
     try {
         const query = req.query.query;
-        if (!query || typeof query !== 'string' || query.trim().length < 3) {
+        if (!query || typeof query !== 'string') {
             logger.error('No string query provided');
             return res.status(400).json({ error: 'No query provided' });
         }

@@ -45,4 +45,4 @@ const getUserByUsername = async (username: string) => {
     return await User.findOne({ username });
 };
 
-export { levenshteinDistance, validateUsername, getUserByUsername };
+export { levenshteinDistance, validateUsername, getUserByUsername, TEXT_MIN_LENGTH, TEXT_MAX_LENGTH };
