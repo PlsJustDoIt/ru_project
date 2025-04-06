@@ -11,7 +11,6 @@ interface ISector extends Document {
     participants: IParticipant[];
     position: { x: number; y: number };
     size: { width: number; height: number };
-    color?: string;
     name?: string;
 }
 
@@ -33,7 +32,6 @@ const SectorSchema = new Schema(
             width: { type: Number, required: true },
             height: { type: Number, required: true },
         },
-        color: { type: String, default: '#00FF00' }, // Default color is green
     },
     {
         timestamps: true,
@@ -52,31 +50,32 @@ SectorSchema.statics.cleanupExpiredParticipants = async function () {
             'participants.satAt': { $exists: true },
         });
 
+        let cleanedCount = 0;
+
         // Iterate through each sector and remove expired participants
         for (const sector of sectors) {
+            const initialCount = sector.participants.length;
+
             const updatedParticipants = sector.participants.filter((participant: IParticipant) => {
                 const expirationTime = new Date(participant.satAt.getTime() + participant.duration * 60000); // satAt + duration in ms
                 return expirationTime > now; // Keep participants who haven't expired
             });
 
-            // Update the sector with the filtered participants
-            sector.participants = updatedParticipants;
-            await sector.save();
+            if (updatedParticipants.length !== initialCount) {
+                sector.participants = updatedParticipants;
+                await sector.save();
+                cleanedCount += initialCount - updatedParticipants.length;
+            }
         }
 
-        console.log(`Cleaned up expired participants.`);
+        console.log(`Cleaned up ${cleanedCount} expired participants.`);
     } catch (error) {
         console.error('Error cleaning up expired participants:', error);
     }
 };
 
-// Pre-save hook to update the color based on participants
+// Pre-save hook to check for duplicate participants
 SectorSchema.pre('save', function (next) {
-    if (this.participants.length > 0) {
-        this.color = '#FFA500'; // Orange when occupied
-    } else {
-        this.color = '#00FF00'; // Green when empty
-    }
     next();
 });
 

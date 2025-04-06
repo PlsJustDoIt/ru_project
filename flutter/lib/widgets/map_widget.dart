@@ -76,7 +76,7 @@ class _FloorPlanState extends State<FloorPlan> {
                         width: sectorWidth,
                         height: sectorHeight,
                         decoration: BoxDecoration(
-                          color: sector.color ?? Colors.grey,
+                          color: sector.getColor(),
                           border: Border.all(
                             color: selectedSector?.id == sector.id
                                 ? Colors.blue
@@ -198,38 +198,44 @@ class SectorInfoWidget extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Friends in Area Section
-            if (sector.friendsInArea != null && sector.friendsInArea!.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Amis dans le secteur :',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      itemCount: sector.friendsInArea!.length,
-                      itemBuilder: (context, index) {
-                        final friend = sector.friendsInArea![index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              radius: 28,
-                              backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
-                            ),
-                            title: Text(friend.username),
-                            subtitle: Text(friend.status),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+            if (sector.friendsInArea != null && sector.friendsInArea!.isNotEmpty) 
+              const Center(
+                child: Text(
+                  'Il y a des amis dans ce secteur !',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
               )
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: [
+              //     Text(
+              //       'Amis dans le secteur :',
+              //       style: Theme.of(context).textTheme.headlineMedium,
+              //     ),
+              //     const SizedBox(height: 8),
+              //     SizedBox(
+              //       height: 200,
+              //       child: ListView.builder(
+              //         itemCount: sector.friendsInArea!.length,
+              //         itemBuilder: (context, index) {
+              //           final friend = sector.friendsInArea![index];
+              //           return Card(
+              //             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              //             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              //             child: ListTile(
+              //               leading: CircleAvatar(
+              //                 radius: 28,
+              //                 backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
+              //               ),
+              //               title: Text(friend.username),
+              //               subtitle: Text(friend.status),
+              //             ),
+              //           );
+              //         },
+              //       ),
+              //     ),
+              //   ],
+              // )
             else
               const Center(
                 child: Text(
