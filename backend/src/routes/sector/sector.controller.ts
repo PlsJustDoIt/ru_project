@@ -1,25 +1,68 @@
+import Sector from '../../models/sector.js';
 import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
 import { findSectorById } from './sector.service.js';
 import { Request, Response } from 'express';
 
 const joinSector = async (req: Request, res: Response) => {
-    const { sectorId } = req.params;
+    const { sectorId, durationMin } = req.body;
 
     try {
-        const sector = await findSectorById(sectorId);
-        if (!sector) return res.status(404).json({ error: 'Sector not found' });
-
-        if (!sector.participants.includes(req.user.id)) {
-            sector.participants.push(req.user.id);
-            await sector.save();
-            return res.status(200).json({ message: 'You have joined the sector' });
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            logger.error('User not found');
+            return res.status(404).json({ error: 'User not found' });
+        }
+        if (!sectorId || !durationMin) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+        // betveen 5 and 30 min
+        if (durationMin < 5 || durationMin > 30) {
+            return res.status(400).json({ error: 'Duration must be between 5 and 30 minutes' });
+        }
+        // Check if the user is already sitting at a sector
+        const existingSector = await Sector.findOne({
+            'participants.userId': user._id,
+        });
+        if (existingSector) {
+            return res.status(400).json({ error: 'User is already sitting at a sector' });
         }
 
-        return res.status(409).json({ message: 'You are already a participant of this sector' });
+        // Find the sector by ID
+        const sector = await Sector.findById(sectorId);
+        if (!sector) {
+            logger.error('Sector not found');
+            return res.status(404).json({ error: 'Sector not found' });
+        }
+
+        // Check if the user is already a participant in the sector
+        const existingParticipant = sector.participants.find(participant =>
+            participant.userId.toString() === user._id.toString(),
+        );
+
+        if (existingParticipant) {
+            return res.status(400).json({ error: 'User is already sitting at this sector' });
+        }
+
+        // Add the user to the sector's participants with duration
+        sector.participants.push({
+            userId: user._id,
+            satAt: new Date(),
+            duration: durationMin,
+        });
+
+        await sector.save();
+
+        return res.json({
+            success: true,
+            message: `Successfully sat in sector for ${durationMin} minutes`,
+        });
     } catch (error) {
-        logger.error('Error joining sector:', error);
-        return res.status(500).json({ error: 'Server error' });
+        logger.error('Erreur lors de la mise à jour du secteur:', error);
+        return res.status(500).json({
+            error: 'Erreur lors de la mise à jour du secteur',
+            success: false,
+        });
     }
 };
 

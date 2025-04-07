@@ -78,14 +78,6 @@ const getSectors = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Use the user's friends array directly to filter participants
-        const friendIds = user.friends.map(friendId => friendId.toString()); // Convert ObjectIds to strings
-        sectors.forEach((sector) => {
-            sector.participants = sector.participants.filter(participant =>
-                friendIds.includes(participant.userId._id.toString()),
-            );
-        });
-
         return res.json({ sectors });
     } catch (error) {
         logger.error('Erreur lors de la récupération des secteurs:', error);
@@ -93,70 +85,8 @@ const getSectors = async (req: Request, res: Response) => {
     }
 };
 
-const sitAtSector = async (req: Request, res: Response) => {
-    const { sectorId, durationMin } = req.body;
-
-    try {
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            logger.error('User not found');
-            return res.status(404).json({ error: 'User not found' });
-        }
-        if (!sectorId || !durationMin) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-        // betveen 5 and 30 min
-        if (durationMin < 5 || durationMin > 30) {
-            return res.status(400).json({ error: 'Duration must be between 5 and 30 minutes' });
-        }
-        // Check if the user is already sitting at a sector
-        const existingSector = await Sector.findOne({
-            'participants.userId': user._id,
-        });
-        if (existingSector) {
-            return res.status(400).json({ error: 'User is already sitting at a sector' });
-        }
-
-        // Find the sector by ID
-        const sector = await Sector.findById(sectorId);
-        if (!sector) {
-            logger.error('Sector not found');
-            return res.status(404).json({ error: 'Sector not found' });
-        }
-
-        // Check if the user is already a participant in the sector
-        const existingParticipant = sector.participants.find(participant =>
-            participant.userId.toString() === user._id.toString(),
-        );
-
-        if (existingParticipant) {
-            return res.status(400).json({ error: 'User is already sitting at this sector' });
-        }
-
-        // Add the user to the sector's participants with duration
-        sector.participants.push({
-            userId: user._id,
-            satAt: new Date(),
-            duration: durationMin,
-        });
-
-        await sector.save();
-
-        return res.json({
-            success: true,
-            message: `Successfully sat in sector for ${durationMin} minutes`,
-        });
-    } catch (error) {
-        logger.error('Erreur lors de la mise à jour du secteur:', error);
-        return res.status(500).json({
-            error: 'Erreur lors de la mise à jour du secteur',
-            success: false,
-        });
-    }
-};
-
 const getApiDoc = (res: Response) => {
     return res.json(apiDoc);
 };
 
-export { getMenus, getApiDoc, getSectors, sitAtSector };
+export { getMenus, getApiDoc, getSectors };

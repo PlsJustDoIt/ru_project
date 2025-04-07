@@ -674,7 +674,8 @@ class ApiService {
 
   Future<bool> sitInSector(int durationMin, String sectorId) async {
     try {
-      final Response response = await _dio.post('/ru/sit', data: {
+      //join/sectorId
+      final Response response = await _dio.post('/sectors/join/$sectorId', data: {
         'durationMin': durationMin,
         'sectorId': sectorId,
       });
@@ -689,6 +690,43 @@ class ApiService {
       return false;
     }
   }
+
+  Future<bool> leaveSector(String sectorId) async {
+    try {
+      final Response response =
+          await _dio.delete('/sectors/leave/$sectorId');
+      if (response.statusCode == 200) {
+        return true;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to leave sector: $e');
+      return false;
+    }
+  }
+
+  Future<List<User>> getFriendsInSector(String sectorId) async {
+    try {
+      final Response response =
+          await _dio.get('/$sectorId/friends');
+      if (response.statusCode == 200 && response.data != null) {
+        List<User> users = [
+          for (Map<String, dynamic> user in response.data['friendsInSector'])
+            User.fromJson(user)
+        ];
+        return users;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return [];
+    } catch (e) {
+      logger.e('Failed to get users in sector: $e');
+      return [];
+    }
+  }
+
 
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';
