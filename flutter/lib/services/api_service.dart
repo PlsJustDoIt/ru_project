@@ -674,7 +674,6 @@ class ApiService {
 
   Future<bool> sitInSector(int durationMin, String sectorId) async {
     try {
-      //join/sectorId
       final Response response = await _dio.post('/sectors/join/$sectorId', data: {
         'durationMin': durationMin,
         'sectorId': sectorId,
@@ -710,7 +709,7 @@ class ApiService {
   Future<List<User>> getFriendsInSector(String sectorId) async {
     try {
       final Response response =
-          await _dio.get('/$sectorId/friends');
+          await _dio.get('/sectors/$sectorId/friends-in-sector');
       if (response.statusCode == 200 && response.data != null) {
         List<User> users = [
           for (Map<String, dynamic> user in response.data['friendsInSector'])
