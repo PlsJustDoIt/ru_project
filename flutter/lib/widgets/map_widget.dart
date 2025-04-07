@@ -105,11 +105,18 @@ class _FloorPlanState extends State<FloorPlan> {
     );
   }
 
+  // Function to refresh the map
+  void refreshMap() {
+    setState(() {
+      selectedSector = null; // Reset selected sector
+    });
+  }
+
   void showSectorDetails(BuildContext context, SectorModel sector, ApiService apiService, UserProvider userProvider) {
     // if (!sector.isClickable) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SectorInfoWidget(sector: sector, apiService: apiService, userProvider: userProvider),
+        builder: (context) => SectorInfoWidget(sector: sector, apiService: apiService, userProvider: userProvider, onMove: refreshMap),
       ),
     );
   }
@@ -141,12 +148,14 @@ class SectorInfoWidget extends StatefulWidget {
   final SectorModel sector;
   final ApiService apiService;
   final UserProvider userProvider;
+  final void Function() onMove;
 
   const SectorInfoWidget({
     Key? key,
     required this.sector,
     required this.apiService,
     required this.userProvider,
+    required this.onMove,
   }) : super(key: key);
 
   @override
@@ -234,6 +243,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                       setState(() {
                         widget.sector.participants!.remove(widget.userProvider.user!.id);
                       });
+                      widget.onMove();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -358,6 +368,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                         setState(() {
                           widget.sector.participants!.add(widget.userProvider.user!.id);
                         });
+                        widget.onMove();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
