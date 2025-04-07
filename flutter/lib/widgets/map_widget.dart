@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/models/sectorModel.dart';
@@ -25,6 +26,7 @@ class _FloorPlanState extends State<FloorPlan> {
   @override
   Widget build(BuildContext context) {
     ApiService apiService = Provider.of<ApiService>(context, listen: false);
+    UserProvider userProvider = Provider.of<UserProvider>(context, listen: false);
 
     return FutureBuilder<List<SectorModel>>(
       future: apiService.getRestaurantsSectors(), // Fetch sectors dynamically
@@ -70,7 +72,7 @@ class _FloorPlanState extends State<FloorPlan> {
                         setState(() {
                           selectedSector = sector;
                         });
-                        showSectorDetails(context, sector, apiService);
+                        showSectorDetails(context, sector, apiService, userProvider);
                       },
                       child: Container(
                         width: sectorWidth,
@@ -103,11 +105,11 @@ class _FloorPlanState extends State<FloorPlan> {
     );
   }
 
-  void showSectorDetails(BuildContext context, SectorModel sector, ApiService apiService) {
+  void showSectorDetails(BuildContext context, SectorModel sector, ApiService apiService, UserProvider userProvider) {
     // if (!sector.isClickable) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SectorInfoWidget(sector: sector, apiService: apiService),
+        builder: (context) => SectorInfoWidget(sector: sector, apiService: apiService, userProvider: userProvider),
       ),
     );
   }
@@ -135,11 +137,47 @@ class SimpleMapWidget extends StatelessWidget {
   }
 }
 
-class SectorInfoWidget extends StatelessWidget {
+class SectorInfoWidget extends StatefulWidget {
   final SectorModel sector;
   final ApiService apiService;
+  final UserProvider userProvider;
 
-  const SectorInfoWidget({Key? key, required this.sector, required this.apiService}) : super(key: key);
+  const SectorInfoWidget({
+    Key? key,
+    required this.sector,
+    required this.apiService,
+    required this.userProvider,
+  }) : super(key: key);
+
+  @override
+  _SectorInfoWidgetState createState() => _SectorInfoWidgetState();
+}
+
+class _SectorInfoWidgetState extends State<SectorInfoWidget> {
+  List<User> friendsInArea = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFriendsInArea();
+  }
+
+  Future<void> _fetchFriendsInArea() async {
+    try {
+      final friends = await widget.apiService.getFriendsInSector(widget.sector.id!);
+      setState(() {
+        logger.d('Amis dans le secteur ${widget.sector.name}: $friends');
+        friendsInArea = friends;
+        isLoading = false;
+      });
+    } catch (error) {
+      logger.e('Error fetching friends in sector: $error');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +189,7 @@ class SectorInfoWidget extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-        title: Text('Détails du secteur : ${sector.name ?? "N/A"}'),
+        title: Text('Détails du secteur : ${widget.sector.name ?? "N/A"}'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -173,10 +211,10 @@ class SectorInfoWidget extends StatelessWidget {
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
-                      Text('Nom : ${sector.name ?? "N/A"}'),
-                      Text('ID : ${sector.id ?? "N/A"}'),
-                      Text('Position : (${sector.x}, ${sector.y})'),
-                      Text('Dimensions : ${sector.width}x${sector.height}'),
+                      Text('Nom : ${widget.sector.name ?? "N/A"}'),
+                      Text('ID : ${widget.sector.id ?? "N/A"}'),
+                      Text('Position : (${widget.sector.x}, ${widget.sector.y})'),
+                      Text('Dimensions : ${widget.sector.width}x${widget.sector.height}'),
                     ],
                   ),
                 ),
@@ -184,58 +222,96 @@ class SectorInfoWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Action Button
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  logger.d('S\'assoir dans le secteur ${sector.name}');
-                  _showTimeSelector(context, apiService);
-                },
-                icon: const Icon(Icons.chair),
-                label: const Text('S\'assoir ici ?'),
+            // Action Button (if userid not in participants then join button else leave button)
+            if (widget.sector.participants!.contains(widget.userProvider.user!.id))
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    logger.d('Se lever du secteur ${widget.sector.name}');
+                    bool res = await widget.apiService.leaveSector(widget.sector.id!);
+                    if (res) {
+                      logger.d('Vous vous êtes levé du secteur ${widget.sector.name}');
+                      setState(() {
+                        widget.sector.participants!.remove(widget.userProvider.user!.id);
+                      });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vous vous êtes levé du secteur.'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } else {
+                      logger.e('Erreur lors de la réservation du secteur ${widget.sector.name}.');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Erreur lors de l\'opération.'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.chair),
+                  label: const Text('Se lever ?'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red, // Change button color to red
+                    foregroundColor: Colors.white, // Change text color to white
+                  ),
+                ),
+              )
+            else
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    logger.d('S\'assoir dans le secteur ${widget.sector.name}');
+                    _showTimeSelector(context, widget.apiService);
+                  },
+                  icon: const Icon(Icons.chair),
+                  label: const Text('S\'assoir ici ?'),
+                ),
               ),
-            ),
             const SizedBox(height: 16),
 
             // Friends in Area Section
-            if (sector.friendsInArea != null && sector.friendsInArea!.isNotEmpty) 
-              const Center(
-                child: Text(
-                  'Il y a des amis dans ce secteur !',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
+            if (isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (friendsInArea.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Amis dans le secteur :',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      itemCount: friendsInArea.length,
+                      itemBuilder: (context, index) {
+                        final friend = friendsInArea[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              radius: 28,
+                              backgroundImage: NetworkImage(
+                                widget.apiService.getImageNetworkUrl(friend.avatarUrl),
+                              ),
+                            ),
+                            title: Text(friend.username),
+                            subtitle: Text(friend.status),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               )
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     Text(
-              //       'Amis dans le secteur :',
-              //       style: Theme.of(context).textTheme.headlineMedium,
-              //     ),
-              //     const SizedBox(height: 8),
-              //     SizedBox(
-              //       height: 200,
-              //       child: ListView.builder(
-              //         itemCount: sector.friendsInArea!.length,
-              //         itemBuilder: (context, index) {
-              //           final friend = sector.friendsInArea![index];
-              //           return Card(
-              //             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              //             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              //             child: ListTile(
-              //               leading: CircleAvatar(
-              //                 radius: 28,
-              //                 backgroundImage: NetworkImage(apiService.getImageNetworkUrl(friend.avatarUrl)),
-              //               ),
-              //               title: Text(friend.username),
-              //               subtitle: Text(friend.status),
-              //             ),
-              //           );
-              //         },
-              //       ),
-              //     ),
-              //   ],
-              // )
             else
               const Center(
                 child: Text(
@@ -275,26 +351,27 @@ class SectorInfoWidget extends StatelessWidget {
                     leading: const Icon(Icons.timer),
                     title: Text('$duration minutes'),
                     onTap: () async {
-                      logger.d('Durée sélectionnée : $duration minutes dans le secteur ${sector.name}');
-                      // Add your logic here for the selected duration
-                      bool succes = await apiService.sitInSector(duration, sector.id!);
-                      // Handle the response
-                      if (succes) {
-                        logger.d('Vous êtes assis dans le secteur ${sector.name} pour $duration minutes.');
+                      logger.d('Durée sélectionnée : $duration minutes dans le secteur ${widget.sector.name}');
+                      bool success = await apiService.sitInSector(duration, widget.sector.id!);
+                      if (success) {
+                        logger.d('Vous êtes assis dans le secteur ${widget.sector.name} pour $duration minutes.');
+                        setState(() {
+                          widget.sector.participants!.add(widget.userProvider.user!.id);
+                        });
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Vous êtes assis dans le secteur ${sector.name} pour $duration minutes.'),
+                              content: Text('Vous êtes assis dans le secteur ${widget.sector.name} pour $duration minutes.'),
                               duration: const Duration(seconds: 2),
                             ),
                           );
                         }
                       } else {
-                        logger.e('Erreur lors de la réservation du secteur ${sector.name}.');
+                        logger.e('Erreur lors de la réservation du secteur ${widget.sector.name}.');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Erreur lors de la réservation du secteur.'),
+                              content: Text('Erreur lors de l\'opération.'),
                               duration: Duration(seconds: 2),
                             ),
                           );

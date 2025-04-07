@@ -654,13 +654,12 @@ class ApiService {
   Future<List<SectorModel>> getRestaurantsSectors({String idResto = "r135"}) async {
     try {
       final Response response = await _dio.get('/ru/$idResto/sectors');
-      logger.i('Response from server: ${response.data}');
+      // logger.i('Response from server: ${response.data}');
       if (response.statusCode == 200 && response.data != null) {
         List<SectorModel> sectors = [
           for (Map<String, dynamic> sector in response.data['sectors'])
             SectorModel.fromJson(sector)
         ];
-        logger.i('Processed sectors: $sectors');
         return sectors;
       }
       logger.e(
@@ -693,7 +692,7 @@ class ApiService {
   Future<bool> leaveSector(String sectorId) async {
     try {
       final Response response =
-          await _dio.delete('/sectors/leave/$sectorId');
+          await _dio.post('/sectors/leave/$sectorId');
       if (response.statusCode == 200) {
         return true;
       }
@@ -709,7 +708,7 @@ class ApiService {
   Future<List<User>> getFriendsInSector(String sectorId) async {
     try {
       final Response response =
-          await _dio.get('/sectors/$sectorId/friends-in-sector');
+          await _dio.get('/sectors/$sectorId/friends');
       if (response.statusCode == 200 && response.data != null) {
         List<User> users = [
           for (Map<String, dynamic> user in response.data['friendsInSector'])

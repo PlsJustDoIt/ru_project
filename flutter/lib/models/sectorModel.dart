@@ -13,7 +13,7 @@ class SectorModel {
   final double width;
   final double height;
   final String? name;
-  List<String>? friendsInArea;
+  List<String>? participants;
 
   SectorModel({
     this.id,
@@ -22,7 +22,7 @@ class SectorModel {
     required this.width,
     required this.height,
     this.name,
-    this.friendsInArea,
+    this.participants,
   });
 
   factory SectorModel.fromJson(Map<String, dynamic> json) {
@@ -33,15 +33,15 @@ class SectorModel {
       width: json['size']['width']?.toDouble() ?? 0.0,
       height: json['size']['height']?.toDouble() ?? 0.0,
       name: json['name'],
-      friendsInArea: json['friendsInArea'] != null
-          ? List<String>.from(json['friendsInArea'])
+      participants: json['participants'] != null
+          ? List<String>.from(json['participants'])
           : [],
     );
   }
 
   //if there is no one then it's a default color else it's orange
   Color getColor() {
-    return friendsInArea != null && friendsInArea!.isNotEmpty
+    return participants != null && participants!.isNotEmpty
         ? Colors.orange
         : const Color(0xFF00FF00); // Default color (green)
   }
@@ -58,12 +58,12 @@ class SectorModel {
         'height': height,
       },
       'name': name,
-      'friendsInArea': friendsInArea,
+      'participants': participants,
     };
   }
 
   @override
   String toString() {
-    return 'SectorModel{id: $id, x: $x, y: $y, width: $width, height: $height, name: $name, friendsInArea: $friendsInArea}';
+    return 'SectorModel{id: $id, x: $x, y: $y, width: $width, height: $height, name: $name, participants: $participants}';
   }
 }

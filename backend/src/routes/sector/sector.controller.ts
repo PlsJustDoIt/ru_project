@@ -71,19 +71,39 @@ const leaveSector = async (req: Request, res: Response) => {
     const { sectorId } = req.params;
 
     try {
-        const sector = await findSectorById(sectorId);
-        if (!sector) return res.status(404).json({ error: 'Sector not found' });
-
-        const index = sector.participants.indexOf(req.user.id);
-        if (index > -1) {
-            sector.participants.splice(index, 1);
-            await sector.save();
-            return res.status(200).json({ message: 'You have left the sector' });
+        // Validate sectorId
+        if (!sectorId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid sector ID' });
         }
 
-        return res.status(404).json({ message: 'You are not a participant of this sector' });
+        // Find the sector by ID
+        const sector = await findSectorById(sectorId);
+        if (!sector) {
+            return res.status(404).json({ error: 'Sector not found' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const userId = user?._id;
+
+        // Check if the user is a participant in the sector
+        const participantIndex = sector.participants.findIndex(
+            participant => participant.userId.toString() == userId.toString(),
+        );
+
+        if (participantIndex === -1) {
+            return res.status(400).json({ error: 'You are not a participant of this sector' });
+        }
+
+        // Remove the user from the participants array
+        sector.participants.splice(participantIndex, 1);
+        await sector.save();
+
+        return res.status(200).json({ message: 'You have left the sector' });
     } catch (error) {
-        logger.error('Error joining sector:', error);
+        logger.error('Error leaving sector:', error);
         return res.status(500).json({ error: 'Server error' });
     }
 };
@@ -92,13 +112,27 @@ const getFriendsInSector = async (req: Request, res: Response) => {
     const { sectorId } = req.params;
 
     try {
+        // Find the user making the request
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Find the sector by ID
         const sector = await findSectorById(sectorId);
-        if (!sector) return res.status(404).json({ error: 'Sector not found' });
+        if (!sector) {
+            return res.status(404).json({ error: 'Sector not found' });
+        }
 
-        const friendsInSector = sector.participants.filter(participant => req.user.friends.includes(participant));
+        // Filter participants who are friends of the user
+        const friendsInSector = sector.participants.filter(participant =>
+            user.friends.some(friendId => friendId.toString() === participant.userId.toString()),
+        );
 
-        const populatedFriends = await User.find({ _id: { $in: friendsInSector } })
-            .select('-password -__v'); // Exclure les champs sensibles
+        // Populate the friends' details
+        const populatedFriends = await User.find({ _id: { $in: friendsInSector.map(p => p.userId) } })
+            .select('-password -__v'); // Exclude sensitive fields
+
         return res.status(200).json({ friendsInSector: populatedFriends });
     } catch (error) {
         logger.error('Error getting friends in sector:', error);

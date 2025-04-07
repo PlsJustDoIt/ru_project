@@ -383,6 +383,7 @@ const acceptFriendRequest = async (req: Request, res: Response) => {
 
         const friendRequest = await FriendRequest.findById(requestId);
         if (friendRequest === null) {
+            logger.error('Friend request not found');
             return res.status(404).json({ error: 'Friend request not found' });
         }
 
