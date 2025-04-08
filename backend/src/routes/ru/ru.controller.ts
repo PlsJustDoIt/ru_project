@@ -5,6 +5,7 @@ import { fetchMenusFromExternalAPI, findRestaurant } from './ru.service.js';
 import NodeCache from 'node-cache';
 import Sector from '../../models/sector.js';
 import User from '../../models/user.js';
+import Restaurant from '../../models/restaurant.js';
 
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
@@ -155,8 +156,21 @@ const sitAtSector = async (req: Request, res: Response) => {
     }
 };
 
+const getRestaurants = async (req: Request, res: Response) => {
+    try {
+        const restaurants = await Restaurant.find().select('name restaurantId').limit(10);
+        if (!restaurants || restaurants.length === 0) {
+            return res.status(404).json({ error: 'No restaurants found' });
+        }
+        return res.json({ restaurants });
+    } catch (error) {
+        logger.error('Erreur lors de la récupération des restaurants:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération des restaurants' });
+    }
+};
+
 const getApiDoc = (res: Response) => {
     return res.json(apiDoc);
 };
 
-export { getMenus, getApiDoc, getSectors, sitAtSector };
+export { getMenus, getApiDoc, getSectors, sitAtSector, getRestaurants };

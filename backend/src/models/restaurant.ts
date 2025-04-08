@@ -3,7 +3,7 @@ import { Schema, Document, Types, model } from 'mongoose';
 interface IRestaurant extends Document {
     _id: Types.ObjectId;
     sectors: Types.ObjectId[];
-    id: string;
+    restaurantId: string;
     name: string;
     address: string;
     description: string;
@@ -11,7 +11,7 @@ interface IRestaurant extends Document {
 
 const RestaurantSchema = new Schema({
     sectors: [{ type: Schema.Types.ObjectId, ref: 'Sector' }],
-    id: { type: String, required: true },
+    restaurantId: { type: String, required: true },
     name: { type: String, required: true },
     address: { type: String, required: true },
     description: { type: String, required: true },

@@ -143,7 +143,7 @@ const setupRestaurant = async () => {
     const resto_lumiere = await findRestaurant('r135');
     if (!resto_lumiere) {
         await createRestaurant({
-            id: 'r135',
+            restaurantId: 'r135',
             name: 'RU Lumière',
             sectors: [],
             address: '42 avenue de l\'Observatoire 25003 Besançon',
