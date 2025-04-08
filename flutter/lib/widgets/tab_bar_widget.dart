@@ -9,6 +9,7 @@ import 'package:ru_project/widgets/menu_widget.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
+import 'package:ru_project/widgets/settings_widget.dart';
 import 'package:ru_project/widgets/tables.dart';
 import 'package:ru_project/widgets/profile.dart';
 import 'package:ru_project/widgets/welcome.dart';
@@ -53,6 +54,16 @@ class TabBarWidget extends StatelessWidget {
                 });
               }),
           actions: [
+            IconButton(
+                icon: const Icon(Icons.settings),
+                color: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsWidget()),
+                  );
+                }),
             IconButton(
                 icon: const Icon(Icons.logout),
                 color: Colors.white,

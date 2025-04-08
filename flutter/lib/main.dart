@@ -15,18 +15,25 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Config.init();
+
+  // Instanciation manuelle
+
+  final secureStorage = SecureStorage();
+  final userProvider = UserProvider(secureStorage: secureStorage);
+
+  final apiService = ApiService(
+    userProvider: userProvider,
+    secureStorage: secureStorage,
+  );
+
+  // Initialisation de l'état utilisateur
+  await userProvider.init(apiService);
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => UserProvider(),
-        ),
-        Provider(
-            create: (context) => ApiService(
-                  userProvider:
-                      Provider.of<UserProvider>(context, listen: false),
-                  secureStorage: SecureStorage(),
-                )),
+        ChangeNotifierProvider<UserProvider>.value(value: userProvider),
+        Provider<ApiService>.value(value: apiService),
       ],
       child: BetterFeedback(
         theme: FeedbackThemeData(
@@ -46,7 +53,7 @@ void main() async {
           GlobalFeedbackLocalizationsDelegate(),
         ],
         localeOverride: const Locale('fr', 'FR'),
-        child: MyApp(),
+        child: const MyApp(),
       ),
     ),
   );
