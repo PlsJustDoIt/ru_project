@@ -13,8 +13,7 @@ class SectorModel {
   final double width;
   final double height;
   final String? name;
-  final Color? color;
-  List<User>? friendsInArea;
+  List<String>? participants;
 
   SectorModel({
     this.id,
@@ -23,8 +22,7 @@ class SectorModel {
     required this.width,
     required this.height,
     this.name,
-    this.color,
-    this.friendsInArea,
+    this.participants,
   });
 
   factory SectorModel.fromJson(Map<String, dynamic> json) {
@@ -35,13 +33,17 @@ class SectorModel {
       width: json['size']['width']?.toDouble() ?? 0.0,
       height: json['size']['height']?.toDouble() ?? 0.0,
       name: json['name'],
-      color: json['color'] != null
-          ? _colorFromHex(json['color']) // Convert hex string to Color
-          : null,
-      friendsInArea: json['friendsInArea'] != null
-          ? List<User>.from(json['friendsInArea'].map((friend) => User.fromJson(friend)))
+      participants: json['participants'] != null
+          ? List<String>.from(json['participants'])
           : [],
     );
+  }
+
+  //if there is no one then it's a default color else it's orange
+  Color getColor() {
+    return participants != null && participants!.isNotEmpty
+        ? Colors.orange
+        : const Color(0xFF00FF00); // Default color (green)
   }
 
   Map<String, dynamic> toJson() {
@@ -56,26 +58,12 @@ class SectorModel {
         'height': height,
       },
       'name': name,
-      'color': color != null ? _colorToHex(color!) : null, // Convert Color to hex string
-      'friendsInArea': friendsInArea?.map((friend) => friend.toJson()).toList(),
+      'participants': participants,
     };
-  }
-
-  /// Convert a hex string (e.g., "#00FF00") to a Flutter [Color]
-  static Color _colorFromHex(String hex) {
-    final buffer = StringBuffer();
-    if (hex.startsWith('#')) buffer.write('ff'); // Add alpha channel if missing
-    buffer.write(hex.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
-  }
-
-  /// Convert a Flutter [Color] to a hex string (e.g., "#00FF00")
-  static String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
   }
 
   @override
   String toString() {
-    return 'SectorModel{id: $id, x: $x, y: $y, width: $width, height: $height, name: $name, color: $color, friendsInArea: $friendsInArea}';
+    return 'SectorModel{id: $id, x: $x, y: $y, width: $width, height: $height, name: $name, participants: $participants}';
   }
 }

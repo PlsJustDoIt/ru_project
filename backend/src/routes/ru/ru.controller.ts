@@ -66,28 +66,37 @@ const getSectors = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'No sectors found' });
         }
 
-        // Fetch the sectors with populated participants
+        //         // // Fetch the sectors with populated participants
+        // const sectors = await Sector.find({ _id: { $in: ru.sectors } })
+        //     .populate({
+        //         path: 'participants.userId',
+        //         select: 'username avatarUrl status', // Only include necessary fields
+        //     });
+
+        // Fetch the sectors with populated participants with only the userId
+        // const sectors = await Sector.find({ _id: { $in: ru.sectors } })
+        //     .populate({
+        //         path: 'participants.userId',
+        //         select: 'username avatarUrl status', // Only include necessary fields
+        //     });
+
+        // Fetch the sectors with populated participants with only the userId
         const sectors = await Sector.find({ _id: { $in: ru.sectors } })
             .populate({
                 path: 'participants.userId',
-                select: 'username avatarUrl status', // Only include necessary fields
+                select: '_id', // Only fetch the userId
             });
 
-        // Get the current user
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+        // Transform the participants field to an array of userId
+        const transformedSectors = sectors.map(sector => ({
+            _id: sector._id,
+            name: sector.name,
+            position: sector.position,
+            size: sector.size,
+            participants: sector.participants.map(participant => participant.userId._id),
+        }));
 
-        // Use the user's friends array directly to filter participants
-        const friendIds = user.friends.map(friendId => friendId.toString()); // Convert ObjectIds to strings
-        sectors.forEach((sector) => {
-            sector.participants = sector.participants.filter(participant =>
-                friendIds.includes(participant.userId._id.toString()),
-            );
-        });
-
-        return res.json({ sectors });
+        return res.json({ sectors: transformedSectors });
     } catch (error) {
         logger.error('Erreur lors de la récupération des secteurs:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des secteurs' });

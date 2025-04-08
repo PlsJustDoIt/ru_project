@@ -155,15 +155,15 @@ const setupRestaurant = async () => {
     const resto = await findRestaurant('r135');
     if (resto && resto.sectors.length === 0) {
         const sectors = [
-            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: 'A', color: '#00FF00' },
-            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: 'B', color: '#00FF00' },
-            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: 'C', color: '#00FF00' },
-            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: 'D', color: '#00FF00' },
-            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: 'E', color: '#00FF00' },
-            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: 'F', color: '#00FF00' },
-            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: 'G', color: '#00FF00' },
-            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: 'H', color: '#00FF00' },
-            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: 'I', color: '#00FF00' },
+            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: 'A' },
+            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: 'B' },
+            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: 'C' },
+            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: 'D' },
+            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: 'E' },
+            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: 'F' },
+            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: 'G' },
+            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: 'H' },
+            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: 'I' },
         ];
         const sectorIds = await Promise.all(sectors.map(async (sector) => {
             const newSector = await Sector.create(sector);
