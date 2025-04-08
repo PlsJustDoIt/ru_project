@@ -119,8 +119,8 @@ async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise
     }
 }
 
-const findRestaurant = async (id: string) => {
-    return await Restaurant.findOne({ id: id }).populate('sectors');
+const findRestaurant = async (restaurantId: string) => {
+    return await Restaurant.findOne({ restaurantId: restaurantId }).populate('sectors');
 };
 
 const createRestaurant = async (restaurant: restaurant) => {
