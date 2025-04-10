@@ -128,20 +128,41 @@ const createRestaurant = async (restaurant: restaurant) => {
 };
 
 const setupRestaurant = async () => {
-    // TODO : à voir
-    // const secteur = await Sector.findOne({ name: 'secteur 1' });
-    // if (!secteur) {
-    //     await Sector.create({ name: 'secteur 1', position: { x: 2, y: 2 }, size: { width: 2, height: 2 } });
-    // }
-
-    // TEMP
-    // // clear sector
-    // await Sector.deleteMany({});
-    // // clear restaurant
-    // await Restaurant.deleteMany({});
-
+    // Check if the restaurant exists and has valid data
     const resto_lumiere = await findRestaurant('r135');
+
+    let shouldClearData = false;
+
     if (!resto_lumiere) {
+        logger.warn('Restaurant RU Lumière not found. Data will be cleared and recreated.');
+        shouldClearData = true;
+    } else if (!Array.isArray(resto_lumiere.sectors) || resto_lumiere.sectors.length === 0) {
+        logger.warn('Restaurant RU Lumière has no sectors. Data will be cleared and recreated.');
+        shouldClearData = true;
+    }
+    // Check if the restaurant has valid data
+    if (resto_lumiere && resto_lumiere.sectors.length > 0) {
+        const hasInvalidData = resto_lumiere.sectors.some((sectorId) => {
+            // get sector by id
+            const sector = Sector.findById(sectorId);
+            if (!sector) {
+                logger.warn(`Sector with ID ${sectorId} not found. Data will be cleared and recreated.`);
+                return true;
+            }
+        });
+        if (hasInvalidData) {
+            logger.warn('Restaurant RU Lumière has invalid data. Data will be cleared and recreated.');
+            shouldClearData = true;
+        }
+    }
+
+    if (shouldClearData) {
+        // Clear sectors and restaurants
+        logger.info('Clearing invalid data...');
+        await Sector.deleteMany({});
+        await Restaurant.deleteMany({});
+
+        // Recreate the restaurant
         await createRestaurant({
             restaurantId: 'r135',
             name: 'RU Lumière',
@@ -149,29 +170,34 @@ const setupRestaurant = async () => {
             address: '42 avenue de l\'Observatoire 25003 Besançon',
             description: 'Restaurant universitaire situé à proximité de la place de la Bourse',
         });
-        logger.info('Restaurant RU Lumière créé');
+        logger.info('Restaurant RU Lumière created.');
     }
-    // si resto lumiere na pas de secteur, on lui en ajoute
+
+    // Fetch the restaurant again after clearing or if it already exists
     const resto = await findRestaurant('r135');
+
+    // Add sectors if the restaurant exists and has no sectors
     if (resto && resto.sectors.length === 0) {
         const sectors = [
-            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: 'A' },
-            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: 'B' },
-            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: 'C' },
-            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: 'D' },
-            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: 'E' },
-            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: 'F' },
-            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: 'G' },
-            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: 'H' },
-            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: 'I' },
+            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: '1' },
+            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: '2' },
+            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: '3' },
+            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: '4' },
+            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: '5' },
+            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: '6' },
+            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: '7' },
+            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: '8' },
+            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: '9' },
         ];
-        const sectorIds = await Promise.all(sectors.map(async (sector) => {
-            const newSector = await Sector.create(sector);
-            return newSector._id;
-        }));
+        const sectorIds = await Promise.all(
+            sectors.map(async (sector) => {
+                const newSector = await Sector.create(sector);
+                return newSector._id;
+            }),
+        );
         resto.sectors = sectorIds;
         await resto.save();
-        logger.info('Sectors created and added to RU Lumière');
+        logger.info('Sectors created and added to RU Lumière.');
     }
 };
 

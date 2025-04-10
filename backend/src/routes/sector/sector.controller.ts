@@ -3,6 +3,7 @@ import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
 import { findSectorById } from './sector.service.js';
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 
 const joinSector = async (req: Request, res: Response) => {
     const { sectorId, durationMin } = req.body;
@@ -113,27 +114,43 @@ const getFriendsInSector = async (req: Request, res: Response) => {
 
     try {
         // Find the user making the request
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('friends');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Find the sector by ID
-        const sector = await findSectorById(sectorId);
-        if (!sector) {
-            return res.status(404).json({ error: 'Sector not found' });
+        // Use MongoDB aggregation to filter participants and populate friends in one query
+        const sector = await Sector.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(sectorId) } }, // Match the sector by ID
+            { $unwind: '$participants' }, // Deconstruct the participants array
+            {
+                $match: {
+                    'participants.userId': { $in: user.friends }, // Match only friends
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users', // Collection to join (users)
+                    localField: 'participants.userId', // Field from Sector
+                    foreignField: '_id', // Field from User
+                    as: 'friendDetails', // Output array field
+                },
+            },
+            { $unwind: '$friendDetails' }, // Deconstruct the friendDetails array
+            {
+                $project: {
+                    '_id': 0, // Exclude the sector ID
+                    'friendDetails.password': 0, // Exclude sensitive fields
+                    'friendDetails.__v': 0,
+                },
+            },
+        ]);
+
+        if (!sector || sector.length === 0) {
+            return res.status(404).json({ error: 'No friends found in this sector' });
         }
 
-        // Filter participants who are friends of the user
-        const friendsInSector = sector.participants.filter(participant =>
-            user.friends.some(friendId => friendId.toString() === participant.userId.toString()),
-        );
-
-        // Populate the friends' details
-        const populatedFriends = await User.find({ _id: { $in: friendsInSector.map(p => p.userId) } })
-            .select('-password -__v'); // Exclude sensitive fields
-
-        return res.status(200).json({ friendsInSector: populatedFriends });
+        return res.status(200).json({ friendsInSector: sector.map(s => s.friendDetails) });
     } catch (error) {
         logger.error('Error getting friends in sector:', error);
         return res.status(500).json({ error: 'Server error' });

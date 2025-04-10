@@ -88,7 +88,7 @@ const cleanupJob = setInterval(async () => {
     } catch (error) {
         console.error('Error during scheduled cleanup:', error);
     }
-}, 5 * 60 * 1000); // Run every 5 minutes
+}, 1 * 60 * 1000); // Run every 5 minutes
 
 // Graceful shutdown for cleanup job
 const shutdownCleanupJob = () => {
