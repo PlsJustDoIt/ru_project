@@ -1,4 +1,4 @@
-import { Schema, Document, Types, model } from 'mongoose';
+import { Schema, Document, Types, model, Model } from 'mongoose';
 
 interface IParticipant {
     userId: Types.ObjectId;
@@ -20,6 +20,32 @@ const ParticipantSchema = new Schema({
     duration: { type: Number, required: true }, // in minutes
 });
 
+ParticipantSchema.index({ duration: 1, satAt: 1 });
+
+/*
+
+const ParticipantSchema = new Schema({
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    satAt: { type: Date, required: true, default: Date.now },
+    duration: { type: Number, required: true }, // in minutes
+    expiresAt: { type: Date, required: true }, // Automatically calculated expiration time
+});
+
+// Pre-save hook to calculate `expiresAt`
+ParticipantSchema.pre('save', function (next) {
+    const participant = this as any; // Cast to access fields
+    participant.expiresAt = new Date(participant.satAt.getTime() + participant.duration * 60000); // satAt + duration in ms
+    next();
+});
+
+// Add TTL index on `expiresAt`
+ParticipantSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+*/
+interface ISectorModel extends Model<ISector> {
+    cleanupExpiredParticipants: () => Promise<void>;
+}
+
 const SectorSchema = new Schema(
     {
         name: { type: String },
@@ -39,38 +65,32 @@ const SectorSchema = new Schema(
 );
 
 // Add an index for efficient queries
-SectorSchema.index({ 'participants.userId': 1, 'name': 1 }, { unique: true });
+SectorSchema.index({ 'participants.userId': 1 }, { unique: true });
 
 // Static method to clean up expired participants
 SectorSchema.statics.cleanupExpiredParticipants = async function () {
     const now = new Date();
     try {
-        // Find all sectors with expired participants
-        const sectors = await this.find({
-            'participants.satAt': { $exists: true },
-        });
+        // Utiliser updateMany avec $pull pour supprimer les participants expirés en une seule opération
+        const result = await this.updateMany(
+            {}, // Tous les secteurs
+            {
+                $pull: {
+                    participants: {
+                        $expr: {
+                            $lt: [
+                                { $add: ['$satAt', { $multiply: ['$duration', 60000] }] },
+                                now,
+                            ],
+                        },
+                    },
+                },
+            },
+        );
 
-        let cleanedCount = 0;
-
-        // Iterate through each sector and remove expired participants
-        for (const sector of sectors) {
-            const initialCount = sector.participants.length;
-
-            const updatedParticipants = sector.participants.filter((participant: IParticipant) => {
-                const expirationTime = new Date(participant.satAt.getTime() + participant.duration * 60000); // satAt + duration in ms
-                return expirationTime > now; // Keep participants who haven't expired
-            });
-
-            if (updatedParticipants.length !== initialCount) {
-                sector.participants = updatedParticipants;
-                await sector.save();
-                cleanedCount += initialCount - updatedParticipants.length;
-            }
-        }
-
-        console.log(`Cleaned up ${cleanedCount} expired participants.`);
+        console.log(`Nettoyage terminé. Documents modifiés: ${result.modifiedCount}`);
     } catch (error) {
-        console.error('Error cleaning up expired participants:', error);
+        console.error('Erreur lors du nettoyage des participants expirés:', error);
     }
 };
 
@@ -79,7 +99,7 @@ SectorSchema.pre('save', function (next) {
     next();
 });
 
-const Sector = model<ISector>('Sector', SectorSchema);
+const Sector = model<ISector, ISectorModel>('Sector', SectorSchema);
 
 // Cleanup job to remove expired participants every 5 minutes
 const cleanupJob = setInterval(async () => {
@@ -101,4 +121,4 @@ process.on('SIGINT', shutdownCleanupJob);
 process.on('SIGTERM', shutdownCleanupJob);
 
 export default Sector;
-export { ISector, IParticipant };
+export { ISector, IParticipant, ISectorModel };
