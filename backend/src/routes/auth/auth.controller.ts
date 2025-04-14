@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import User, { IUser } from '../../models/user.js';
+import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
 import { validateCredentials, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
 import jwt from 'jsonwebtoken';
 import RefreshToken from '../../models/refreshToken.js';
 import { join } from 'path';
-import { unlink } from 'fs';
+import { unlink } from 'fs/promises';
 import { avatarPath } from '../../config.js';
 
 const registerUser = async (req: Request, res: Response) => {
@@ -101,7 +101,7 @@ const refreshUserToken = async (req: Request, res: Response) => {
         // Générer un nouveau access token
         const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
 
-        const userUsername: IUser | null = await User.findById(userIdFromToken).select('username');
+        const userUsername = await User.findById(userIdFromToken).select('username');
 
         logger.info(`Nouveau token créé pour l'utilisateur ${userUsername?.username} :\n accessToken: ${accessToken}`);
 
@@ -120,7 +120,10 @@ const refreshUserToken = async (req: Request, res: Response) => {
 const logoutUser = async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     try {
-        await RefreshToken.findOneAndDelete({ token: refreshToken });
+        const foundToken = await RefreshToken.findOneAndDelete({ token: refreshToken });
+        if (!foundToken) {
+            return res.status(403).json({ error: 'Invalid refresh token' });
+        }
         const user = await User.findById(req.user.id);
         if (user === null) {
             return res.status(404).json({ error: 'problem with the middleware' });
@@ -137,7 +140,7 @@ const deleteUser = async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     if (!refreshToken) {
         logger.error('No refresh token provided');
-        return res.status(500).json({ error: 'An error has occured' });
+        return res.status(403).json({ error: 'Access not authorized' });
     }
     try {
         const user = await User.findById(req.user.id);
@@ -146,11 +149,7 @@ const deleteUser = async (req: Request, res: Response) => {
         }
 
         if (user.avatarUrl !== 'uploads/avatar/default.png') {
-            unlink(join(avatarPath, user.avatarUrl), (err) => {
-                if (err) {
-                    logger.error('Could not delete avatar : ' + err);
-                }
-            });
+            await unlink(join(avatarPath, user.avatarUrl));
         }
         await user.deleteOne();
         await RefreshToken.findOneAndDelete({ token: refreshToken });

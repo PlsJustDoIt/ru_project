@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose';
 
-const bugReportSchema = new Schema({
+const BugReportSchema = new Schema({
     description: {
         type: String,
         required: true,
@@ -26,6 +26,6 @@ const bugReportSchema = new Schema({
 
 }, { timestamps: true });
 
-const BugReport = model('BugReport', bugReportSchema);
+const BugReport = model('BugReport', BugReportSchema);
 
 export default BugReport;
