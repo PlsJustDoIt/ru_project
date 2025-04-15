@@ -5,6 +5,7 @@ import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:duration/duration.dart';
+import 'package:video_player/video_player.dart';
 
 class DebugWidget extends StatefulWidget {
   @override
@@ -13,6 +14,17 @@ class DebugWidget extends StatefulWidget {
 
 class _DebugWidgetState extends State<DebugWidget> {
   final SecureStorage _secureStorage = SecureStorage();
+  late VideoPlayerController _videoController;
+
+  @override
+  void initState() {
+    super.initState();
+    _videoController = VideoPlayerController.asset('assets/images/video.mp4')
+      ..initialize().then((_) {
+        setState(() {});
+      });
+    logger.d('DebugWidget initState');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +73,48 @@ class _DebugWidgetState extends State<DebugWidget> {
                 Image.asset(
                   "assets/images/jm.jpg",
                 ),
+                SizedBox(height: 16),
+                Column(
+                  children: [
+                    Text(
+                      'Video Player',
+                      style: TextStyle(fontSize: 24),
+                    ),
+                    _videoController.value.isInitialized
+                    ? SizedBox(
+                        width: 200, // Set the desired width
+                        child: AspectRatio(
+                          aspectRatio: _videoController.value.aspectRatio,
+                          child: VideoPlayer(_videoController),
+                        ),
+                      )
+                    : const CircularProgressIndicator(),
+                    IconButton(
+                      icon: _videoController.value.isPlaying
+                          ? const Icon(Icons.pause)
+                          : const Icon(Icons.play_arrow),
+                      onPressed: () {
+                          if (_videoController.value.isPlaying) {
+                            _videoController.pause();
+                          } else {
+                            _videoController.play();
+                          }
+                      },
+                    ),
+                  ],
+                ),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    super.dispose();
   }
 
   void refreshTokent() async {

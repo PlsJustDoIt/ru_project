@@ -23,7 +23,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   late Animation<double> welcomeFadeanimation;
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  late VideoPlayerController _videoController;
   final _formKey = GlobalKey<FormState>();
   final Map<String, String> _apiErrors = {};
   bool _hasSubmitted = false;
@@ -35,10 +34,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
       vsync: this,
       duration: const Duration(seconds: 20),
     );
-    _videoController = VideoPlayerController.asset('assets/images/video.mp4')
-      ..initialize().then((_) {
-        setState(() {});
-      });
 
     welcomeFadeanimation = Tween<double>(begin: 0, end: 1).animate(controller);
 
@@ -61,29 +56,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _videoController.value.isInitialized
-                  ? SizedBox(
-                      width: 200, // Set the desired width
-                      child: AspectRatio(
-                        aspectRatio: _videoController.value.aspectRatio,
-                        child: VideoPlayer(_videoController),
-                      ),
-                    )
-                  : const CircularProgressIndicator(),
-              IconButton(
-                icon: _videoController.value.isPlaying
-                    ? const Icon(Icons.pause)
-                    : const Icon(Icons.play_arrow),
-                onPressed: () {
-                  setState(() {
-                    if (_videoController.value.isPlaying) {
-                      _videoController.pause();
-                    } else {
-                      _videoController.play();
-                    }
-                  });
-                },
-              ),
               const Text(
                 'test',
                 style: TextStyle(fontSize: 32, fontFamily: 'Marianne'),
@@ -293,7 +265,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   void dispose() {
     // TODO: implement dispose
     controller.dispose();
-    _videoController.dispose();
     super.dispose();
   }
 }
