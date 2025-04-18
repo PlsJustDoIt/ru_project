@@ -7,7 +7,6 @@ const apiKey = process.env.GINKO_API_KEY;
 if (!apiKey) {
     throw new Error('Ginko API Key not found');
 }
-logger.info('API Key : ' + apiKey);
 
 const getTempsLieu = async (lieu: string) => {
     /**
@@ -55,7 +54,7 @@ const getTempsLieu = async (lieu: string) => {
         lignes,
     };
 
-    logger.info('Horaires récupérés : ' + result);
+    logger.info('Horaires récupérés : %o', result);
 
     return result;
 };

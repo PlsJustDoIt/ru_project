@@ -20,7 +20,6 @@ AdminJS.registerAdapter({
 });
 
 const componentLoader = new ComponentLoader();
-logger.info('componentsPath: ' + componentsPath);
 
 const admin = new AdminJS({
     resources: [
@@ -73,9 +72,28 @@ const admin = new AdminJS({
         },
         {
             resource: Restaurant,
+            options: {
+                properties: {
+                    _id: {
+                        isVisible: { list: false, show: true, edit: false },
+                    },
+                },
+            },
+
         },
         {
             resource: Sector,
+            options: {
+                sort: {
+                    sortBy: 'sectorId',
+                    direction: 'asc',
+                },
+                properties: {
+                    _id: {
+                        isVisible: { list: false, show: true, edit: false },
+                    },
+                },
+            },
         },
     ],
     rootPath: '/admin',
@@ -105,6 +123,13 @@ const authProvider = new DefaultAuthProvider({
     componentLoader,
     authenticate: authenticateAdmin,
 });
+
+// const sessionStore = process.env.NODE_ENV === 'production'
+//   ? MongoStore.create({
+//       mongoUrl: process.env.MONGO_URI,
+//       ttl: 14 * 24 * 60 * 60,
+//     })
+//   : undefined; // MemoryStore sera utilisé par défaut
 
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
     cookiePassword: process.env.JWT_ACCESS_SECRET ?? 'truc',
