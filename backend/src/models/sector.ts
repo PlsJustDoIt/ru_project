@@ -1,29 +1,21 @@
 import { Schema, Document, Types, model } from 'mongoose';
+import { mongoose } from '../modules/db.js'; // Importez mongoose depuis votre fichier de connexion
+import AutoIncrementFactory from 'mongoose-sequence';
 
-interface IParticipant {
-    userId: Types.ObjectId;
-    satAt: Date;
-    duration: number; // in minutes
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const AutoIncrement = AutoIncrementFactory(mongoose as any); // TODO : désactiver ça le jour où les types pour mongoose-sequence seront fix
 
 interface ISector extends Document {
     _id: Types.ObjectId;
-    participants: IParticipant[];
     position: { x: number; y: number };
     size: { width: number; height: number };
-    name?: string;
+    restaurant: Types.ObjectId;
+    sectorId: number;
 }
-
-const ParticipantSchema = new Schema({
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    satAt: { type: Date, required: true, default: Date.now },
-    duration: { type: Number, required: true }, // in minutes
-});
-
 const SectorSchema = new Schema(
     {
-        name: { type: String },
-        participants: [ParticipantSchema],
+        restaurant: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
+        sectorId: { type: Number },
         position: {
             x: { type: Number, required: true },
             y: { type: Number, required: true },
@@ -33,72 +25,61 @@ const SectorSchema = new Schema(
             height: { type: Number, required: true },
         },
     },
-    {
-        timestamps: true,
-    },
 );
 
-// Add an index for efficient queries
-SectorSchema.index({ 'participants.userId': 1, 'name': 1 }, { unique: true });
+SectorSchema.index({ restaurant: 1, sectorId: 1 }, { unique: true });
 
-// Static method to clean up expired participants
-SectorSchema.statics.cleanupExpiredParticipants = async function () {
-    const now = new Date();
-    try {
-        // Find all sectors with expired participants
-        const sectors = await this.find({
-            'participants.satAt': { $exists: true },
-        });
+// SectorSchema.pre('save', async function (next) {
+//     try {
+//         // Vérifier si c'est un nouveau document et si aucun sectorId n'est défini
+//         if (this.isNew && !(this as any).sectorId) {
+//             console.log('Nouveau secteur détecté, génération du sectorId');
 
-        let cleanedCount = 0;
+//             // Utiliser directement le nom du modèle
+//             const SectorModel = model('Sector');
 
-        // Iterate through each sector and remove expired participants
-        for (const sector of sectors) {
-            const initialCount = sector.participants.length;
+//             // Déboguer la requête
+//             console.log('Restaurant ID:', (this as any).restaurant);
 
-            const updatedParticipants = sector.participants.filter((participant: IParticipant) => {
-                const expirationTime = new Date(participant.satAt.getTime() + participant.duration * 60000); // satAt + duration in ms
-                return expirationTime > now; // Keep participants who haven't expired
-            });
+//             const lastSector = await (SectorModel as any)
+//                 .findOne({ restaurant: (this as any).restaurant })
+//                 .sort({ sectorId: -1 })
+//                 .lean() // Pour performance
+//                 .exec();
 
-            if (updatedParticipants.length !== initialCount) {
-                sector.participants = updatedParticipants;
-                await sector.save();
-                cleanedCount += initialCount - updatedParticipants.length;
-            }
-        }
+//             console.log('Dernier secteur trouvé:', lastSector);
 
-        console.log(`Cleaned up ${cleanedCount} expired participants.`);
-    } catch (error) {
-        console.error('Error cleaning up expired participants:', error);
-    }
-};
+//             // Définir explicitement à 1 si aucun secteur trouvé
+//             if (!lastSector) {
+//                 (this as any).sectorId = 1;
+//                 console.log('Premier secteur, sectorId défini à 1');
+//             } else {
+//                 // S'assurer que la valeur est un nombre et l'incrémenter
+//                 const nextId = typeof lastSector.sectorId === 'number'
+//                     ? lastSector.sectorId + 1
+//                     : parseInt(lastSector.sectorId || '0') + 1;
 
-// Pre-save hook to check for duplicate participants
-SectorSchema.pre('save', function (next) {
-    next();
+//                 (this as any).sectorId = nextId;
+//                 console.log(`Prochain sectorId défini à ${nextId}`);
+//             }
+//         }
+//         next();
+//     } catch (error) {
+//         console.error('Erreur dans le middleware sectorId:', error);
+//         next();
+//     }
+// });
+
+// db.counters.updateOne({ reference_value: { restaurant: ObjectId('680118632705126ae3fa86fc') },},{ $set:{ seq:0}})
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+SectorSchema.plugin(AutoIncrement as any, {
+    inc_field: 'sectorId',
+    reference_fields: ['restaurant'],
+
+    id: 'sectorId',
 });
 
 const Sector = model<ISector>('Sector', SectorSchema);
 
-// Cleanup job to remove expired participants every 5 minutes
-const cleanupJob = setInterval(async () => {
-    try {
-        await Sector.cleanupExpiredParticipants();
-    } catch (error) {
-        console.error('Error during scheduled cleanup:', error);
-    }
-}, 1 * 60 * 1000); // Run every 5 minutes
-
-// Graceful shutdown for cleanup job
-const shutdownCleanupJob = () => {
-    clearInterval(cleanupJob);
-    console.log('Cleanup job stopped.');
-    process.exit();
-};
-
-process.on('SIGINT', shutdownCleanupJob);
-process.on('SIGTERM', shutdownCleanupJob);
-
 export default Sector;
-export { ISector, IParticipant };
+export { ISector, SectorSchema };

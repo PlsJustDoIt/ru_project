@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import { MenuResponse } from '../../interfaces/menu.js';
 import logger from '../../utils/logger.js';
-import { fetchMenusFromExternalAPI, findRestaurant } from './ru.service.js';
+import { fetchMenusFromExternalAPI, findRestaurant, getSectorsFromRestaurant } from './ru.service.js';
 import NodeCache from 'node-cache';
-import Sector from '../../models/sector.js';
-import User from '../../models/user.js';
 import Restaurant from '../../models/restaurant.js';
+import { getUserById } from '../user/user.service.js';
+import SectorSession from '../../models/sectorSession.js';
+import { Types } from 'mongoose';
+import friendsInSector from '../../interfaces/friendsInSector.js';
 
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
@@ -52,116 +54,19 @@ const getMenus = async (req: Request, res: Response) => {
 };
 
 const getSectors = async (req: Request, res: Response) => {
-    const ruId = req.params.ruId;
+    const restaurantId = req.params.restaurantId;
 
     try {
-        // Find the restaurant by ID
-        const ru = await findRestaurant(ruId);
-        if (!ru) {
-            return res.status(404).json({ error: 'Restaurant not found' });
+        if (!restaurantId) {
+            return res.status(400).json({ error: 'Restaurant ID is required' });
         }
 
-        // Check if the restaurant has sectors
-        if (ru.sectors.length === 0) {
-            return res.status(404).json({ error: 'No sectors found' });
-        }
+        const sectors = await getSectorsFromRestaurant(restaurantId);
 
-        //         // // Fetch the sectors with populated participants
-        // const sectors = await Sector.find({ _id: { $in: ru.sectors } })
-        //     .populate({
-        //         path: 'participants.userId',
-        //         select: 'username avatarUrl status', // Only include necessary fields
-        //     });
-
-        // Fetch the sectors with populated participants with only the userId
-        // const sectors = await Sector.find({ _id: { $in: ru.sectors } })
-        //     .populate({
-        //         path: 'participants.userId',
-        //         select: 'username avatarUrl status', // Only include necessary fields
-        //     });
-
-        // Fetch the sectors with populated participants with only the userId
-        const sectors = await Sector.find({ _id: { $in: ru.sectors } })
-            .populate({
-                path: 'participants.userId',
-                select: '_id', // Only fetch the userId
-            });
-
-        // Transform the participants field to an array of userId
-        const transformedSectors = sectors.map(sector => ({
-            _id: sector._id,
-            name: sector.name,
-            position: sector.position,
-            size: sector.size,
-            participants: sector.participants.map(participant => participant.userId._id),
-        }));
-
-        return res.json({ sectors: transformedSectors });
+        return res.json({ sectors });
     } catch (error) {
         logger.error('Erreur lors de la récupération des secteurs:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des secteurs' });
-    }
-};
-
-const sitAtSector = async (req: Request, res: Response) => {
-    const { sectorId, durationMin } = req.body;
-
-    try {
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            logger.error('User not found');
-            return res.status(404).json({ error: 'User not found' });
-        }
-        if (!sectorId || !durationMin) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-        // betveen 5 and 30 min
-        if (durationMin < 5 || durationMin > 30) {
-            return res.status(400).json({ error: 'Duration must be between 5 and 30 minutes' });
-        }
-        // Check if the user is already sitting at a sector
-        const existingSector = await Sector.findOne({
-            'participants.userId': user._id,
-        });
-        if (existingSector) {
-            return res.status(400).json({ error: 'User is already sitting at a sector' });
-        }
-
-        // Find the sector by ID
-        const sector = await Sector.findById(sectorId);
-        if (!sector) {
-            logger.error('Sector not found');
-            return res.status(404).json({ error: 'Sector not found' });
-        }
-
-        // Check if the user is already a participant in the sector
-        const existingParticipant = sector.participants.find(participant =>
-            participant.userId.toString() === user._id.toString(),
-        );
-
-        if (existingParticipant) {
-            return res.status(400).json({ error: 'User is already sitting at this sector' });
-        }
-
-        // Add the user to the sector's participants with duration
-        sector.participants.push({
-            userId: user._id,
-            satAt: new Date(),
-            duration: durationMin,
-        });
-
-        await sector.save();
-
-        return res.json({
-            success: true,
-            message: `Successfully sat in sector for ${durationMin} minutes`,
-        });
-    } catch (error) {
-        logger.error('Erreur lors de la mise à jour du secteur:', error);
-        return res.status(500).json({
-            error: 'Erreur lors de la mise à jour du secteur',
-            success: false,
-        });
     }
 };
 
@@ -178,8 +83,92 @@ const getRestaurants = async (req: Request, res: Response) => {
     }
 };
 
+const getSectorsSessions = async (req: Request, res: Response) => {
+    const restaurantId = req.params.restaurantId;
+    try {
+        if (!restaurantId) {
+            return res.status(400).json({ error: 'Restaurant ID is required' });
+        }
+
+        const restaurant = await findRestaurant(restaurantId);
+        if (!restaurant) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+
+        const userId = req.user.id;
+        const user = await getUserById(userId, 'friends');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Conversion correcte des IDs d'amis en ObjectId
+        const friendObjectIds = user.friends.map(id => new Types.ObjectId(id));
+
+        const friendsInSectors = await SectorSession.aggregate([
+            {
+                $match: {
+                    user: { $in: friendObjectIds },
+                    sector: { $in: restaurant.sectors },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'user',
+                    foreignField: '_id',
+                    as: 'userDetails',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'sectors',
+                    localField: 'sector',
+                    foreignField: '_id',
+                    as: 'sectorDetails',
+                },
+            },
+            { $unwind: '$userDetails' },
+            { $unwind: '$sectorDetails' },
+            {
+                $project: {
+                    _id: 0,
+                    sectorName: '$sectorDetails.name',
+                    friend: {
+                        _id: '$userDetails._id',
+                        username: '$userDetails.username',
+                        avatarUrl: '$userDetails.avatarUrl',
+                        status: '$userDetails.status',
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: '$sectorName',
+                    friends: { $push: '$friend' },
+                    // sector: { $first: '$sectorDetails' }, // Facultatif si tu veux encore les infos du secteur
+                },
+            },
+        ]);
+        const formatted: friendsInSector = {};
+        for (const item of friendsInSectors) {
+            formatted[item._id] = item.friends;
+        }
+
+        if (!formatted || Object.keys(formatted).length === 0) {
+            return res.status(200).json({ message: 'No friends found in sectors' });
+        }
+
+        logger.info('Formatted friends in sectors: %o', formatted);
+
+        return res.status(200).json(formatted);
+    } catch (error) {
+        logger.error('Error getting sectors with friends:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
 const getApiDoc = (res: Response) => {
     return res.json(apiDoc);
 };
 
-export { getMenus, getApiDoc, getSectors, sitAtSector, getRestaurants };
+export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions };

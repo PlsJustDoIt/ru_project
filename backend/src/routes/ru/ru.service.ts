@@ -120,7 +120,7 @@ async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise
 }
 
 const findRestaurant = async (restaurantId: string) => {
-    return await Restaurant.findOne({ restaurantId: restaurantId }).populate('sectors');
+    return await Restaurant.findOne({ restaurantId: restaurantId });
 };
 
 const createRestaurant = async (restaurant: restaurant) => {
@@ -179,15 +179,15 @@ const setupRestaurant = async () => {
     // Add sectors if the restaurant exists and has no sectors
     if (resto && resto.sectors.length === 0) {
         const sectors = [
-            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: '1' },
-            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: '2' },
-            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: '3' },
-            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: '4' },
-            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: '5' },
-            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: '6' },
-            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: '7' },
-            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: '8' },
-            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: '9' },
+            { position: { x: 10, y: 10 }, size: { width: 20, height: 15 }, name: '1', restaurant: resto._id },
+            { position: { x: 40, y: 10 }, size: { width: 20, height: 15 }, name: '2', restaurant: resto._id },
+            { position: { x: 70, y: 10 }, size: { width: 20, height: 15 }, name: '3', restaurant: resto._id },
+            { position: { x: 10, y: 30 }, size: { width: 20, height: 15 }, name: '4', restaurant: resto._id },
+            { position: { x: 70, y: 30 }, size: { width: 20, height: 15 }, name: '5', restaurant: resto._id },
+            { position: { x: 10, y: 50 }, size: { width: 20, height: 15 }, name: '6', restaurant: resto._id },
+            { position: { x: 70, y: 50 }, size: { width: 20, height: 15 }, name: '7', restaurant: resto._id },
+            { position: { x: 10, y: 70 }, size: { width: 20, height: 15 }, name: '8', restaurant: resto._id },
+            { position: { x: 70, y: 70 }, size: { width: 20, height: 15 }, name: '9', restaurant: resto._id },
         ];
         const sectorIds = await Promise.all(
             sectors.map(async (sector) => {
@@ -201,4 +201,21 @@ const setupRestaurant = async () => {
     }
 };
 
-export { fetchMenusFromExternalAPI, findRestaurant, createRestaurant, setupRestaurant };
+const getSectorsFromRestaurant = async (restaurantId: string) => {
+    const restaurant = await findRestaurant(restaurantId);
+    if (!restaurant) {
+        throw new Error('Restaurant not found');
+    }
+    const sectors = await Sector.find({ _id: { $in: restaurant.sectors } });
+    if (!sectors || sectors.length === 0) {
+        throw new Error('No sectors found for this restaurant');
+    }
+    return sectors.map(sector => ({
+        id: sector._id.toString(),
+        position: sector.position,
+        size: sector.size,
+        sectorId: sector.sectorId,
+    }));
+};
+
+export { fetchMenusFromExternalAPI, findRestaurant, createRestaurant, setupRestaurant, getSectorsFromRestaurant };
