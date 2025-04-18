@@ -1,30 +1,22 @@
 import app, { setupRoutes } from './app.js';
-import { connect } from 'mongoose';
 import logger from './utils/logger.js';
 import { socketService } from './routes/socket/socket.service.js';
 import swaggerSetup from './modules/swagger.js';
 import adminJsSetup from './modules/admin.js';
-import { exit } from 'process';
 import { isProduction, rootDir } from './config.js';
 import { createWriteStream } from 'fs';
 import { join } from 'path';
 import morgan from 'morgan';
 import { setupRestaurant } from './routes/ru/ru.service.js';
-
-console.log('isProduction: ' + isProduction);
-// Database Connection
-if (process.env.MONGO_URI == null) {
-    logger.error('MONGO_URI is not defined');
-    exit(1);
-}
+import connectDB from './modules/db.js';
 
 // Logging
 if (isProduction) {
-    console.log('lancement en production');
+    logger.info('lancement en production');
     const accessLogStream = createWriteStream(join(rootDir, 'logs', 'access.log'), { flags: 'a+' });
     app.use(morgan('combined', { stream: accessLogStream }));
 } else {
-    console.log('lancement en dev');
+    logger.info('lancement en dev');
     app.use(morgan('dev'));
 }
 
@@ -32,9 +24,15 @@ setupRoutes(app);
 
 logger.info('MONGO_URI: ' + process.env.MONGO_URI);
 logger.info('API Key : ' + process.env.GINKO_API_KEY);
-connect(process.env.MONGO_URI)
-    .then(() => logger.info('MongoDB Connected'))
-    .catch(err => logger.error('MongoDB connection error:', err));
+
+// mongoose.connect(process.env.MONGO_URI)
+//     .then(() => {
+//         logger.info('MongoDB Connected');
+
+//     })
+//     .catch(err => logger.error('MongoDB connection error:', err));
+
+await connectDB();
 
 setupRestaurant();
 

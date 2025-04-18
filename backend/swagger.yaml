@@ -474,7 +474,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/errorResponse"
-  /ru/{ruId}/sectors:
+  /ru/{restaurantId}/sectors:
     get:
       tags: [ru]
       summary: Récupérer les secteurs d'un restaurant universitaire
@@ -483,7 +483,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: ruId
+          name: restaurantId
           required: true
           schema:
             type: string
@@ -524,7 +524,134 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/errorResponse"
-
+  /ru/restaurants:
+    get:
+      tags: [ru]
+      summary: Récupérer les restaurants universitaires
+      description: "Récupérer les restaurants universitaires (nom et ID)"
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: "RU Lumière"
+                        restaurantId:
+                          type: string
+                          example: "64f15359199a3c3a5911819b"
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "403":
+          description: Erreur de token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Restaurant non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  /ru/{restaurantId}/sectors-sessions:
+    get:
+      tags: [ru]
+      summary: Récupérer les sessions de secteurs d'un restaurant universitaire avec les amis présents
+      description: "Récupérer les sessions de secteurs d'un restaurant universitaire en fonction de son ID, et les amis de l'utilisateur connecté qui sont présents dans ces secteurs"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: restaurantId
+          required: true
+          schema:
+            type: string
+          description: ID du restaurant universitaire
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendsInSectors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          description: ID du secteur
+                        sector:
+                          type: object
+                          description: Détails du secteur
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            restaurant:
+                              type: string
+                        friends:
+                          type: array
+                          items:
+                            type: object
+                            description: Détails des amis présents dans le secteur
+                            properties:
+                              _id:
+                                type: string
+                              username:
+                                type: string
+                              avatarUrl:
+                                type: string
+                              status:
+                                type: string
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "403":
+          description: Erreur de token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Restaurant non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
   ## users
   /users/me:
     get:

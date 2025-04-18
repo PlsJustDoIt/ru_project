@@ -29,6 +29,10 @@ const limiter = rateLimit({
         logger.error('Too many requests, please try again later.');
         return res.status(429).json({ error: 'Too many requests, please try again later.' });
     },
+    skip: (req) => {
+        // Skip rate limiting for specific routes
+        return req.path.startsWith('/admin');
+    },
 });
 
 app.use(limiter);

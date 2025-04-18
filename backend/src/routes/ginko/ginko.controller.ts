@@ -1,20 +1,17 @@
 import { Request, Response } from 'express';
 import NodeCache from 'node-cache';
-import { readFileSync } from 'fs';
-import { join, resolve } from 'path';
 import logger from '../../utils/logger.js';
-import { isProduction } from '../../config.js';
 import { getTempsLieu } from './ginko.service.js';
 
 const cache = new NodeCache({ stdTTL: 60 }); // 1 minute
 
 const getSchedules = async (req: Request, res: Response) => {
     try {
-        if (!isProduction) {
-            const data = readFileSync(join(resolve(), 'horaires.json'));
-            const horaires = JSON.parse(data.toString());
-            return res.json(horaires);
-        }
+        // if (!isProduction) {
+        //     const data = readFileSync(join(resolve(), 'horaires.json'));
+        //     const horaires = JSON.parse(data.toString());
+        //     return res.json(horaires);
+        // }
 
         const lieu = req.query.lieu as string;
         if (!lieu || lieu.length === 0) {
@@ -27,7 +24,7 @@ const getSchedules = async (req: Request, res: Response) => {
             return res.json(cachedData);
         }
 
-        const result = getTempsLieu(lieu);
+        const result = await getTempsLieu(lieu);
         cache.set(lieu, result);
         return res.json(result);
     } catch (err: unknown) {
