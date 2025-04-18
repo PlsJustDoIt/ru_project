@@ -5,6 +5,8 @@ import { compare } from 'bcrypt';
 import { getUserByUsername, levenshteinDistance } from './user.service.js';
 import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
+import { join } from 'path';
+import { bugReportPath } from '../../config.js';
 
 const getUserInformation = async (req: Request, res: Response) => {
     try {
@@ -286,8 +288,6 @@ const getFriendRequests = async (req: Request, res: Response) => {
         }
         const resFriendRequests = await FriendRequest.find({ receiver: user._id }).populate<{ sender: IUser }>('sender', 'username avatarUrl');
 
-        logger.info('res : %o', resFriendRequests);
-
         const friendRequests = resFriendRequests.map(request => ({
             id: request._id,
             sender: {
@@ -418,6 +418,7 @@ const declineFriendRequest = async (req: Request, res: Response) => {
         }
 
         const friendRequest = await FriendRequest.findById(requestId);
+
         if (friendRequest === null) {
             return res.status(404).json({ error: 'Friend request not found' });
         }
@@ -437,7 +438,7 @@ const declineFriendRequest = async (req: Request, res: Response) => {
 const sendBugReport = async (req: Request, res: Response) => {
     try {
         const { description, app_version, platform } = req.body;
-        const screenshot_url = req.file ? 'uploads/bugReport/' + req.file.filename : '';
+        const screenshot_url = req.file ? join(bugReportPath, req.file.filename) : '';
         const bugReport = new BugReport({
             description,
             screenshot_url: screenshot_url,

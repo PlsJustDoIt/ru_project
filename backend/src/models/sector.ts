@@ -1,5 +1,4 @@
-import { Schema, Document, Types, model } from 'mongoose';
-import { mongoose } from '../modules/db.js'; // Importez mongoose depuis votre fichier de connexion
+import mongoose, { Schema, Document, Types, model } from 'mongoose';
 import AutoIncrementFactory from 'mongoose-sequence';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
