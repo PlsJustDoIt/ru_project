@@ -57,10 +57,9 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                'test',
+                'RU Project',
                 style: TextStyle(fontSize: 32, fontFamily: 'Marianne'),
               ),
-              const StateWidget(),
               const Text(
                 'Bienvenue !',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
