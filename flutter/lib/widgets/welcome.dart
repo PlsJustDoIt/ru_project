@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
@@ -56,9 +57,23 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'RU Project',
-                style: TextStyle(fontSize: 32, fontFamily: 'Marianne'),
+              Row( //Title animation
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: 'RU Project'.split('').asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final letter = entry.value;
+                  return Text(
+                    letter,
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontFamily: 'Marianne',
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryColor,
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(duration: 300.ms, delay: (index * 100).ms); // Sequential fade-in
+                }).toList(),
               ),
               const Text(
                 'Bienvenue !',
