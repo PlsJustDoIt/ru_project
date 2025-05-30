@@ -62,7 +62,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     children: [
                       Row( // Title animation
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: 'RU Project'.split('').asMap().entries.map((entry) {
+                        children: 'Projet RU'.split('').asMap().entries.map((entry) {
                           final index = entry.key;
                           final letter = entry.value;
                           return Text(
