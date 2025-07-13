@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/services/user_service.dart';
 
 class UserProvider with ChangeNotifier {
   final SecureStorage secureStorage;
@@ -19,17 +19,18 @@ class UserProvider with ChangeNotifier {
 
   UserProvider({required this.secureStorage});
 
-  Future<void> init(ApiService apiService) async {
+  Future<void> init(
+      UserService userService, FriendService friendService) async {
     final accessToken = await secureStorage.getAccessToken();
     if (accessToken != null) {
       try {
-        final user = await apiService.getUser();
+        final user = await userService.getUser();
         if (user == null) {
           clearUserData();
           return;
         }
 
-        final friends = await apiService.getFriends();
+        final friends = await friendService.getFriends();
 
         _user = user;
         _friends = friends;

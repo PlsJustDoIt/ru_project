@@ -4,8 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/api_client.dart';
+import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/feedback_service.dart';
+import 'package:ru_project/services/friend_service.dart';
+import 'package:ru_project/services/ginko_service.dart';
+import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/services/socket_service.dart';
+import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -17,23 +24,39 @@ void main() async {
   await Config.init();
 
   // Instanciation manuelle
-
   final secureStorage = SecureStorage();
   final userProvider = UserProvider(secureStorage: secureStorage);
 
-  final apiService = ApiService(
+  final apiClient = ApiClient(
     userProvider: userProvider,
     secureStorage: secureStorage,
   );
 
+  final userService = UserService(dio: apiClient.dio);
+  final friendService = FriendService(dio: apiClient.dio);
+  final authService = AuthService(
+      dio: apiClient.dio,
+      secureStorage: secureStorage,
+      userService: userService);
+  final restaurantService = RestaurantService(dio: apiClient.dio);
+  final socketService = SocketService(dio: apiClient.dio);
+  final ginkoService = GinkoService(dio: apiClient.dio);
+  final feedbackService = FeedbackService(dio: apiClient.dio);
+
   // Initialisation de l'état utilisateur
-  await userProvider.init(apiService);
+  await userProvider.init(userService, friendService);
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<UserProvider>.value(value: userProvider),
-        Provider<ApiService>.value(value: apiService),
+        Provider<AuthService>.value(value: authService),
+        Provider<UserService>.value(value: userService),
+        Provider<FriendService>.value(value: friendService),
+        Provider<RestaurantService>.value(value: restaurantService),
+        Provider<SocketService>.value(value: socketService),
+        Provider<GinkoService>.value(value: ginkoService),
+        Provider<FeedbackService>.value(value: feedbackService),
       ],
       child: BetterFeedback(
         theme: FeedbackThemeData(

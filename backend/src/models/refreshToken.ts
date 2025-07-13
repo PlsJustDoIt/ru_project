@@ -17,6 +17,6 @@ const RefreshTokenSchema = new Schema({
     expires: { type: Date, required: true },
 }, { timestamps: true });
 
-RefreshTokenSchema.index({ createdAt: 1 }, { expireAfterSeconds: 24 * 3600 * 7 }); // Expire après une semaine
+RefreshTokenSchema.index({ expires: 1 }, { expireAfterSeconds: 0 });
 
 export default model<IRefreshToken>('RefreshToken', RefreshTokenSchema);
