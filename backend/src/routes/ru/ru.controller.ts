@@ -72,7 +72,7 @@ const getSectors = async (req: Request, res: Response) => {
 
 const getRestaurants = async (req: Request, res: Response) => {
     try {
-        const restaurants = await Restaurant.find().select('name restaurantId').limit(10);
+        const restaurants = await Restaurant.find().select('name restaurantId -_id').limit(10);
         if (!restaurants || restaurants.length === 0) {
             return res.status(404).json({ error: 'No restaurants found' });
         }
@@ -90,7 +90,7 @@ const getSectorsSessions = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
 
-        const restaurant = await findRestaurant(restaurantId);
+        const restaurant = await findRestaurant(restaurantId, 'sectors -_id');
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
@@ -103,6 +103,8 @@ const getSectorsSessions = async (req: Request, res: Response) => {
 
         // Conversion correcte des IDs d'amis en ObjectId
         const friendObjectIds = user.friends.map(id => new Types.ObjectId(id));
+
+        const tmp_sectorsSessions = await SectorSession.find({}).populate('user', 'username avatarUrl status -_id');
 
         const friendsInSectors = await SectorSession.aggregate([
             {
@@ -132,26 +134,38 @@ const getSectorsSessions = async (req: Request, res: Response) => {
             {
                 $project: {
                     _id: 0,
-                    sectorName: '$sectorDetails.name',
-                    friend: {
-                        _id: '$userDetails._id',
-                        username: '$userDetails.username',
-                        avatarUrl: '$userDetails.avatarUrl',
-                        status: '$userDetails.status',
+                    sectorId: '$sectorDetails.sectorId',
+                    sessions: {
+                        friend: {
+                            _id: '$userDetails._id',
+                            username: '$userDetails.username',
+                            avatarUrl: '$userDetails.avatarUrl',
+                            status: '$userDetails.status',
+                        },
+                        expiresAt: '$expiresAt',
                     },
+
                 },
             },
             {
                 $group: {
-                    _id: '$sectorName',
-                    friends: { $push: '$friend' },
+                    _id: '$sectorId',
+                    sessions: { $push: '$sessions' },
                     // sector: { $first: '$sectorDetails' }, // Facultatif si tu veux encore les infos du secteur
                 },
             },
         ]);
+
+        if (!friendsInSectors || friendsInSectors.length === 0) {
+            logger.info('No friends found in sectors');
+            return res.status(200).json({ message: 'No friends found in sectors' });
+        }
+
+        logger.info('Friends in sectors: %o', friendsInSectors);
+
         const formatted: friendsInSector = {};
         for (const item of friendsInSectors) {
-            formatted[item._id] = item.friends;
+            formatted[item._id] = item.sessions;
         }
 
         if (!formatted || Object.keys(formatted).length === 0) {
@@ -171,4 +185,21 @@ const getApiDoc = (res: Response) => {
     return res.json(apiDoc);
 };
 
-export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions };
+const getRestaurantInfo = async (req: Request, res: Response) => {
+    const restaurantId = req.params.restaurantId;
+    try {
+        if (!restaurantId) {
+            return res.status(400).json({ error: 'Restaurant ID is required' });
+        }
+        const restaurant = await findRestaurant(restaurantId, 'name restaurantId address description -_id');
+        if (!restaurant) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+        return res.json({ restaurant });
+    } catch (error) {
+        logger.error('Erreur lors de la récupération des informations du restaurant:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération des informations du restaurant' });
+    }
+};
+
+export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions, getRestaurantInfo };

@@ -3,27 +3,41 @@ import Sector, { ISector } from '../../models/sector.js';
 import SectorSession, { ISectorSession } from '../../models/sectorSession.js';
 
 /**
- * Creates a new sector with the given parameters.
+ * Creates a new sector with the given position, size, and restaurant.
  * @param position The position of the sector.
  * @param size The size of the sector.
- * @param participants The participants of the sector.
- * @param name The name of the sector.
- * @param color The color of the sector.
+ * @param restaurant The restaurant the sector belongs to.
  * @returns A promise that resolves with the created sector.
  */
-const createSector = async (position: { x: number; y: number }, size: { width: number; height: number }, restaurant: Types.ObjectId, name?: string, color?: string): Promise<ISector> => {
-    const sector = new Sector({ name, position, size, color, restaurant });
+const createSector = async (position: { x: number; y: number }, size: { width: number; height: number }, restaurant: Types.ObjectId): Promise<ISector> => {
+    const sector = new Sector({ position, size, restaurant });
     return await sector.save();
 };
-
+/**
+ * Finds a sector by its ID.
+ * @param id The ID of the sector to find.
+ * @returns A promise that resolves with the found sector, or null if not found.
+ */
 const findSectorById = async (id: string | Types.ObjectId): Promise<ISector | null> => {
     return await Sector.findById(id);
 };
 
+/**
+ * Deletes a sector by its name.
+ * @param name The name of the sector to delete.
+ * @returns A promise that resolves when the sector is deleted.
+ */
 const deleteSector = async (name: string): Promise<void> => {
     await Sector.deleteOne({ name: name });
 };
 
+/**
+ * Creates a new sector session.
+ * @param sectorId The ID of the sector for the session.
+ * @param userId The ID of the user creating the session.
+ * @param duration The duration of the session in minutes.
+ * @returns A promise that resolves with the created sector session.
+ */
 const createSectorSession = async (sectorId: string | Types.ObjectId, userId: string | Types.ObjectId, duration: number): Promise<ISectorSession> => {
     const expiresAt = new Date(Date.now() + duration * 60 * 1000);
     const remainingTime = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
@@ -32,6 +46,11 @@ const createSectorSession = async (sectorId: string | Types.ObjectId, userId: st
     return await session.save();
 };
 
+/**
+ * Finds a sector session by user ID.
+ * @param userId The ID of the user to find sessions for.
+ * @returns A promise that resolves with the found sector session, or null if not found.
+ */
 const findSectorSessionByUserId = async (userId: string | Types.ObjectId): Promise<ISectorSession | null> => {
     return await SectorSession.findOne({ user: userId });
 };

@@ -1,15 +1,22 @@
+import { Types } from 'mongoose';
 import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
 import { createSectorSession, findSectorById, findSectorSessionByUserId, findSectorSessionsForSector } from './sector.service.js';
 import { Request, Response } from 'express';
 
 const joinSector = async (req: Request, res: Response) => {
-    const { sectorId, duration } = req.body;
+    const { sectorId } = req.params;
+    const { duration } = req.body;
 
     try {
         if (!sectorId || !duration) {
             logger.error('Missing required fields');
             return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        if (Types.ObjectId.isValid(sectorId) === false) {
+            logger.error('Invalid sector ID');
+            return res.status(400).json({ error: 'Invalid sector ID' });
         }
         // // betveen 5 and 30 min
         // if (duration < 5 || duration > 30) {
@@ -24,6 +31,7 @@ const joinSector = async (req: Request, res: Response) => {
 
         const existingSectorSession = await findSectorSessionByUserId(req.user.id);
         if (existingSectorSession) {
+            logger.error('User is already sitting at a sector');
             return res.status(400).json({ error: 'User is already sitting at a sector' });
         }
 
@@ -42,7 +50,7 @@ const joinSector = async (req: Request, res: Response) => {
 
         return res.json({
             success: true,
-            message: `Successfully sat in sector for ${duration} minutes`,
+            message: `Successfully sat in sector ${sector.sectorId} for ${duration} minutes`,
         });
     } catch (error) {
         logger.error('Erreur lors de la mise à jour du secteur:', error);

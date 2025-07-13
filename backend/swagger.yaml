@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: API Projet Ru
   description: |
@@ -642,6 +642,172 @@ paths:
                 $ref: "#/components/schemas/errorResponse"
         "404":
           description: Restaurant non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  ## sectors
+  /sectors/join/{sectorId}:
+    post:
+      tags: [ru]
+      summary: Rejoindre un secteur
+      description: "Rejoindre un secteur pour une durée déterminée"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: sectorId
+          required: true
+          schema:
+            type: string
+          description: ID du secteur à rejoindre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - duration
+              properties:
+                duration:
+                  type: integer
+                  description: Durée en minutes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "400":
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Secteur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  /sectors/leave/{sectorId}:
+    post:
+      tags: [ru]
+      summary: Quitter un secteur
+      description: "Quitter un secteur"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: sectorId
+          required: true
+          schema:
+            type: string
+          description: ID du secteur à quitter
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Secteur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "500":
+          description: Erreur interne du serveur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+  /sectors/{sectorId}/friends:
+    get:
+      tags: [ru]
+      summary: Récupérer les amis dans un secteur
+      description: "Récupérer la liste des amis présents dans un secteur spécifique"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: sectorId
+          required: false
+          schema:
+            type: string
+          description: ID du secteur
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendsInSector:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        user:
+                          type: string
+        "400":
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "401":
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Secteur non trouvé
           content:
             application/json:
               schema:

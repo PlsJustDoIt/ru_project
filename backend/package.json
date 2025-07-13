@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "dev": "tsx watch src/server.ts",
+    "build" : "npx tsc",
     "test:unit": "jest --config jest.unit.config.js",
     "test:e2e": "jest --config jest.e2e.config.js"
   },

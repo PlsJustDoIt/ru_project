@@ -5,6 +5,7 @@ import Restaurant from '../../models/restaurant.js';
 import logger from '../../utils/logger.js';
 import { restaurant } from '../../interfaces/restaurant.js';
 import Sector from '../../models/sector.js';
+import { Types } from 'mongoose';
 const ru_lumiere_id = 'r135';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars
@@ -119,8 +120,18 @@ async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise
     }
 }
 
-const findRestaurant = async (restaurantId: string) => {
+const findRestaurant = async (restaurantId: string, select: string | null = null) => {
+    if (select) {
+        return await Restaurant.findOne({ restaurantId: restaurantId }).select(select);
+    }
     return await Restaurant.findOne({ restaurantId: restaurantId });
+};
+
+const findRestaurantById = async (id: Types.ObjectId | undefined, select?: string) => {
+    if (select) {
+        return await Restaurant.findById(id).select(select);
+    }
+    return await Restaurant.findById(id);
 };
 
 const createRestaurant = async (restaurant: restaurant) => {
@@ -218,4 +229,4 @@ const getSectorsFromRestaurant = async (restaurantId: string) => {
     }));
 };
 
-export { fetchMenusFromExternalAPI, findRestaurant, createRestaurant, setupRestaurant, getSectorsFromRestaurant };
+export { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, createRestaurant, setupRestaurant, getSectorsFromRestaurant };

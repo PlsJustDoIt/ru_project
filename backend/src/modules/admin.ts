@@ -22,6 +22,26 @@ AdminJS.registerAdapter({
 const componentLoader = new ComponentLoader();
 
 const admin = new AdminJS({
+    branding: {
+        companyName: 'Projet ru',
+        theme: {
+            colors: {
+                primary100: '#E01020',
+                primary80: '#E01020',
+                primary60: '#E01020',
+                primary40: '#E01020',
+                primary20: '#E01020',
+                accent: '#E01020',
+                filterBg: '#E01020',
+                hoverBg: '#E01020',
+                hoverText: '#E01020',
+                danger: '#E01020',
+                success: '#E01020',
+                info: '#E01020',
+            },
+        },
+    },
+
     resources: [
         {
             resource: BugReport,

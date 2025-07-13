@@ -4,6 +4,7 @@ interface friendsInSector {
         username: string;
         status: string;
         avatarUrl: string;
+        expiresAt: Date;
     }[];
 }
 

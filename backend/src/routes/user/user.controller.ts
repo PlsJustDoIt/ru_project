@@ -7,11 +7,29 @@ import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
 import { join } from 'path';
 import { bugReportPath } from '../../config.js';
+import { findRestaurantById } from '../ru/ru.service.js';
 
 const getUserInformation = async (req: Request, res: Response) => {
     try {
-        const user = await User.findById(req.user.id).populate('friends', 'username status');
-        return res.json({ user: user });
+        const user = await User.findById(req.user.id);
+        if (user === null) {
+            logger.error('User not found');
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const userRestaurant = await findRestaurantById(user.restaurant, 'name restaurantId address description -_id');
+        if (userRestaurant === null) {
+            logger.error('Restaurant not found');
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+        const userData = {
+            username: user.username,
+            status: user.status,
+            avatarUrl: user.avatarUrl,
+            friends: user.friends,
+            id: user._id,
+            restaurant: userRestaurant,
+        };
+        return res.json({ user: userData });
     } catch (err: unknown) {
         logger.error('Could not retrieve user : ' + err);
         return res.status(500).json({ error: 'An error has occured' });

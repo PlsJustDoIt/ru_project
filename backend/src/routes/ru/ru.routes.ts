@@ -1,6 +1,6 @@
 import auth from '../../middleware/auth.js';
 import { Router } from 'express';
-import { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions } from './ru.controller.js';
+import { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions, getRestaurantInfo } from './ru.controller.js';
 const router = Router();
 
 router.get('/', getApiDoc);
@@ -12,5 +12,7 @@ router.get('/menus', auth, getMenus);
 router.get('/restaurants', auth, getRestaurants);
 
 router.get('/:restaurantId/sectors-sessions', auth, getSectorsSessions);
+
+router.get('/:restaurantId/info', auth, getRestaurantInfo);
 
 export default router;
