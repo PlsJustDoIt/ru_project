@@ -8,7 +8,7 @@ import 'package:ru_project/models/message.dart';
 class FriendsRequestWidget extends StatefulWidget {
   final List<FriendRequest>? initialFriendsRequests;
   final ApiService apiService;
-  final void Function(User friend) onAddFriend;
+  final void Function(Friend friend) onAddFriend;
 
   const FriendsRequestWidget({
     super.key,
@@ -87,7 +87,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                                     .acceptFriendRequest(request.requestId);
                                 if (res) {
                                   _removeFriendRequest(index);
-                                  widget.onAddFriend(User(
+                                  widget.onAddFriend(Friend(
                                       id: request.sender["id"],
                                       username: request.sender["username"],
                                       status: 'absent',

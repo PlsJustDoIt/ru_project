@@ -68,6 +68,7 @@ dependencies:
   flyer_chat_text_message: ^0.0.4
   cross_cache: ^0.0.4
   flutter_lorem: ^2.0.0
+  home_widget: ^0.7.0+1
 
 dev_dependencies:
   flutter_test:

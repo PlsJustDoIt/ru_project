@@ -1,19 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 
 class UserProvider with ChangeNotifier {
   final SecureStorage secureStorage;
 
   User? _user;
-  List<User> _friends = [];
+  List<Friend> _friends = [];
   bool _isConnected = false;
 
   bool get isConnected => _isConnected;
   User? get user => _user;
-  List<User> get friends => _friends;
+  List<Friend> get friends => _friends;
 
   UserProvider({required this.secureStorage});
 
@@ -27,7 +29,10 @@ class UserProvider with ChangeNotifier {
           return;
         }
 
+        final friends = await apiService.getFriends();
+
         _user = user;
+        _friends = friends;
         _isConnected = true;
       } catch (_) {
         clearUserData();
@@ -46,7 +51,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  void setFriends(List<User> friends) {
+  void setFriends(List<Friend> friends) {
     _friends = friends;
     notifyListeners();
   }

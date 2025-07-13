@@ -1,331 +1,450 @@
 import 'package:flutter/material.dart';
+import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/models/cafeteria_table.dart';
 
-class RoomLayout extends StatefulWidget {
-  const RoomLayout({Key? key}) : super(key: key);
+class CafeteriaLayout extends StatefulWidget {
+  const CafeteriaLayout({super.key});
 
   @override
-  State<RoomLayout> createState() => _RoomLayoutState();
+  State<CafeteriaLayout> createState() => _CafeteriaLayoutState();
 }
 
-class _RoomLayoutState extends State<RoomLayout>
-    with SingleTickerProviderStateMixin {
-  Sector? selectedSector;
-  late AnimationController _controller;
-  late Animation<double> _animation;
+class _CafeteriaLayoutState extends State<CafeteriaLayout> {
+  // Define tables with positions as percentages
+  final List<CafeteriaTable> tables = [
+    CafeteriaTable(id: 1, xPercent: 0.2, yPercent: 0.15),
+    CafeteriaTable(id: 2, xPercent: 0.5, yPercent: 0.2),
+    CafeteriaTable(id: 3, xPercent: 0.8, yPercent: 0.15),
+    CafeteriaTable(id: 4, xPercent: 0.15, yPercent: 0.45),
+    CafeteriaTable(id: 5, xPercent: 0.4, yPercent: 0.5),
+    CafeteriaTable(id: 6, xPercent: 0.7, yPercent: 0.45),
+    CafeteriaTable(id: 7, xPercent: 0.25, yPercent: 0.8),
+    CafeteriaTable(id: 8, xPercent: 0.6, yPercent: 0.75),
+    CafeteriaTable(id: 9, xPercent: 0.80, yPercent: 0.8),
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
+  void _handleTableTap(CafeteriaTable table) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Table ${table.id}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Status: ${table.isOccupied ? 'Occupied' : 'Available'}'),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        table.isOccupied = true;
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Mark Occupied'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        table.isOccupied = false;
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Mark Available'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
-
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final roomSize = Size(screenSize.width * 0.9, screenSize.height * 0.9);
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      // padding: const EdgeInsets.symmetric(horizontal: 40),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          var tableSize =
+              constraints.maxWidth * 0.03; // Table size as % of width
+          if (tableSize <= 30) {
+            tableSize = 30;
+          }
+          logger.i('Table size: $tableSize');
 
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: SizedBox(
-            child: Stack(
-              children: [
-                // Vue principale
-                AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      painter: RoomPainter(
-                        sectors: getSectorData(),
-                        selectedSector: selectedSector,
-                        animationValue: _animation.value,
-                      ),
-                      size: roomSize,
-                    );
-                  },
+          return Stack(
+            children: [
+              // Room border
+              Container(
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(horizontal: 100),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.yellow,
                 ),
+              ),
 
-                // Gestion des clics
-                if (selectedSector == null)
-                  ...getSectorData().map(
-                    (sector) => Positioned(
-                      left: sector.dx * roomSize.width,
-                      top: sector.dy * roomSize.height,
-                      width: sector.width * roomSize.width,
-                      height: sector.height * roomSize.height,
-                      child: GestureDetector(
-                        onTap: () => _selectSector(sector),
-                        child: Container(
-                          color: Colors.transparent,
+              // Tables
+              ...tables.map((table) {
+                // Calculate actual positions based on container size
+                final xPos =
+                    constraints.maxWidth * table.xPercent - (tableSize / 2);
+                final yPos =
+                    constraints.maxHeight * table.yPercent - (tableSize / 2);
+
+                return Positioned(
+                  left: xPos,
+                  top: yPos,
+                  child: GestureDetector(
+                    onTap: () => _handleTableTap(table),
+                    child: Container(
+                      width: tableSize * 2.3,
+                      height: tableSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.rectangle,
+                        color: table.isOccupied ? Colors.red : Colors.green,
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${table.id}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
+                );
+              }),
 
-                // Tables du secteur sélectionné
-                if (selectedSector != null)
-                  ...selectedSector!.tables.map(
-                    (table) => AnimatedBuilder(
-                      animation: _animation,
-                      builder: (context, child) {
-                        final relativeX = (table.dx - selectedSector!.dx) /
-                            selectedSector!.width;
-                        final relativeY = (table.dy - selectedSector!.dy) /
-                            selectedSector!.height;
-
-                        return Positioned(
-                          left: (selectedSector!.dx +
-                                  relativeX * selectedSector!.width) *
-                              roomSize.width,
-                          top: (selectedSector!.dy +
-                                  relativeY * selectedSector!.height) *
-                              roomSize.height,
-                          width:
-                              table.width * roomSize.width * _animation.value,
-                          height:
-                              table.height * roomSize.height * _animation.value,
-                          child: GestureDetector(
-                            onTap: () => _showTableDetails(table),
-                            child: Opacity(
-                              opacity: _animation.value,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.brown,
-                                  border: Border.all(color: Colors.black),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    table.name,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+              // Entrance
+              Positioned(
+                bottom: 30,
+                left: constraints.maxWidth * 0.5 - 75, // Center entrance
+                child: Container(
+                  width: 150,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Entrée',
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      // Bouton retour quand un secteur est sélectionné
-      floatingActionButton: selectedSector != null
-          ? FloatingActionButton(
-              onPressed: _unselectSector,
-              child: const Icon(Icons.arrow_back),
-            )
-          : null,
-    );
-  }
-
-  void _selectSector(Sector sector) {
-    setState(() {
-      selectedSector = sector;
-    });
-    _controller.forward(from: 0);
-  }
-
-  void _unselectSector() {
-    _controller.reverse().then((_) {
-      setState(() {
-        selectedSector = null;
-      });
-    });
-  }
-
-  void _showTableDetails(Table table) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(table.name),
-        content: const Text('Détails de la table'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class RoomPainter extends CustomPainter {
-  final List<Sector> sectors;
-  final Sector? selectedSector;
-  final double animationValue;
 
-  RoomPainter({
-    required this.sectors,
-    this.selectedSector,
-    required this.animationValue,
-  });
+// import 'package:flutter/material.dart';
+// import 'package:flutter/rendering.dart';
+// import 'package:logger/logger.dart';
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Dessiner les murs
-    final wallPaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
+// // Model for a table
+// class CafeteriaTable {
+//   final int id;
+//   final double x;
+//   final double y;
+//   bool isOccupied;
 
-    canvas.drawRect(Offset.zero & size, wallPaint);
+//   CafeteriaTable({
+//     required this.id,
+//     required this.x,
+//     required this.y,
+//     this.isOccupied = false,
+//   });
+// }
 
-    // Dessiner les secteurs
-    for (final sector in sectors) {
-      final isSelected = sector == selectedSector;
-      final sectorPaint = Paint()
-        ..color = isSelected
-            ? sector.color.withOpacity(0.1 + (0.2 * animationValue))
-            : sector.color.withOpacity(selectedSector != null ? 0.1 : 0.3)
-        ..style = PaintingStyle.fill;
+// class CafeteriaLayout extends StatefulWidget {
+//   const CafeteriaLayout({Key? key}) : super(key: key);
 
-      final rect = Rect.fromLTWH(
-        sector.dx * size.width,
-        sector.dy * size.height,
-        sector.width * size.width,
-        sector.height * size.height,
-      );
+//   @override
+//   State<CafeteriaLayout> createState() => _CafeteriaLayoutState();
+// }
 
-      canvas.drawRect(rect, sectorPaint);
+// class _CafeteriaLayoutState extends State<CafeteriaLayout> {
+//   // List of tables in the cafeteria
+//   final List<CafeteriaTable> tables = [
+//     CafeteriaTable(id: 1, x: 50, y: 50),
+//     CafeteriaTable(id: 2, x: 150, y: 50),
+//     CafeteriaTable(id: 3, x: 250, y: 50),
+//     CafeteriaTable(id: 5, x: 150, y: 150),
+//     CafeteriaTable(id: 6, x: 250, y: 150),
+//     CafeteriaTable(id: 7, x: 50, y: 250),
+//     CafeteriaTable(id: 8, x: 150, y: 250),
+//     CafeteriaTable(id: 9, x: 250, y: 250),
+//   ];
 
-      // Afficher le nom du secteur seulement si aucun secteur n'est sélectionné
-      // ou si c'est le secteur sélectionné
-      if (selectedSector == null || isSelected) {
-        final textPainter = TextPainter(
-          text: TextSpan(
-            text: sector.name,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: isSelected ? 20 : 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        );
+//   void _handleTableTap(CafeteriaTable table) {
+//     showDialog(
+//       context: context,
+//       builder: (BuildContext context) {
+//         return AlertDialog(
+//           title: Text('Table ${table.id}'),
+//           content: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Text('Status: ${table.isOccupied ? 'Occupied' : 'Available'}'),
+//               const SizedBox(height: 20),
+//               Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//                 children: [
+//                   ElevatedButton(
+//                     onPressed: () {
+//                       setState(() {
+//                         table.isOccupied = true;
+//                       });
+//                       Navigator.pop(context);
+//                     },
+//                     child: const Text('Mark Occupied'),
+//                   ),
+//                   ElevatedButton(
+//                     onPressed: () {
+//                       setState(() {
+//                         table.isOccupied = false;
+//                       });
+//                       Navigator.pop(context);
+//                     },
+//                     child: const Text('Mark Available'),
+//                   ),
+//                 ],
+//               ),
+//             ],
+//           ),
+//           actions: [
+//             TextButton(
+//               onPressed: () => Navigator.pop(context),
+//               child: const Text('Close'),
+//             ),
+//           ],
+//         );
+//       },
+//     );
+//   }
 
-        textPainter.layout();
-        final textOffset = Offset(
-          rect.left + (rect.width - textPainter.width) / 2,
-          rect.top + (rect.height - textPainter.height) / 2,
-        );
-        textPainter.paint(canvas, textOffset);
-      }
-    }
-  }
+//   Widget _buildTable(CafeteriaTable table) {
+//     return GestureDetector(
+//       onTap: () => _handleTableTap(table),
+//       child: Container(
+//         margin: const EdgeInsets.all(10),
+//         decoration: BoxDecoration(
+//           shape: BoxShape.rectangle,
+//           color: table.isOccupied ? Colors.red : Colors.green,
+//           border: Border.all(color: Colors.black),
+//         ),
+//         child: Center(
+//           child: Text(
+//             '${table.id}',
+//             style: const TextStyle(
+//               color: Colors.white,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
 
-  @override
-  bool shouldRepaint(RoomPainter oldDelegate) {
-    return oldDelegate.selectedSector != selectedSector ||
-        oldDelegate.animationValue != animationValue;
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Cafeteria Layout'),
+//       ),
+//       body: Container(
+//         width: double.infinity,  // Take full width
+//         height: double.infinity, // Take full height
+//         decoration: BoxDecoration(
+//           color: Colors.grey[200],
+//         ),
+//         child: Column(
+//           children: [
+//             // Tables area - takes all available space except for entrance
+//             Expanded(
+//               child: Container(
+//                 margin: const EdgeInsets.all(20),
+//                 decoration: BoxDecoration(
+//                   border: Border.all(color: Colors.grey),
+//                   borderRadius: BorderRadius.circular(10),
+//                 ),
+//                 child: GridView.builder(
+//                   padding: const EdgeInsets.all(20),
+//                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//                     crossAxisCount: 3,
+//                     childAspectRatio: 1, // Square tables
+//                     mainAxisSpacing: 20,  // Vertical spacing
+//                     crossAxisSpacing: 20,  // Horizontal spacing
+//                   ),
+//                   itemCount: tables.length,
+//                   itemBuilder: (context, index) {
+//                     return _buildTable(tables[index]);
+//                   },
+//                 ),
+//               ),
+//             ),
+//             // Entrance area at bottom
+//             Container(
+//               width: 150,
+//               height: 40,
+//               margin: const EdgeInsets.only(bottom: 20),
+//               decoration: BoxDecoration(
+//                 border: Border.all(color: Colors.black),
+//                 color: Colors.white,
+//                 borderRadius: BorderRadius.circular(5),
+//               ),
+//               child: const Center(
+//                 child: Text(
+//                   'Entrance',
+//                   style: TextStyle(fontSize: 16),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
 
-// Les classes Sector et Table restent les mêmes
-class Sector {
-  final String name;
-  final double dx;
-  final double dy;
-  final double width;
-  final double height;
-  final Color color;
-  final List<Table> tables;
+//   // @override
+//   // Widget build(BuildContext context) {
+//   //   return Scaffold(
+//   //     appBar: AppBar(
+//   //       title: const Text('Cafeteria Layout'),
+//   //     ),
+//   //     body: Center(
+//   //       child: LayoutBuilder(
+//   //         builder: (context, constraints) {
+//   //           double containerSize = constraints.maxWidth > 400 ? 400 : constraints.maxWidth * 0.9;
+//   //           logger.i('Container size: $containerSize');
+//   //           return Container(
+//   //             height: containerSize,
+//   //             width: containerSize,
+//   //             padding: const EdgeInsets.all(20),
+//   //             decoration: BoxDecoration(
+//   //               border: Border.all(color: Colors.grey),
+//   //               color: Colors.yellow,
+//   //             ),
+//   //             child: Column(
+//   //               mainAxisAlignment: MainAxisAlignment.center,
+//   //               children: [
+//   //                 // Tables area
+//   //                 Expanded(
+//   //                   child: GridView.builder(
+//   //                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//   //                       crossAxisCount: 3,
+//   //                       childAspectRatio: 1,
+//   //                     ),
+//   //                     itemCount: tables.length,
+//   //                     itemBuilder: (context, index) {
+//   //                       return _buildTable(tables[index]);
+//   //                     },
+//   //                   ),
+//   //                 ),
+//   //                 // Entrance area
+//   //                 Container(
+//   //                   width: 100,
+//   //                   height: 30,
+//   //                   margin: const EdgeInsets.only(top: 10),
+//   //                   decoration: BoxDecoration(
+//   //                     border: Border.all(color: Colors.black),
+//   //                     color: Colors.white,
+//   //                     borderRadius: BorderRadius.circular(5),
+//   //                   ),
+//   //                   child: const Center(
+//   //                     child: Text('Entrance'),
+//   //                   ),
+//   //                 ),
+//   //               ],
+//   //             ),
+//   //           );
 
-  Sector({
-    required this.name,
-    required this.dx,
-    required this.dy,
-    required this.width,
-    required this.height,
-    required this.color,
-    required this.tables,
-  });
-}
-
-class Table {
-  final double dx;
-  final double dy;
-  final double width;
-  final double height;
-  final String name;
-
-  Table({
-    required this.dx,
-    required this.dy,
-    required this.width,
-    required this.height,
-    required this.name,
-  });
-}
-
-// Données de test
-List<Sector> getSectorData() {
-  return [
-    Sector(
-      name: 'Secteur A',
-      dx: 0.1,
-      dy: 0.1,
-      width: 0.4,
-      height: 0.3,
-      color: Colors.blue,
-      tables: [
-        Table(
-          dx: 0.15,
-          dy: 0.15,
-          width: 0.08,
-          height: 0.12,
-          name: 'A1',
-        ),
-        Table(
-          dx: 0.35,
-          dy: 0.15,
-          width: 0.08,
-          height: 0.12,
-          name: 'A2',
-        ),
-      ],
-    ),
-    Sector(
-      name: 'Secteur B',
-      dx: 0.1,
-      dy: 0.5,
-      width: 0.4,
-      height: 0.3,
-      color: Colors.green,
-      tables: [
-        Table(
-          dx: 0.15,
-          dy: 0.55,
-          width: 0.08,
-          height: 0.12,
-          name: 'B1',
-        ),
-        Table(
-          dx: 0.35,
-          dy: 0.55,
-          width: 0.08,
-          height: 0.12,
-          name: 'B2',
-        ),
-      ],
-    ),
-  ];
-}
+//   //         }),
+//   //     )
+      
+      
+//   //     //  Container(
+//   //     //   decoration: BoxDecoration(
+//   //     //     border: Border.all(color: Colors.grey),
+//   //     //     color: Colors.yellow,
+//   //     //   ),
+//   //     //   child: Stack(
+//   //     //     children: [
+//   //     //       // Draw entrance
+//   //     //       Positioned(
+//   //     //         bottom: 10,
+//   //     //         left: 150,
+//   //     //         child: Container(
+//   //     //           width: 100,
+//   //     //           height: 60,
+//   //     //           decoration: BoxDecoration(
+//   //     //             border: Border.all(color: Colors.black),
+//   //     //             color: const Color.fromARGB(255, 155, 22, 22),
+//   //     //           ),
+//   //     //           child: const Center(
+//   //     //             child: Text('Entrance', style: TextStyle(fontSize: 10)),
+//   //     //           ),
+//   //     //         ),
+//   //     //       ),
+//   //     //       // Draw tables
+//   //     //       ...tables.map((table) => Positioned(
+//   //     //             left: table.x,
+//   //     //             top: table.y,
+//   //     //             child: GestureDetector(
+//   //     //               onTap: () => _handleTableTap(table),
+//   //     //               child: Container(
+//   //     //                 width: 100,
+//   //     //                 height: 50,
+//   //     //                 decoration: BoxDecoration(
+//   //     //                   shape: BoxShape.rectangle,
+//   //     //                   color: table.isOccupied ? Colors.red : Colors.green,
+//   //     //                   border: Border.all(color: Colors.black),
+//   //     //                 ),
+//   //     //                 child: Center(
+//   //     //                   child: Text(
+//   //     //                     '${table.id}',
+//   //     //                     style: const TextStyle(
+//   //     //                       color: Colors.white,
+//   //     //                       fontWeight: FontWeight.bold,
+//   //     //                     ),
+//   //     //                   ),
+//   //     //                 ),
+//   //     //               ),
+//   //     //             ),
+//   //     //           )),
+//   //     //     ],
+//   //     //   ),
+//   //     // ),
+//   //   );
+//   // }
+// }

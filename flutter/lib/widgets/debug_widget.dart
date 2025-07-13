@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
@@ -13,6 +14,14 @@ class DebugWidget extends StatefulWidget {
 
 class _DebugWidgetState extends State<DebugWidget> {
   final SecureStorage _secureStorage = SecureStorage();
+  late final UserProvider userProvider;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    userProvider = Provider.of<UserProvider>(context, listen: false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +67,11 @@ class _DebugWidgetState extends State<DebugWidget> {
                     onPressed: refreshTokent,
                     child: Text('rafraichir le token')),
                 SizedBox(height: 16),
+                Text('User Info: ${userProvider.user}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 16),
+                Text('Friends: ${userProvider.friends}',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Image.asset(
                   "assets/images/jm.jpg",
                 ),

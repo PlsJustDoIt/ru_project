@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
@@ -197,7 +198,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           final User user = response['user'];
                           userProvider.setUser(user);
                           //set friends in userProvider
-                          List<User> fetchedFriends = await apiService.getFriends();
+                          List<Friend> fetchedFriends =
+                              await apiService.getFriends();
                           userProvider.setFriends(fetchedFriends);
 
                           if (context.mounted == false) {

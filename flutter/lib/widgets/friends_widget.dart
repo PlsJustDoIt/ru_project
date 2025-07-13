@@ -49,12 +49,11 @@ class FriendsListSheet extends StatefulWidget {
 }
 
 class _FriendsListSheetState extends State<FriendsListSheet> {
-  List<User>? friends;
+  List<Friend>? friends;
   List<FriendRequest>? friendRequests;
   late ApiService apiService;
   late UserProvider userProvider;
 
-  @override
   bool get wantKeepAlive => true; // Important !
 
   @override
@@ -63,6 +62,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
     apiService = Provider.of<ApiService>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
     friends = userProvider.friends;
+    logger.i('FriendsListSheet initialized with ${friends?.length} friends');
   }
 
   static String generatePrivateRoomName(String user1Id, String user2Id) {
@@ -73,7 +73,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
 
   Future<void> addFriend(String friend) async {
     try {
-      User? friendAdded = await apiService.addFriend(friend);
+      Friend? friendAdded = await apiService.addFriend(friend);
       if (friendAdded == null) {
         throw 'peut etre un jour des vrais messages d\'erreurs';
       } else {
@@ -87,7 +87,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
     }
   }
 
-  void addFriendToFriendsList(User friend) {
+  void addFriendToFriendsList(Friend friend) {
     setState(() {
       friends?.add(friend);
     });
@@ -242,8 +242,8 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                                 _showDeleteConfirmationDialog(friend.id);
                               } else if (details.primaryVelocity! < 0) {
                                 // User swiped Right
-                                logger.i(
-                                    'Swipe à droite sur ${friend?.username}');
+                                logger
+                                    .i('Swipe à droite sur ${friend.username}');
                               }
                             },
                             child: ListTile(

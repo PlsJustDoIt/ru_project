@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:feedback/feedback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http_parser/http_parser.dart';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -10,10 +9,11 @@ import 'package:ru_project/config.dart';
 import 'package:dio/dio.dart';
 import 'package:ru_project/main.dart';
 import 'package:ru_project/models/friend_request.dart';
+import 'package:ru_project/models/friendsInSector.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/models/restaurant.dart';
-import 'package:ru_project/models/sectorModel.dart';
+import 'package:ru_project/models/sector.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/logger.dart';
@@ -235,7 +235,7 @@ class ApiService {
   }
 
   // Fonction pour ajouter un ami
-  Future<User?> addFriend(String friendUsername) async {
+  Future<Friend?> addFriend(String friendUsername) async {
     try {
       final Response response =
           await _dio.post('/users/send-friend-request', data: {
@@ -244,7 +244,7 @@ class ApiService {
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200) {
-        User friend = User.fromJson(response.data['friend']);
+        Friend friend = Friend.fromJson(response.data['friend']);
         return friend;
       }
       logger.e(
@@ -257,15 +257,15 @@ class ApiService {
   }
 
   // Fonction pour récupérer la liste des amis
-  Future<List<User>> getFriends() async {
+  Future<List<Friend>> getFriends() async {
     try {
       final Response response = await _dio.get('/users/friends');
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        List<User> friends = [
+        List<Friend> friends = [
           for (Map<String, dynamic> friend in response.data['friends'])
-            User.fromJson(friend)
+            Friend.fromJson(friend)
         ];
 
         return friends;
@@ -491,10 +491,12 @@ class ApiService {
         // For web
         var byteData = await pickedFile.readAsBytes();
         file = MultipartFile.fromBytes(byteData,
-            filename: pickedFile.name, contentType: MediaType('image', 'jpeg'));
+            filename: pickedFile.name,
+            contentType: DioMediaType('image', 'jpeg'));
       } else {
         file = await MultipartFile.fromFile(pickedFile.path,
-            filename: pickedFile.name, contentType: MediaType('image', 'jpeg'));
+            filename: pickedFile.name,
+            contentType: DioMediaType('image', 'jpeg'));
       }
 
       final formData = FormData.fromMap({
@@ -652,15 +654,14 @@ class ApiService {
   }
 
   //Restaurant map sectors
-  Future<List<SectorModel>> getRestaurantsSectors(
-      {String idResto = "r135"}) async {
+  Future<List<Sector>> getRestaurantsSectors({String idResto = "r135"}) async {
     try {
+      logger.i('Getting sectors for restaurant: $idResto');
       final Response response = await _dio.get('/ru/$idResto/sectors');
-      // logger.i('Response from server: ${response.data}');
       if (response.statusCode == 200 && response.data != null) {
-        List<SectorModel> sectors = [
+        List<Sector> sectors = [
           for (Map<String, dynamic> sector in response.data['sectors'])
-            SectorModel.fromJson(sector)
+            Sector.fromJson(sector)
         ];
         return sectors;
       }
@@ -673,11 +674,11 @@ class ApiService {
     }
   }
 
-  Future<bool> sitInSector(int durationMin, String sectorId) async {
+  Future<bool> sitInSector(int duration, String sectorId) async {
     try {
-      final Response response = await _dio.post('/sectors/join/$sectorId', data: {
-        'durationMin': durationMin,
-        'sectorId': sectorId,
+      final Response response =
+          await _dio.post('/sectors/join/$sectorId', data: {
+        'duration': duration,
       });
       if (response.statusCode == 200) {
         return true;
@@ -693,8 +694,7 @@ class ApiService {
 
   Future<bool> leaveSector(String sectorId) async {
     try {
-      final Response response =
-          await _dio.post('/sectors/leave/$sectorId');
+      final Response response = await _dio.post('/sectors/leave/$sectorId');
       if (response.statusCode == 200) {
         return true;
       }
@@ -709,9 +709,13 @@ class ApiService {
 
   Future<List<User>> getFriendsInSector(String sectorId) async {
     try {
-      final Response response =
-          await _dio.get('/sectors/$sectorId/friends');
+      final Response response = await _dio.get('/sectors/$sectorId/friends');
       if (response.statusCode == 200 && response.data != null) {
+        logger.i('Response from server: ${response.data}');
+        if (response.data['friendsInSector'] == null) {
+          return [];
+        }
+
         List<User> users = [
           for (Map<String, dynamic> user in response.data['friendsInSector'])
             User.fromJson(user)
@@ -727,6 +731,30 @@ class ApiService {
     }
   }
 
+  Future<List<User>> getUsersInSector(String restaurantId) async {
+    try {
+      final Response response =
+          await _dio.get('/ru/$restaurantId/sectors-sessions');
+      if (response.statusCode == 200 && response.data != null) {
+        logger.i('Response from server: ${response.data}');
+        if (response.data['usersInSector'] == null) {
+          return [];
+        }
+
+        List<User> users = [
+          for (Map<String, dynamic> user in response.data['friendsInSectors'])
+            User.fromJson(user)
+        ];
+        return users;
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return [];
+    } catch (e) {
+      logger.e('Failed to get users in sector: $e');
+      return [];
+    }
+  }
 
   String getImageNetworkUrl(String avatarUrl) {
     return '${Config.apiUrl}/$avatarUrl';
@@ -739,7 +767,7 @@ class ApiService {
       FormData formData = FormData.fromMap({
         'description': feedback.text,
         'screenshot': MultipartFile.fromBytes(feedback.screenshot,
-            filename: filename, contentType: MediaType('image', 'png')),
+            filename: filename, contentType: DioMediaType('image', 'png')),
         'extra': feedback.extra,
         'platform': kIsWeb ? 'web' : Platform.operatingSystem,
         'app_version': Config.appVersion,
@@ -759,14 +787,13 @@ class ApiService {
     }
   }
 
-  Future<List<Restaurant>> getRestaurants() async {
+  Future<List<RestaurantPartial>> getRestaurants() async {
     try {
       final Response response = await _dio.get('/ru/restaurants');
       if (response.statusCode == 200 && response.data != null) {
-        logger.i('Response from server: ${response.data}');
-        List<Restaurant> restaurants = [
+        List<RestaurantPartial> restaurants = [
           for (Map<String, dynamic> restaurant in response.data['restaurants'])
-            Restaurant.fromJson(restaurant)
+            RestaurantPartial.fromJson(restaurant)
         ];
         return restaurants;
       }
@@ -776,6 +803,42 @@ class ApiService {
     } catch (e) {
       logger.e('Failed to get restaurants: $e');
       return [];
+    }
+  }
+
+  Future<RestaurantTmp?> getRestaurantInfo(String restaurantId) async {
+    try {
+      final Response response = await _dio.get('/ru/$restaurantId/info');
+      if (response.statusCode == 200 && response.data != null) {
+        logger.i('Response from server: ${response.data}');
+        return RestaurantTmp.fromJson(response.data['restaurant']);
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to get restaurant info: $e');
+      return null;
+    }
+  }
+
+  Future<FriendsInSectors?> getFriendsSessions(String restaurantId) async {
+    try {
+      final Response response =
+          await _dio.get('/ru/$restaurantId/sectors-sessions');
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data['message'] != null) {
+          return null;
+        }
+        logger.i('Response from server: ${response.data}');
+        return FriendsInSectors.fromJson(response.data);
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to get friends in sectors: $e');
+      return null;
     }
   }
 }

@@ -5,7 +5,7 @@ import 'package:ru_project/models/user.dart';
 class ChatWidget extends StatelessWidget {
   final String roomname;
   final User actualUser;
-  final List<User>? friends;
+  final List<Friend>? friends;
 
   const ChatWidget(
       {super.key,

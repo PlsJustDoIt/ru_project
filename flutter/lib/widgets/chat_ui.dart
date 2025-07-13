@@ -30,7 +30,7 @@ class ChatUi extends StatefulWidget {
         );
 
   final ru_project.User actualUser;
-  final List<ru_project.User>? friends;
+  final List<ru_project.Friend>? friends;
   final User user;
   final String roomName;
 

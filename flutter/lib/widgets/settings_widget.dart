@@ -11,7 +11,7 @@ class SettingsWidget extends StatefulWidget {
 }
 
 class _SettingsWidgetState extends State<SettingsWidget> {
-  List<Restaurant> _restaurants = [];
+  List<RestaurantPartial> _restaurants = [];
   String? _selectedRestaurantId;
   bool _isLoading = true;
   late final ApiService _apiService;
@@ -32,7 +32,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         _isLoading = false;
         // Sélectionner le premier restaurant par défaut s'il existe
         if (restaurants.isNotEmpty) {
-          _selectedRestaurantId = restaurants.first.id;
+          _selectedRestaurantId = restaurants.first.restaurantId;
         }
       });
     } catch (e) {
@@ -102,7 +102,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                   value: _selectedRestaurantId,
                   items: _restaurants.map((restaurant) {
                     return DropdownMenuItem<String>(
-                      value: restaurant.id,
+                      value: restaurant.restaurantId,
                       child: Text(restaurant.name),
                     );
                   }).toList(),
