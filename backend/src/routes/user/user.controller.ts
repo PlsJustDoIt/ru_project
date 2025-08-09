@@ -7,7 +7,6 @@ import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
 import { join } from 'path';
 import { bugReportPath } from '../../config.js';
-import { findRestaurantById } from '../ru/ru.service.js';
 
 const getUserInformation = async (req: Request, res: Response) => {
     try {
@@ -16,18 +15,18 @@ const getUserInformation = async (req: Request, res: Response) => {
             logger.error('User not found');
             return res.status(404).json({ error: 'User not found' });
         }
-        const userRestaurant = await findRestaurantById(user.restaurant, 'name restaurantId address description -_id');
-        if (userRestaurant === null) {
-            logger.error('Restaurant not found');
-            return res.status(404).json({ error: 'Restaurant not found' });
-        }
+        // const userRestaurant = await findRestaurantById(user.restaurant, 'name restaurantId address description -_id');
+        // if (userRestaurant === null) {
+        //     logger.error('Restaurant not found');
+        //     return res.status(404).json({ error: 'Restaurant not found' });
+        // }
         const userData = {
             username: user.username,
             status: user.status,
             avatarUrl: user.avatarUrl,
             friends: user.friends,
             id: user._id,
-            restaurant: userRestaurant,
+            restaurantId: user.restaurant?.toString(),
         };
         return res.json({ user: userData });
     } catch (err: unknown) {

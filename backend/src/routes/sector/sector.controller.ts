@@ -65,7 +65,7 @@ const leaveSector = async (req: Request, res: Response) => {
     const { sectorId } = req.params;
 
     try {
-        if (!sectorId) {
+        if (!sectorId || !Types.ObjectId.isValid(sectorId)) {
             return res.status(400).json({ error: 'Sector ID is required' });
         }
 

@@ -212,8 +212,8 @@ const setupRestaurant = async () => {
     }
 };
 
-const getSectorsFromRestaurant = async (restaurantId: string) => {
-    const restaurant = await findRestaurant(restaurantId);
+const getSectorsFromRestaurant = async (restaurantId: Types.ObjectId) => {
+    const restaurant = await findRestaurantById(restaurantId);
     if (!restaurant) {
         throw new Error('Restaurant not found');
     }
