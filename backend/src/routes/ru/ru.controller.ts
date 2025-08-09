@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { MenuResponse } from '../../interfaces/menu.js';
 import logger from '../../utils/logger.js';
-import { fetchMenusFromExternalAPI, findRestaurant, getSectorsFromRestaurant } from './ru.service.js';
+import { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, getSectorsFromRestaurant } from './ru.service.js';
 import NodeCache from 'node-cache';
 import Restaurant from '../../models/restaurant.js';
 import { getUserById } from '../user/user.service.js';
@@ -57,11 +57,11 @@ const getSectors = async (req: Request, res: Response) => {
     const restaurantId = req.params.restaurantId;
 
     try {
-        if (!restaurantId) {
+        if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
 
-        const sectors = await getSectorsFromRestaurant(restaurantId);
+        const sectors = await getSectorsFromRestaurant(new Types.ObjectId(restaurantId));
 
         return res.json({ sectors });
     } catch (error) {
@@ -181,6 +181,88 @@ const getSectorsSessions = async (req: Request, res: Response) => {
     }
 };
 
+// Return ALL sessions in restaurant sectors, not only friends
+const getAllSectorsSessions = async (req: Request, res: Response) => {
+    const restaurantId = req.params.restaurantId;
+    try {
+        if (!restaurantId) {
+            return res.status(400).json({ error: 'Restaurant ID is required' });
+        }
+
+        const restaurant = await findRestaurant(restaurantId, 'sectors -_id');
+        if (!restaurant) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+
+        const allSessions = await SectorSession.aggregate([
+            {
+                $match: {
+                    sector: { $in: restaurant.sectors },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'user',
+                    foreignField: '_id',
+                    as: 'userDetails',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'sectors',
+                    localField: 'sector',
+                    foreignField: '_id',
+                    as: 'sectorDetails',
+                },
+            },
+            { $unwind: '$userDetails' },
+            { $unwind: '$sectorDetails' },
+            {
+                $project: {
+                    _id: 0,
+                    sectorId: '$sectorDetails.sectorId',
+                    sessions: {
+                        friend: {
+                            _id: '$userDetails._id',
+                            username: '$userDetails.username',
+                            avatarUrl: '$userDetails.avatarUrl',
+                            status: '$userDetails.status',
+                        },
+                        expiresAt: '$expiresAt',
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: '$sectorId',
+                    sessions: { $push: '$sessions' },
+                },
+            },
+        ]);
+
+        if (!allSessions || allSessions.length === 0) {
+            logger.info('No sessions found in sectors');
+            return res.status(200).json({ message: 'No sessions found in sectors' });
+        }
+
+        const formatted: friendsInSector = {};
+        for (const item of allSessions) {
+            formatted[item._id] = item.sessions;
+        }
+
+        if (!formatted || Object.keys(formatted).length === 0) {
+            return res.status(200).json({ message: 'No sessions found in sectors' });
+        }
+
+        logger.info('All sessions in sectors: %o', formatted);
+        return res.status(200).json(formatted);
+    } catch (error) {
+        logger.error('Error getting all sectors sessions:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
 const getApiDoc = (res: Response) => {
     return res.json(apiDoc);
 };
@@ -202,4 +284,24 @@ const getRestaurantInfo = async (req: Request, res: Response) => {
     }
 };
 
-export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions, getRestaurantInfo };
+const getRestaurantByOwnId = async (req: Request, res: Response) => {
+    const restaurantId = req.params.restaurantId;
+    if (!Types.ObjectId.isValid(restaurantId)) {
+        return res.status(400).json({ error: 'Invalid restaurant ID format' });
+    }
+    try {
+        if (!restaurantId) {
+            return res.status(400).json({ error: 'Restaurant ID is required' });
+        }
+        const restaurant = await findRestaurantById(new Types.ObjectId(restaurantId), 'name restaurantId address description -_id');
+        if (!restaurant) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+        return res.json({ restaurant });
+    } catch (error) {
+        logger.error('Erreur lors de la récupération des informations du restaurant:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération des informations du restaurant' });
+    }
+};
+
+export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions, getAllSectorsSessions, getRestaurantInfo, getRestaurantByOwnId };
