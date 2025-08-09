@@ -1,3 +1,5 @@
+import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/services/socket_service.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +8,6 @@ import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:cross_cache/cross_cache.dart';
 
@@ -44,13 +45,15 @@ class ChatUiState extends State<ChatUi> {
   final _uuid = const Uuid();
   late final List<Message> initialMessages;
   ChatController? _chatController;
-  late final ApiService apiService;
   io.Socket? socket;
+  late final SocketService socketService;
+  late final SecureStorage secureStorage;
 
   @override
   void initState() {
     super.initState();
-    apiService = Provider.of<ApiService>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    secureStorage = Provider.of<SecureStorage>(context, listen: false);
 
     //récupérer les messages de la room
     _initializeMessages();
@@ -65,7 +68,7 @@ class ChatUiState extends State<ChatUi> {
         'transports': ['websocket'],
         'autoConnect': false,
         'query': {
-          'token': await apiService.secureStorage.getAccessToken(),
+          'token': await secureStorage.getAccessToken(),
         },
         // 'withCredentials': true,
       });
@@ -150,7 +153,7 @@ class ChatUiState extends State<ChatUi> {
   Future<List<Message>> setMessages() async {
     List<Message> messagesList = [];
     List<ru_project.Message>? messagesReceived =
-        await apiService.getMessagesFromRoom(widget.roomName);
+        await socketService.getMessagesFromRoom(widget.roomName);
     if (messagesReceived != null) {
       for (ru_project.Message message in messagesReceived) {
         messagesList.add(Message.text(
@@ -217,8 +220,8 @@ class ChatUiState extends State<ChatUi> {
                 onPressed: () async {
                   if (mounted) {
                     await _chatController!.set([]);
-                    //TODO retirer les messages du serveur avec apiService
-                    apiService.deleteMessages(widget.roomName).then((value) {
+                    //TODO retirer les messages du serveur avec socketService
+                    socketService.deleteMessages(widget.roomName).then((value) {
                       if (value == false && mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -267,7 +270,7 @@ class ChatUiState extends State<ChatUi> {
     //TODO envoyer le message au serveur avec apiService voir comme dans l'exemple
     try {
       ru_project.Message? response =
-          await apiService.sendMessageToRoom(widget.roomName, text);
+          await socketService.sendMessageToRoom(widget.roomName, text);
       if (response != null) {
         final nextMessage = message.copyWith(
           id: response.id,
@@ -337,7 +340,7 @@ class ChatUiState extends State<ChatUi> {
                 Navigator.of(context).pop();
                 await _chatController!.remove(item);
                 bool res =
-                    await apiService.deleteMessage(item.id, widget.roomName);
+                    await socketService.deleteMessage(item.id, widget.roomName);
                 if (res) {
                   logger.i('Message deleted');
                 } else {

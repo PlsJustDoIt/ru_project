@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
 import 'package:ru_project/widgets/test_statefull.dart';
 import 'package:video_player/video_player.dart';
@@ -28,10 +29,12 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   final _formKey = GlobalKey<FormState>();
   final Map<String, String> _apiErrors = {};
   bool _hasSubmitted = false;
+  late final FriendService friendService;
 
   @override
   void initState() {
     super.initState();
+    friendService = Provider.of<FriendService>(context, listen: false);
     controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 20),
@@ -49,7 +52,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final apiService = Provider.of<ApiService>(context);
+    final authProvider = Provider.of<AuthService>(context);
 
     return Scaffold(
         body: Padding(
@@ -176,7 +179,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                         }
                         try {
                           final Map<String, dynamic> response =
-                              await apiService.login(_usernameController.text,
+                              await authProvider.login(_usernameController.text,
                                   _passwordController.text);
 
                           if (context.mounted == false) {
@@ -199,7 +202,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           userProvider.setUser(user);
                           //set friends in userProvider
                           List<Friend> fetchedFriends =
-                              await apiService.getFriends();
+                              await friendService.getFriends();
                           userProvider.setFriends(fetchedFriends);
 
                           if (context.mounted == false) {
@@ -240,7 +243,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
 
                         try {
                           final Map<String, dynamic> response =
-                              await apiService.register(
+                              await authProvider.register(
                                   _usernameController.text,
                                   _passwordController.text);
 

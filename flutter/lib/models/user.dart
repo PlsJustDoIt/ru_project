@@ -86,4 +86,10 @@ class Friend {
   String toString() {
     return 'Friend{id: $id, username: $username, status: $status, avatarUrl: $avatarUrl}';
   }
+
+  static List<Friend> fromJsonList(List<dynamic> jsonList) {
+    return jsonList
+        .map((json) => Friend.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
 }

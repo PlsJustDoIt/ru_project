@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:duration/duration.dart';
@@ -15,11 +15,13 @@ class DebugWidget extends StatefulWidget {
 class _DebugWidgetState extends State<DebugWidget> {
   final SecureStorage _secureStorage = SecureStorage();
   late final UserProvider userProvider;
+  late final ApiClient apiClient;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    apiClient = Provider.of<ApiClient>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
   }
 
@@ -84,9 +86,7 @@ class _DebugWidgetState extends State<DebugWidget> {
   }
 
   void refreshTokent() async {
-    final ApiService apiService =
-        Provider.of<ApiService>(context, listen: false);
-    final accessToken = await apiService.refreshToken();
+    final accessToken = await apiClient.refreshToken();
     if (accessToken == null) {
       logger.e('Failed to refresh token');
       return;

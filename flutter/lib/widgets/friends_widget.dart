@@ -3,8 +3,10 @@ import 'package:ru_project/models/friend_request.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/api_client.dart';
+import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/widgets/friends_request_widget.dart';
 import 'package:ru_project/widgets/search_user_widget.dart';
 import 'package:ru_project/widgets/chat_widget.dart';
@@ -51,16 +53,20 @@ class FriendsListSheet extends StatefulWidget {
 class _FriendsListSheetState extends State<FriendsListSheet> {
   List<Friend>? friends;
   List<FriendRequest>? friendRequests;
-  late ApiService apiService;
   late UserProvider userProvider;
+  late FriendService friendService;
+  late ApiClient apiClient;
+  late UserService userService;
 
   bool get wantKeepAlive => true; // Important !
 
   @override
   void initState() {
     super.initState();
-    apiService = Provider.of<ApiService>(context, listen: false);
+    apiClient = Provider.of<ApiClient>(context, listen: false);
+    friendService = Provider.of<FriendService>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
+    userService = Provider.of<UserService>(context, listen: false);
     friends = userProvider.friends;
     logger.i('FriendsListSheet initialized with ${friends?.length} friends');
   }
@@ -73,7 +79,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
 
   Future<void> addFriend(String friend) async {
     try {
-      Friend? friendAdded = await apiService.addFriend(friend);
+      Friend? friendAdded = await friendService.addFriend(friend);
       if (friendAdded == null) {
         throw 'peut etre un jour des vrais messages d\'erreurs';
       } else {
@@ -109,7 +115,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
             child: Text('Supprimer', style: TextStyle(color: Colors.white)),
             onPressed: () {
               // Logique de suppression
-              apiService.removeFriend(friendId);
+              friendService.removeFriend(friendId);
 
               setState(() {
                 friends?.removeWhere((friend) => friend.id == friendId);
@@ -129,7 +135,8 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
     if (friendRequests == null) {
       () async {
         try {
-          Map<String, dynamic> response = await apiService.getFriendRequests();
+          Map<String, dynamic> response =
+              await friendService.getFriendRequests();
           if (!mounted) return;
           setState(() {
             friendRequests = response['friendRequests'];
@@ -187,7 +194,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
                     return FriendsRequestWidget(
                       initialFriendsRequests: friendRequests,
-                      apiService: apiService,
+                      friendService: friendService,
                       onAddFriend: addFriendToFriendsList,
                     );
                   }));
@@ -251,7 +258,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                                   horizontal: 24, vertical: 8),
                               leading: CircleAvatar(
                                 radius: 28,
-                                backgroundImage: NetworkImage(apiService
+                                backgroundImage: NetworkImage(apiClient
                                     .getImageNetworkUrl(friend.avatarUrl)),
                               ),
                               title: Text(
@@ -371,9 +378,9 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) {
                     return RealtimeSearchWidget(
-                      onRemoteSearch: apiService.searchUsers,
-                      getImageNetworkUrl: apiService.getImageNetworkUrl,
-                      addFriend: apiService.addFriend,
+                      onRemoteSearch: userService.searchUsers,
+                      getImageNetworkUrl: apiClient.getImageNetworkUrl,
+                      addFriend: friendService.addFriend,
                       addFriendToFriendsList: addFriendToFriendsList,
                     );
                   }));

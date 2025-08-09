@@ -37,12 +37,7 @@ class FriendService {
 
       // Vérifie si la réponse contient des données valides
       if (response.statusCode == 200 && response.data != null) {
-        List<Friend> friends = [
-          for (Map<String, dynamic> friend in response.data['friends'])
-            Friend.fromJson(friend)
-        ];
-
-        return friends;
+        return Friend.fromJsonList(response.data['friends']);
       }
 
       logger.e(

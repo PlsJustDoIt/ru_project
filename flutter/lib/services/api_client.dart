@@ -107,4 +107,9 @@ class ApiClient {
       return null;
     }
   }
+
+  //TODO : a voir si ya mieux
+  String getImageNetworkUrl(String avatarUrl) {
+    return '${Config.apiUrl}/$avatarUrl';
+  }
 }

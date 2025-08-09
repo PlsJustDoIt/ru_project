@@ -1,6 +1,7 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/feedback_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/widgets/map_widget.dart';
@@ -23,7 +24,10 @@ class TabBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final apiService = Provider.of<ApiService>(context, listen: false);
+    final feedbackService =
+        Provider.of<FeedbackService>(context, listen: false);
+    final AuthService authService =
+        Provider.of<AuthService>(context, listen: false);
 
     return DefaultTabController(
       length: 8,
@@ -39,7 +43,7 @@ class TabBarWidget extends StatelessWidget {
               color: Colors.white,
               onPressed: () {
                 BetterFeedback.of(context).show((UserFeedback feedback) async {
-                  bool res = await apiService.sendFeedback(feedback);
+                  bool res = await feedbackService.sendFeedback(feedback);
                   if (!context.mounted) {
                     return;
                   }
@@ -67,7 +71,7 @@ class TabBarWidget extends StatelessWidget {
                 icon: const Icon(Icons.logout),
                 color: Colors.white,
                 onPressed: () async {
-                  bool res = await apiService.logout();
+                  bool res = await authService.logout();
                   userProvider.clearUserData();
                   //log out apiservice (test bool)
                   if (!context.mounted) {

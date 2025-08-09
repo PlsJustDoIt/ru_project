@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/restaurant_service.dart';
 
 class SettingsWidget extends StatefulWidget {
   const SettingsWidget({super.key});
@@ -14,19 +14,19 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   List<RestaurantPartial> _restaurants = [];
   String? _selectedRestaurantId;
   bool _isLoading = true;
-  late final ApiService _apiService;
+  late final RestaurantService _restaurantService;
 
   @override
   void initState() {
     super.initState();
-    _apiService = Provider.of<ApiService>(context, listen: false);
+    _restaurantService = Provider.of<RestaurantService>(context, listen: false);
 
     _loadRestaurants();
   }
 
   void _loadRestaurants() async {
     try {
-      final restaurants = await _apiService.getRestaurants();
+      final restaurants = await _restaurantService.getRestaurants();
       setState(() {
         _restaurants = restaurants;
         _isLoading = false;

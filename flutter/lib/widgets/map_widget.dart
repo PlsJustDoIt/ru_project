@@ -4,9 +4,10 @@ import 'package:ru_project/models/friendsInSector.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/models/sector.dart';
+import 'package:ru_project/services/restaurant_service.dart';
 
 class FloorPlan extends StatefulWidget {
   final double width;
@@ -24,17 +25,17 @@ class FloorPlan extends StatefulWidget {
 
 class _FloorPlanState extends State<FloorPlan> {
   Sector? selectedSector;
-  late final ApiService apiService;
   late final UserProvider userProvider;
   late final RestaurantTmp restaurant;
   late FriendsInSectors? sectorSessions;
   late Future<void> getRestaurantData;
+  late final RestaurantService restaurantService;
 
   @override
   initState() {
     logger.d('FloorPlan initState');
     super.initState();
-    apiService = Provider.of<ApiService>(context, listen: false);
+    restaurantService = Provider.of<RestaurantService>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
     restaurant = userProvider.user!.restaurant;
     setRestaurantSectors();
@@ -57,12 +58,12 @@ class _FloorPlanState extends State<FloorPlan> {
 
   Future<void> setSectorSessions() async {
     sectorSessions =
-        await apiService.getFriendsSessions(restaurant.restaurantId);
+        await restaurantService.getFriendsSessions(restaurant.restaurantId);
     logger.d('Sector Sessions: $sectorSessions');
   }
 
   Future<void> setRestaurantSectors() async {
-    restaurant.sectors = await apiService.getRestaurantsSectors();
+    restaurant.sectors = await restaurantService.getRestaurantsSectors();
   }
 
   @override
@@ -118,7 +119,7 @@ class _FloorPlanState extends State<FloorPlan> {
                           selectedSector = sector;
                         });
                         showSectorDetails(
-                            context, sector, apiService, userProvider);
+                            context, sector, restaurantService, userProvider);
                       },
                       child: Container(
                         width: sectorWidth,
@@ -161,13 +162,13 @@ class _FloorPlanState extends State<FloorPlan> {
   }
 
   void showSectorDetails(BuildContext context, Sector sector,
-      ApiService apiService, UserProvider userProvider) {
+      RestaurantService restaurantService, UserProvider userProvider) {
     // if (!sector.isClickable) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SectorInfoWidget(
             sector: sector,
-            apiService: apiService,
+            restaurantService: restaurantService,
             userProvider: userProvider,
             onMove: refreshMap),
       ),
@@ -203,14 +204,14 @@ class SimpleMapWidget extends StatelessWidget {
 
 class SectorInfoWidget extends StatefulWidget {
   final Sector sector;
-  final ApiService apiService;
+  final RestaurantService restaurantService;
   final UserProvider userProvider;
   final void Function() onMove;
 
   const SectorInfoWidget({
     super.key,
     required this.sector,
-    required this.apiService,
+    required this.restaurantService,
     required this.userProvider,
     required this.onMove,
   });
@@ -233,9 +234,9 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
     try {
       logger.i(widget.sector);
       final friends =
-          await widget.apiService.getFriendsInSector(widget.sector.id!);
+          await widget.restaurantService.getFriendsInSector(widget.sector.id!);
 
-      final users = await widget.apiService.getUsersInSector('r135');
+      final users = await widget.restaurantService.getUsersInSector('r135');
       setState(() {
         logger.d('Amis dans le secteur ${widget.sector.sectorId}: $friends');
         friendsInArea = friends;
@@ -251,6 +252,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final ApiClient apiClient = Provider.of<ApiClient>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -301,8 +303,8 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     logger.d('Se lever du secteur ${widget.sector.sectorId}');
-                    bool res =
-                        await widget.apiService.leaveSector(widget.sector.id!);
+                    bool res = await widget.restaurantService
+                        .leaveSector(widget.sector.id!);
                     if (res) {
                       logger.d(
                           'Vous vous êtes levé du secteur ${widget.sector.sectorId}');
@@ -342,7 +344,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                   onPressed: () {
                     logger.d(
                         'S\'assoir dans le secteur ${widget.sector.sectorId}');
-                    _showTimeSelector(context, widget.apiService);
+                    _showTimeSelector(context, widget.restaurantService);
                   },
                   icon: const Icon(Icons.chair),
                   label: const Text('S\'assoir ici ?'),
@@ -377,8 +379,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                             leading: CircleAvatar(
                               radius: 28,
                               backgroundImage: NetworkImage(
-                                widget.apiService
-                                    .getImageNetworkUrl(friend.avatarUrl),
+                                apiClient.getImageNetworkUrl(friend.avatarUrl),
                               ),
                             ),
                             title: Text(friend.username),
@@ -403,7 +404,8 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
     );
   }
 
-  void _showTimeSelector(BuildContext context, ApiService apiService) {
+  void _showTimeSelector(
+      BuildContext context, RestaurantService restaurantService) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -432,7 +434,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                     onTap: () async {
                       logger.d(
                           'Durée sélectionnée : $duration minutes dans le secteur ${widget.sector.sectorId}');
-                      bool success = await apiService.sitInSector(
+                      bool success = await restaurantService.sitInSector(
                           duration, widget.sector.id!);
                       if (success) {
                         logger.d(

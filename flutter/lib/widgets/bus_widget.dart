@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/ginko_service.dart';
 import 'package:ru_project/services/logger.dart';
 
 class TransportTimeWidget extends StatefulWidget {
@@ -13,9 +13,13 @@ class TransportTimeWidget extends StatefulWidget {
 class _TransportWidgetState extends State<TransportTimeWidget> {
   Stream<Map<String, dynamic>>? _horairesStream;
   bool _isActive = true; // Contrôle pour arrêter le flux
+
+  late final GinkoService ginkoService;
+
   @override
   void initState() {
     super.initState();
+    ginkoService = Provider.of<GinkoService>(context, listen: false);
     _horairesStream = _createHorairesStream();
   }
 
@@ -27,12 +31,10 @@ class _TransportWidgetState extends State<TransportTimeWidget> {
   }
 
   Stream<Map<String, dynamic>> _createHorairesStream() async* {
-    final apiService = Provider.of<ApiService>(context, listen: false);
-
     while (_isActive) {
       // S'assurer que le flux continue seulement si actif
       try {
-        final data = await apiService.getHoraires();
+        final data = await ginkoService.getHoraires();
         logger.i('Données reçues : $data');
         yield data;
       } catch (e) {

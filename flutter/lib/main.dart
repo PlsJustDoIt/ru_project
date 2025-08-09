@@ -57,6 +57,8 @@ void main() async {
         Provider<SocketService>.value(value: socketService),
         Provider<GinkoService>.value(value: ginkoService),
         Provider<FeedbackService>.value(value: feedbackService),
+        Provider<SecureStorage>.value(value: secureStorage),
+        Provider<ApiClient>.value(value: apiClient),
       ],
       child: BetterFeedback(
         theme: FeedbackThemeData(
