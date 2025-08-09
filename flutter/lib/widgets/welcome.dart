@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/friend_service.dart';
@@ -30,11 +31,14 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
   final Map<String, String> _apiErrors = {};
   bool _hasSubmitted = false;
   late final FriendService friendService;
+  late final RestaurantProvider restaurantProvider;
 
   @override
   void initState() {
     super.initState();
     friendService = Provider.of<FriendService>(context, listen: false);
+    restaurantProvider =
+        Provider.of<RestaurantProvider>(context, listen: false);
     controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 20),
@@ -200,6 +204,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           }
                           final User user = response['user'];
                           userProvider.setUser(user);
+                          restaurantProvider.loadRestaurant(user.restaurantId);
                           //set friends in userProvider
                           List<Friend> fetchedFriends =
                               await friendService.getFriends();
@@ -264,6 +269,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           }
                           final User user = response['user'];
                           userProvider.setUser(user);
+                          restaurantProvider.loadRestaurant(user.restaurantId);
 
                           Navigator.pushReplacement(
                             context,

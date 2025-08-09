@@ -6,13 +6,13 @@ class User {
   String username;
   String status; // status : en ligne, au ru, absent
   String avatarUrl;
-  RestaurantTmp restaurant;
+  String restaurantId;
 
   User(
       {required this.id,
       required this.username,
       required this.status,
-      required this.restaurant,
+      required this.restaurantId,
       required this.avatarUrl});
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -22,7 +22,7 @@ class User {
         id: json['id'] ?? '',
         username: json['username'] ?? 'ton pere',
         status: json['status'] ?? 'status non défini',
-        restaurant: RestaurantTmp.fromJson(json['restaurant'] ?? {}),
+        restaurantId: json['restaurantId'] ?? 'r135', // todo eviter confusion
         avatarUrl: json['avatarUrl'] ?? 'uploads/avatar/default-avatar.png',
       );
     } catch (e) {
@@ -37,12 +37,13 @@ class User {
       'username': username,
       'status': status,
       'avatarUrl': avatarUrl,
+      'restaurantId': restaurantId,
     };
   }
 
   @override
   String toString() {
-    return 'User{id: $id, username: $username, status: $status, avatarUrl: $avatarUrl , restaurantId: $restaurant}';
+    return 'User{id: $id, username: $username, status: $status, avatarUrl: $avatarUrl , restaurantId: $restaurantId}';
   }
 }
 

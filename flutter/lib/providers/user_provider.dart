@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
@@ -19,8 +20,8 @@ class UserProvider with ChangeNotifier {
 
   UserProvider({required this.secureStorage});
 
-  Future<void> init(
-      UserService userService, FriendService friendService) async {
+  Future<void> init(UserService userService, FriendService friendService,
+      RestaurantProvider restaurantProvider) async {
     final accessToken = await secureStorage.getAccessToken();
     if (accessToken != null) {
       try {
@@ -31,6 +32,8 @@ class UserProvider with ChangeNotifier {
         }
 
         final friends = await friendService.getFriends();
+
+        await restaurantProvider.loadRestaurant(user.restaurantId);
 
         _user = user;
         _friends = friends;

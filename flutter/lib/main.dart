@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/auth_service.dart';
@@ -43,8 +44,10 @@ void main() async {
   final ginkoService = GinkoService(dio: apiClient.dio);
   final feedbackService = FeedbackService(dio: apiClient.dio);
 
+  final restaurantProvider = RestaurantProvider(restaurantService);
+
   // Initialisation de l'état utilisateur
-  await userProvider.init(userService, friendService);
+  await userProvider.init(userService, friendService, restaurantProvider);
 
   runApp(
     MultiProvider(
@@ -59,6 +62,8 @@ void main() async {
         Provider<FeedbackService>.value(value: feedbackService),
         Provider<SecureStorage>.value(value: secureStorage),
         Provider<ApiClient>.value(value: apiClient),
+        ChangeNotifierProvider<RestaurantProvider>.value(
+            value: restaurantProvider),
       ],
       child: BetterFeedback(
         theme: FeedbackThemeData(

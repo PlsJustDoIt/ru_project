@@ -1,5 +1,7 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
+import 'package:ru_project/config.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/feedback_service.dart';
 import 'package:ru_project/services/logger.dart';
@@ -30,7 +32,7 @@ class TabBarWidget extends StatelessWidget {
         Provider.of<AuthService>(context, listen: false);
 
     return DefaultTabController(
-      length: 8,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -99,7 +101,6 @@ class TabBarWidget extends StatelessWidget {
                 .yellow, // Couleur de l'indicateur sous l'onglet sélectionné
             tabs: [
               Tab(icon: Icon(Icons.map), text: 'Carte ru'),
-              Tab(icon: Icon(Icons.settings), text: 'Carte ru test'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
               Tab(icon: Icon(Icons.messenger), text: 'Chat'),
@@ -111,14 +112,13 @@ class TabBarWidget extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            const CafeteriaLayout(),
             SimpleMapWidget(),
             const MenuWidget(),
             FriendsListSheet(),
             ChatWidget(roomname: 'Global', actualUser: userProvider.user!),
             ProfileWidget(),
             TransportTimeWidget(),
-            DebugWidget(),
+            if (Config.env == "development") DebugWidget(),
           ],
         ),
       ),
