@@ -149,6 +149,7 @@ class RestaurantService {
     }
   }
 
+  // utilise l'id de l'api officiel
   Future<RestaurantTmp?> getRestaurantInfo(String restaurantId) async {
     try {
       final Response response = await _dio.get('/ru/$restaurantId/info');
@@ -161,6 +162,23 @@ class RestaurantService {
       return null;
     } catch (e) {
       logger.e('Failed to get restaurant info: $e');
+      return null;
+    }
+  }
+
+  // utilise l'id interne
+  Future<RestaurantTmp?> getRestaurantById(String restaurantId) async {
+    try {
+      final Response response = await _dio.get('/ru/$restaurantId');
+      if (response.statusCode == 200 && response.data != null) {
+        logger.i('Response from server: ${response.data}');
+        return RestaurantTmp.fromJson(response.data['restaurant']);
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to get restaurant: $e');
       return null;
     }
   }
@@ -181,6 +199,26 @@ class RestaurantService {
       return null;
     } catch (e) {
       logger.e('Failed to get friends in sectors: $e');
+      return null;
+    }
+  }
+
+  Future<FriendsInSectors?> getAllSectorsSessions(String restaurantId) async {
+    try {
+      final Response response =
+          await _dio.get('/ru/$restaurantId/sectors-sessions/all');
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data['message'] != null) {
+          return null;
+        }
+        logger.i('Response (all sessions) from server: ${response.data}');
+        return FriendsInSectors.fromJson(response.data);
+      }
+      logger.e(
+          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to get all sectors sessions: $e');
       return null;
     }
   }
