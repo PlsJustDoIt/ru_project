@@ -15,6 +15,7 @@ class Sector {
   final double height;
   final String sectorId;
   bool? occupied;
+  bool occupiedByMe;
 
   Sector({
     required this.id,
@@ -24,6 +25,7 @@ class Sector {
     required this.height,
     required this.sectorId,
     this.occupied,
+    this.occupiedByMe = false,
   });
 
   factory Sector.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class Sector {
         y: json['position']['y']?.toDouble() ?? 0.0,
         width: json['size']['width']?.toDouble() ?? 0.0,
         height: json['size']['height']?.toDouble() ?? 0.0,
+        occupiedByMe: false,
       );
     } catch (e) {
       logger.i('Error parsing sector: $e');
@@ -50,11 +53,10 @@ class Sector {
     }
   }
 
-  //if there is no one then it's a default color else it's orange
+  // Default green; orange if occupied by me
   Color getColor() {
-    return occupied == false
-        ? Colors.orange
-        : const Color(0xFF00FF00); // Default color (green)
+    if (occupiedByMe == true) return Colors.orange;
+    return const Color(0xFF00FF00);
   }
 
   Map<String, dynamic> toJson() {
