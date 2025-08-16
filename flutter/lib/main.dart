@@ -7,7 +7,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
-import 'package:ru_project/widgets/welcome.dart';
+import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

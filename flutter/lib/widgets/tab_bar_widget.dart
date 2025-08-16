@@ -10,7 +10,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
 import 'package:ru_project/widgets/tables.dart';
 import 'package:ru_project/widgets/profile.dart';
-import 'package:ru_project/widgets/welcome.dart';
+import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:liquid_swipe/liquid_swipe.dart';
