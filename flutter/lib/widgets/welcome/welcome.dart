@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:provider/provider.dart';
 import 'package:ru_project/models/color.dart';
-import 'package:ru_project/models/user.dart';
-import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
-import 'package:ru_project/widgets/tab_bar_widget.dart';
-import 'package:ru_project/widgets/custom_snack_bar.dart';
-import 'package:ru_project/widgets/welcome/auth_form.dart';
 import 'package:ru_project/widgets/welcome/login.dart';
 import 'package:ru_project/widgets/welcome/register.dart';
 
@@ -85,7 +78,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                             onPressed: () {
-                              final apiService = Provider.of<ApiService>(context, listen: false);
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -106,7 +98,6 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
                             onPressed: () {
-                              final apiService = Provider.of<ApiService>(context, listen: false);
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
