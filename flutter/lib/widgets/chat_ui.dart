@@ -306,7 +306,6 @@ class ChatUiState extends State<ChatUi> {
       authorId: widget.user.id,
       createdAt: DateTime.now(),
       source: image.path,
-      size: bytesLength,
     );
 
     // Insert message to UI before uploading (local)
