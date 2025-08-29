@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "dev": "tsx watch src/server.ts",
-    "build" : "npx tsc",
+    "build": "npx tsc",
     "test:unit": "jest --config jest.unit.config.js",
     "test:e2e": "jest --config jest.e2e.config.js"
   },
@@ -24,6 +24,7 @@
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
     "compression": "^1.7.5",
+    "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
