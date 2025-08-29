@@ -8,11 +8,11 @@ import BugReport from '../models/bugReport.js';
 import User from '../models/user.js';
 import { authenticate } from '../routes/auth/auth.service.js';
 import Sector from '../models/sector.js';
-
 import express from 'express';
 import logger from '../utils/logger.js';
 import { Express } from 'express';
 import Restaurant from '../models/restaurant.js';
+import MongoStore from 'connect-mongo';
 
 AdminJS.registerAdapter({
     Resource: AdminJSMongoose.Resource,
@@ -144,12 +144,12 @@ const authProvider = new DefaultAuthProvider({
     authenticate: authenticateAdmin,
 });
 
-// const sessionStore = process.env.NODE_ENV === 'production'
-//   ? MongoStore.create({
-//       mongoUrl: process.env.MONGO_URI,
-//       ttl: 14 * 24 * 60 * 60,
-//     })
-//   : undefined; // MemoryStore sera utilisé par défaut
+const sessionStore = isProduction
+    ? MongoStore.create({
+            mongoUrl: process.env.MONGO_URI,
+            ttl: 14 * 24 * 60 * 60,
+        })
+    : undefined; // MemoryStore sera utilisé par défaut
 
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
     cookiePassword: process.env.JWT_ACCESS_SECRET ?? 'truc',
@@ -159,15 +159,17 @@ const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
     resave: false,
     saveUninitialized: true,
     secret: process.env.JWT_ACCESS_SECRET ?? 'truc',
+    store: sessionStore,
 });
 
 customRouter.use(admin.options.rootPath, adminRouter);
 
 logger.info(`admin JS running on http://localhost:${5000}${admin.options.rootPath}`);
 
-const adminJsSetup = (app: Express) => {
+const adminJsSetup = async (app: Express) => {
     app.use(admin.options.rootPath, adminRouter);
     if (isProduction) {
+        await admin.initialize();
         app.use('/admin', express.static(join(rootDir, '.adminjs')));
     } else {
         admin.watch();

@@ -35,13 +35,12 @@ const limiter = rateLimit({
     },
 });
 
-app.use(limiter);
-
 app.get('/test-socket', (req, res) => {
     return res.sendFile(join(rootDir, 'public', 'socket-test.html'));
 });
 
 const setupRoutes = (app: Express) => {
+    app.use('/api', limiter);
     app.use(api);
 
     // Image handling routes

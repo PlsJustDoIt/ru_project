@@ -10,6 +10,8 @@ const rootDir = isProduction
     ? join(resolve(), '..') // En production (dossier "dist"), remonte d'un niveau
     : resolve(); // En développement, reste dans le dossier courant
 
+// const rootDir = resolve();
+
 const uploadsPath = join(rootDir, 'uploads');
 const logsPath = join(rootDir, 'logs');
 const avatarPath = join(uploadsPath, 'avatar');
@@ -20,6 +22,7 @@ if (!isProduction) {
 } else {
     componentsPath = join(resolve(), 'components');
 }
+// componentsPath = join(rootDir, 'src/components');
 
 export {
     isProduction,
