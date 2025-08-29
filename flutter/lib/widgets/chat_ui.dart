@@ -1,3 +1,4 @@
+import 'package:ru_project/models/user.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
@@ -10,10 +11,8 @@ import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:cross_cache/cross_cache.dart';
 
-import 'package:flutter_chat_core/flutter_chat_core.dart';
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
-import 'package:flyer_chat_image_message/flyer_chat_image_message.dart';
-import 'package:flyer_chat_text_message/flyer_chat_text_message.dart';
+import 'package:flutter_chat_core/flutter_chat_core.dart' as types;
+import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
 import 'package:uuid/uuid.dart';
 import 'package:flutter_lorem/flutter_lorem.dart';
 import 'dart:math';
@@ -24,14 +23,14 @@ class ChatUi extends StatefulWidget {
       required this.roomName,
       required this.actualUser,
       this.friends})
-      : user = User(
+      : user = types.User(
           id: actualUser.username,
-          firstName: actualUser.username,
+          name: actualUser.username,
         );
 
   final ru_project.User actualUser;
   final List<ru_project.User>? friends;
-  final User user;
+  final types.User user;
   final String roomName;
 
   @override
@@ -42,10 +41,12 @@ class ChatUi extends StatefulWidget {
 class ChatUiState extends State<ChatUi> {
   CrossCache? _crossCache = CrossCache();
   final _uuid = const Uuid();
-  late final List<Message> initialMessages;
-  ChatController? _chatController;
+  late final List<types.Message> initialMessages;
+  List<types.Message> _messages = [];
   late final ApiService apiService;
   io.Socket? socket;
+  //chat controller
+  late final types.ChatController chatController;
 
   @override
   void initState() {
@@ -57,6 +58,9 @@ class ChatUiState extends State<ChatUi> {
 
     //conexion au serveur
     connectToServer();
+
+    //initialisation du chat controller
+    chatController = types.InMemoryChatController();
   }
 
   void connectToServer() async {
@@ -79,7 +83,8 @@ class ChatUiState extends State<ChatUi> {
           ...widget.friends!.map((e) => e.id)
         ];
         logger.i('Participants: $participants');
-        socket?.emit("join_room", {participants});
+        // emit a map with participants
+        socket?.emit("join_room", {'participants': participants});
       }
       socket?.on('receive_message', (response, [ack]) {
         try {
@@ -91,15 +96,14 @@ class ChatUiState extends State<ChatUi> {
             ack({'status': 'ok'});
           }
           if (mounted) {
+            final types.TextMessage incoming = types.TextMessage(
+              id: message.id,
+              authorId: message.sender,
+              text: message.content,
+              createdAt: message.createdAt,
+            );
             setState(() {
-              _chatController?.insert(Message.text(
-                  id: message.id,
-                  author: User(
-                    id: message.sender,
-                    firstName: message.sender,
-                  ),
-                  text: message.content,
-                  createdAt: message.createdAt));
+              _messages.insert(0, incoming);
             });
           }
         } catch (e) {
@@ -130,7 +134,9 @@ class ChatUiState extends State<ChatUi> {
           ack({'status': 'ok'});
         }
         if (mounted) {
-          _chatController?.set([]);
+          setState(() {
+            _messages.clear();
+          });
         }
       });
 
@@ -141,10 +147,9 @@ class ChatUiState extends State<ChatUi> {
           ack({'status': 'ok'});
         }
         if (mounted) {
-          Message? message = _chatController?.messages.firstWhere(
-            (element) => element.id == data['messageId'],
-          );
-          if (message != null) _chatController?.remove(message);
+          setState(() {
+            _messages.removeWhere((m) => m.id == data['messageId']);
+          });
         }
       });
     } catch (e) {
@@ -156,24 +161,21 @@ class ChatUiState extends State<ChatUi> {
     initialMessages = await setMessages();
     if (mounted) {
       setState(() {
-        _chatController = InMemoryChatController(messages: initialMessages);
+        _messages = initialMessages;
       });
     }
   }
 
   //todo demander a leo pour les messages
-  Future<List<Message>> setMessages() async {
-    List<Message> messagesList = [];
+  Future<List<types.Message>> setMessages() async {
+    List<types.Message> messagesList = [];
     List<ru_project.Message>? messagesReceived =
         await apiService.getMessagesFromRoom(widget.roomName);
     if (messagesReceived != null) {
       for (ru_project.Message message in messagesReceived) {
-        messagesList.add(Message.text(
+        messagesList.add(types.TextMessage(
           id: message.id,
-          author: User(
-            id: message.sender,
-            firstName: message.sender,
-          ),
+          authorId: message.sender,
           text: message.content,
           createdAt: message.createdAt,
         ));
@@ -194,69 +196,44 @@ class ChatUiState extends State<ChatUi> {
   @override
   void dispose() {
     disconnectFromServer();
-    _chatController?.dispose();
-    _chatController = null;
     _crossCache?.dispose();
     _crossCache = null;
+    chatController.dispose();
     super.dispose();
   }
 
   void disconnectFromServer() {
-    socket?.off('receive_message');
-    socket?.disconnect();
-    socket?.emit(('leave_room'), widget.roomName);
-    socket?.dispose(); // Dispose the socket
+    if (socket != null) {
+      try {
+        socket!.emit('leave_room', widget.roomName);
+      } catch (e) {
+        logger.w('Error emitting leave_room: $e');
+      }
+      try {
+        socket!.off('receive_message');
+        socket!.off('receive_delete_message');
+        socket!.off('receive_delete_all_messages');
+        socket!.off('userOnline');
+        socket!.off('room_joined');
+        socket!.disconnect();
+      } catch (e) {
+        logger.w('Error during socket cleanup: $e');
+      }
+    }
     socket = null;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_chatController == null) {
+    if (_messages.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Chat(
-      builders: Builders(
-        textMessageBuilder: (context, message, index) =>
-            FlyerChatTextMessage(message: message, index: index),
-        imageMessageBuilder: (context, message, index) =>
-            FlyerChatImageMessage(message: message, index: index),
-        inputBuilder: (context) => ChatInput(
-          topWidget: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shuffle),
-                onPressed: () => _addItem(null),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_sweep),
-                onPressed: () async {
-                  if (mounted) {
-                    await _chatController!.set([]);
-                    //TODO retirer les messages du serveur avec apiService
-                    apiService.deleteMessages(widget.roomName).then((value) {
-                      if (value == false && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed to delete messages'),
-                          ),
-                        );
-                      }
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      chatController: _chatController!,
-      crossCache: _crossCache,
-      user: widget.user,
-      onMessageSend: _addItem,
-      onMessageTap: _removeItem,
-      onAttachmentTap: _handleAttachmentTap,
-      theme: ChatTheme.fromThemeData(Theme.of(context)),
-      themeMode: ThemeMode.light,
+    return ui.Chat(
+      currentUserId: widget.user.id,
+      resolveUser: (types.UserID id) async {
+          return types.User(id: id, name: 'John Doe');
+      },
+      chatController: chatController,
     );
   }
 
@@ -267,16 +244,17 @@ class ChatUiState extends State<ChatUi> {
     logger.i('Adding text $text to chat');
 
     final tempId = _uuid.v4();
-    final message = Message.text(
+    final types.TextMessage message = types.TextMessage(
       id: tempId,
-      author: widget.user,
-      createdAt: DateTime.now(),
+      authorId: widget.user.id,
       text: text,
+      createdAt: DateTime.now(),
     );
 
     if (mounted) {
-      //ajout du message dans le chat local
-      await _chatController!.insert(message);
+      setState(() {
+        _messages.insert(0, message);
+      });
     }
 
     //TODO envoyer le message au serveur avec apiService voir comme dans l'exemple
@@ -288,7 +266,12 @@ class ChatUiState extends State<ChatUi> {
           id: response.id,
           createdAt: response.createdAt,
         );
-        await _chatController!.update(message, nextMessage);
+        if (mounted) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.id == tempId);
+            if (idx != -1) _messages[idx] = nextMessage;
+          });
+        }
         return;
       }
       logger.e('Error sending message to server');
@@ -317,20 +300,24 @@ class ChatUiState extends State<ChatUi> {
 
     final id = _uuid.v4();
 
-    final imageMessage = ImageMessage(
+    final bytesLength = bytes.length;
+    final types.ImageMessage imageMessage = types.ImageMessage(
       id: id,
-      author: widget.user,
-      createdAt: DateTime.now().toUtc(),
+      authorId: widget.user.id,
+      createdAt: DateTime.now(),
       source: image.path,
+      size: bytesLength,
     );
 
     // Insert message to UI before uploading (local)
-    await _chatController!.insert(imageMessage);
+    setState(() {
+      _messages.insert(0, imageMessage);
+    });
 
     //TODO envoyer l'image au serveur avec apiService
   }
 
-  void _removeItem(Message item) async {
+  void _removeItem(types.Message item) async {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -350,7 +337,9 @@ class ChatUiState extends State<ChatUi> {
               child: const Text('Supprimer'),
               onPressed: () async {
                 Navigator.of(context).pop();
-                await _chatController!.remove(item);
+                setState(() {
+                  _messages.removeWhere((m) => m.id == item.id);
+                });
                 bool res =
                     await apiService.deleteMessage(item.id, widget.roomName);
                 if (res) {
@@ -366,7 +355,7 @@ class ChatUiState extends State<ChatUi> {
     );
   }
 
-  Future<void> _showDeleteConfirmationDialog(Message item) async {
+  Future<void> _showDeleteConfirmationDialog(types.Message item) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
