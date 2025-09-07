@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:ru_project/models/user.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
@@ -37,7 +39,6 @@ class ChatUi extends StatefulWidget {
   ChatUiState createState() => ChatUiState();
 }
 
-//TODO
 class ChatUiState extends State<ChatUi> {
   CrossCache? _crossCache = CrossCache();
   final _uuid = const Uuid();
@@ -53,14 +54,15 @@ class ChatUiState extends State<ChatUi> {
     super.initState();
     apiService = Provider.of<ApiService>(context, listen: false);
 
+    //initialisation du chat controller
+    chatController = types.InMemoryChatController();
+
     //récupérer les messages de la room
     _initializeMessages();
 
     //conexion au serveur
     connectToServer();
 
-    //initialisation du chat controller
-    chatController = types.InMemoryChatController();
   }
 
   void connectToServer() async {
@@ -74,7 +76,6 @@ class ChatUiState extends State<ChatUi> {
         // 'withCredentials': true,
       });
       socket?.connect();
-      //TODO change join_global_room to join_room
       if (widget.roomName == 'Global') {
         socket?.emit("join_global_room");
       } else {
@@ -104,6 +105,7 @@ class ChatUiState extends State<ChatUi> {
             );
             setState(() {
               _messages.insert(0, incoming);
+              chatController.insertMessage(incoming);
             });
           }
         } catch (e) {
@@ -128,7 +130,7 @@ class ChatUiState extends State<ChatUi> {
         logger.i('Room joined: ${data['roomName']}');
       });
 
-      socket?.on('receive_delete_all_messages', (response, [ack]) {
+      socket?.on('receive_delete_all_messages', (response, [ack]) { //TODO ?
         logger.i('All messages deleted');
         if (ack != null) {
           ack({'status': 'ok'});
@@ -148,8 +150,13 @@ class ChatUiState extends State<ChatUi> {
         }
         if (mounted) {
           setState(() {
-            _messages.removeWhere((m) => m.id == data['messageId']);
-          });
+            final index = _messages.indexWhere((m) => m.id == data['messageId']);
+            if (index != -1) {
+              final messageToRemove = chatController.messages[index];
+              chatController.removeMessage(messageToRemove);
+              _messages.removeAt(index);
+            }
+          });          
         }
       });
     } catch (e) {
@@ -162,11 +169,11 @@ class ChatUiState extends State<ChatUi> {
     if (mounted) {
       setState(() {
         _messages = initialMessages;
+        chatController.insertAllMessages(_messages);
       });
     }
   }
 
-  //todo demander a leo pour les messages
   Future<List<types.Message>> setMessages() async {
     List<types.Message> messagesList = [];
     List<ru_project.Message>? messagesReceived =
@@ -231,13 +238,18 @@ class ChatUiState extends State<ChatUi> {
     return ui.Chat(
       currentUserId: widget.user.id,
       resolveUser: (types.UserID id) async {
-          return types.User(id: id, name: 'John Doe');
+          return types.User(id: id, name: 'John Doe'); //TODO fetch user info from server?
       },
       chatController: chatController,
+      onMessageSend: (text) {
+        _addItem(text);
+      },
+      onMessageTap: (context, message, { TapUpDetails? details, index = 0}) {
+        _removeItem(message);
+      },
     );
   }
 
-  //TODO refléchire a une fonction create message
   void _addItem(String? text) async {
     text ??=
         lorem(paragraphs: 1, words: Random().nextInt(30) + 1); //text aléatoire
@@ -251,13 +263,13 @@ class ChatUiState extends State<ChatUi> {
       createdAt: DateTime.now(),
     );
 
+    chatController.insertMessage(message);
     if (mounted) {
       setState(() {
         _messages.insert(0, message);
       });
     }
 
-    //TODO envoyer le message au serveur avec apiService voir comme dans l'exemple
     try {
       ru_project.Message? response =
           await apiService.sendMessageToRoom(widget.roomName, text);
@@ -270,6 +282,7 @@ class ChatUiState extends State<ChatUi> {
           setState(() {
             final idx = _messages.indexWhere((m) => m.id == tempId);
             if (idx != -1) _messages[idx] = nextMessage;
+            chatController.updateMessage(message, nextMessage);
           });
         }
         return;
@@ -287,35 +300,36 @@ class ChatUiState extends State<ChatUi> {
     }
   }
 
-  void _handleAttachmentTap() async {
-    final picker = ImagePicker();
+  // this feature is disabled for now
+  // void _handleAttachmentTap() async {
+  //   final picker = ImagePicker();
 
-    final image = await picker.pickImage(source: ImageSource.gallery);
+  //   final image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image == null) return;
+  //   if (image == null) return;
 
-    final bytes = await image.readAsBytes();
-    // Saves image to persistent cache using image.path as key
-    await _crossCache?.set(image.path, bytes);
+  //   final bytes = await image.readAsBytes();
+  //   // Saves image to persistent cache using image.path as key
+  //   await _crossCache?.set(image.path, bytes);
 
-    final id = _uuid.v4();
+  //   final id = _uuid.v4();
 
-    final bytesLength = bytes.length;
-    final types.ImageMessage imageMessage = types.ImageMessage(
-      id: id,
-      authorId: widget.user.id,
-      createdAt: DateTime.now(),
-      source: image.path,
-      size: bytesLength,
-    );
+  //   final bytesLength = bytes.length;
+  //   final types.ImageMessage imageMessage = types.ImageMessage(
+  //     id: id,
+  //     authorId: widget.user.id,
+  //     createdAt: DateTime.now(),
+  //     source: image.path,
+  //     size: bytesLength,
+  //   );
 
-    // Insert message to UI before uploading (local)
-    setState(() {
-      _messages.insert(0, imageMessage);
-    });
+  //   // Insert message to UI before uploading (local)
+  //   setState(() {
+  //     _messages.insert(0, imageMessage);
+  //   });
 
-    //TODO envoyer l'image au serveur avec apiService
-  }
+  //   //envoyer l'image au serveur avec apiService
+  // }
 
   void _removeItem(types.Message item) async {
     showDialog<void>(
@@ -339,7 +353,9 @@ class ChatUiState extends State<ChatUi> {
                 Navigator.of(context).pop();
                 setState(() {
                   _messages.removeWhere((m) => m.id == item.id);
+                  chatController.removeMessage(item);
                 });
+
                 bool res =
                     await apiService.deleteMessage(item.id, widget.roomName);
                 if (res) {
@@ -355,31 +371,32 @@ class ChatUiState extends State<ChatUi> {
     );
   }
 
-  Future<void> _showDeleteConfirmationDialog(types.Message item) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Message'),
-          content: const Text('Are you sure you want to delete this message?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Delete'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _removeItem(item);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // deprecated
+  // Future<void> _showDeleteConfirmationDialog(types.Message item) async {
+  //   return showDialog<void>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: const Text('Delete Message'),
+  //         content: const Text('Are you sure you want to delete this message?'),
+  //         actions: <Widget>[
+  //           TextButton(
+  //             child: const Text('Cancel'),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //             },
+  //           ),
+  //           TextButton(
+  //             child: const Text('Delete'),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //               _removeItem(item);
+  //             },
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 }
