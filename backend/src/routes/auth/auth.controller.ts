@@ -78,14 +78,6 @@ const refreshUserToken = async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Invalid refresh token' });
         }
 
-        // Vérifier si le token est expiré (optionnel, mais si tu stockes l'expiration dans la base)
-        if (existingToken.expires.getTime() < Date.now()) {
-            await RefreshToken.findOneAndDelete({ refreshToken });
-            // peut etre refaire un refresh token au lieu de renvoyer erreur ???
-            logger.error('Refresh token expired');
-            return res.status(403).json({ error: 'Refresh token expired' });
-        }
-
         // Vérifier si le refresh token est valide
         const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as jwt.JwtPayload;
         logger.info(decoded);
