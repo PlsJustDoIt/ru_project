@@ -1,10 +1,9 @@
-import 'dart:ui';
+import 'dart:io';
 
-import 'package:ru_project/models/user.dart';
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
 import 'package:image_picker/image_picker.dart';
@@ -12,12 +11,17 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:cross_cache/cross_cache.dart';
+import 'audio_player_widget.dart';
 
 import 'package:flutter_chat_core/flutter_chat_core.dart' as types;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
 import 'package:uuid/uuid.dart';
 import 'package:flutter_lorem/flutter_lorem.dart';
 import 'dart:math';
+import 'package:record/record.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:flutter_chat_core/src/models/builders.dart';
+import 'package:flutter_chat_core/src/models/message_group_status.dart';
 
 class ChatUi extends StatefulWidget {
   ChatUi(
@@ -49,6 +53,9 @@ class ChatUiState extends State<ChatUi> {
   //chat controller
   late final types.ChatController chatController;
 
+  final _record = AudioRecorder();
+  String? _recordPath;
+
   @override
   void initState() {
     super.initState();
@@ -62,7 +69,78 @@ class ChatUiState extends State<ChatUi> {
 
     //conexion au serveur
     connectToServer();
+  }
 
+  Future<void> _startRecording() async {
+    if (await _record.hasPermission()) {
+      final path =
+          '/tmp/${_uuid.v4()}.mp3'; // tu peux adapter selon ta plateforme
+      await _record.start(
+          const RecordConfig(
+            encoder: kIsWeb
+                ? AudioEncoder.wav // Web → wav (PCM)
+                : AudioEncoder.aacLc, // Mobile → AAC
+          ),
+          path: path);
+      _recordPath = kIsWeb ? null : path;
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    final pathOrUri =
+        await _record.stop(); // Mobile = path | Web = blob:... URL
+    if (pathOrUri == null) return;
+
+    final player = AudioPlayer();
+    Duration duration = Duration.zero;
+
+    if (!kIsWeb) {
+      // --- MOBILE ---
+      await player.setFilePath(pathOrUri);
+      duration = player.duration ?? Duration.zero;
+
+      final file = File(pathOrUri);
+      final audioMessage = types.AudioMessage(
+          id: _uuid.v4(),
+          authorId: widget.user.id,
+          createdAt: DateTime.now(),
+          duration: duration,
+          source: pathOrUri,
+          size: await file.length(),
+          waveform: [2, 3, 5, 6]);
+
+      setState(() {
+        _messages.insert(0, audioMessage);
+        chatController.insertMessage(audioMessage);
+      });
+
+      // 👉 Upload si besoin
+      // await apiService.sendAudioToRoom(widget.roomName, file);
+    } else {
+      // --- WEB ---
+      // pathOrUri est une URL de type "blob:...."
+      await player.setUrl(pathOrUri);
+      duration = player.duration ?? Duration.zero;
+
+      final audioMessage = types.AudioMessage(
+        id: _uuid.v4(),
+        authorId: widget.user.id,
+        createdAt: DateTime.now(),
+        duration: duration,
+        source: pathOrUri, // <- blob utilisable directement avec <audio>
+        size: 0, // pas dispo en web
+      );
+
+      setState(() {
+        _messages.insert(0, audioMessage);
+        chatController.insertMessage(audioMessage);
+      });
+
+      // 👉 Upload côté web : tu envoies le blobUrl,
+      // ton backend devra recevoir le blob via JS/HTML (pas possible direct Flutter)
+    }
+
+    await player.dispose();
   }
 
   void connectToServer() async {
@@ -130,7 +208,8 @@ class ChatUiState extends State<ChatUi> {
         logger.i('Room joined: ${data['roomName']}');
       });
 
-      socket?.on('receive_delete_all_messages', (response, [ack]) { //TODO ?
+      socket?.on('receive_delete_all_messages', (response, [ack]) {
+        //TODO ?
         logger.i('All messages deleted');
         if (ack != null) {
           ack({'status': 'ok'});
@@ -150,13 +229,14 @@ class ChatUiState extends State<ChatUi> {
         }
         if (mounted) {
           setState(() {
-            final index = _messages.indexWhere((m) => m.id == data['messageId']);
+            final index =
+                _messages.indexWhere((m) => m.id == data['messageId']);
             if (index != -1) {
               final messageToRemove = chatController.messages[index];
               chatController.removeMessage(messageToRemove);
               _messages.removeAt(index);
             }
-          });          
+          });
         }
       });
     } catch (e) {
@@ -238,15 +318,65 @@ class ChatUiState extends State<ChatUi> {
     return ui.Chat(
       currentUserId: widget.user.id,
       resolveUser: (types.UserID id) async {
-          return types.User(id: id, name: 'John Doe'); //TODO fetch user info from server?
+        return types.User(
+            id: id, name: 'John Doe'); //TODO fetch user info from server?
       },
       chatController: chatController,
       onMessageSend: (text) {
         _addItem(text);
       },
-      onMessageTap: (context, message, { TapUpDetails? details, index = 0}) {
+      onMessageTap: (context, message, {TapUpDetails? details, index = 0}) {
+        logger.i('Message tapped: ${details}, index: $index');
         _removeItem(message);
       },
+      onAttachmentTap: () async {
+        // Ici on déclenche l’enregistrement audio
+        await _startRecording();
+
+        // on attend que l’utilisateur relâche le bouton (par ex. via un dialogue)
+        await Future.delayed(const Duration(seconds: 8));
+        await _stopRecording();
+      },
+      builders: Builders(
+        audioMessageBuilder: (
+          BuildContext context,
+          types.AudioMessage message,
+          int index, {
+          required bool isSentByMe,
+          MessageGroupStatus? groupStatus,
+        }) {
+          // You may want to use index, isSentByMe, groupStatus for custom UI
+          return Container(
+            // Example: fixed width or from message metadata
+            width: 250,
+            child: AudioPlayerWidget(message: message),
+          );
+        },
+      ),
+
+      // builders: audioMessageBuilder(
+      //   customMessageBuilder: (message, {required int messageWidth}) {
+      //     if (message is types.CustomMessage &&
+      //         message.metadata?['type'] == 'audio') {
+      //       final player = AudioPlayer();
+      //       final uri = message.metadata!['uri'] as String;
+
+      //       return Row(
+      //         children: [
+      //           IconButton(
+      //             icon: const Icon(Icons.play_arrow),
+      //             onPressed: () async {
+      //               await player.setFilePath(uri);
+      //               await player.play();
+      //             },
+      //           ),
+      //           const Text("Message audio"),
+      //         ],
+      //       );
+      //     }
+      //     return const SizedBox();
+      //   },
+      // ),
     );
   }
 
