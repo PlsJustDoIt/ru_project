@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +11,7 @@ import '../models/searchResult.dart';
 // Cache manager with LRU (Least Recently Used)
 class SearchCache {
   final int cacheMaxSize;
-  final _cache = <String, List<SearchResult>>{}; //TODO : utiliser LinkedHashMap
+  final LinkedHashMap<String, List<SearchResult>> _cache = LinkedHashMap<String, List<SearchResult>>();
 
   SearchCache({this.cacheMaxSize = 50});
 
