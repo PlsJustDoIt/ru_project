@@ -37,8 +37,8 @@ class SearchCache {
 class RealtimeSearchWidget extends StatefulWidget {
   final Future<List<SearchResult>> Function(String query) onRemoteSearch;
   final String Function(String avatarUrl) getImageNetworkUrl;
-  final Future<User?> Function(String friendUsername) addFriend;
-  final void Function(User friend) addFriendToFriendsList;
+  final Future<Friend?> Function(String friendUsername) addFriend;
+  final void Function(Friend friend) addFriendToFriendsList;
   final Duration debounceDuration = const Duration(milliseconds: 250);
 
   const RealtimeSearchWidget(
@@ -227,7 +227,8 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                                    icon: const Icon(
+                                        Icons.person_add_alt_1_rounded),
                                     onPressed: () {
                                       showDialog(
                                         context: context,
@@ -269,21 +270,15 @@ class _RealtimeSearchWidgetState extends State<RealtimeSearchWidget> {
   // Ajouter un ami
   Future<void> addFriend(String friend) async {
     try {
-      User? friendAdded = await widget.addFriend(friend);
+      Friend? friendAdded = await widget.addFriend(friend);
       if (friendAdded == null) {
         throw 'Utilisateur non trouvé ou Utilisateur déjà ajouté';
       } else {
-
-        //if friend has curr user in friendIds
-        if (friendAdded.friendIds != null) {
-          if (friendAdded.friendIds!.contains(userProvider.user!.id)) {
-            widget.addFriendToFriendsList(friendAdded);
-          }
-        }
-          
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Demande d\'ami envoyée à ${friendAdded.username}')),
+          SnackBar(
+              content:
+                  Text('Demande d\'ami envoyée à ${friendAdded.username}')),
         );
       }
     } catch (e) {

@@ -11,6 +11,7 @@ interface IUser extends Document {
     avatarUrl: string;
     _id: Types.ObjectId;
     role: role;
+    restaurant?: Types.ObjectId;
 }
 
 interface baseUser {
@@ -26,6 +27,7 @@ const UserSchema = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     status: { type: String, enum: ['en ligne', 'au ru', 'absent'], default: 'absent' },
+    restaurant: { type: Schema.Types.ObjectId, ref: 'Restaurant' },
     friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     avatarUrl: { type: String, default: 'uploads/avatar/default.png' },
     role: { type: String, enum: ['user', 'admin', 'moderator'], default: 'user' },

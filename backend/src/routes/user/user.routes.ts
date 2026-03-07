@@ -27,7 +27,7 @@ router.delete('/remove-friend', auth, removeFriend);
 router.get('/friend-requests', auth, getFriendRequests);
 
 router.post('/send-friend-request', auth, sendFriendRequest);
-router.post('accept-friend-request', auth, acceptFriendRequest);
+router.post('/accept-friend-request', auth, acceptFriendRequest);
 router.post('/decline-friend-request', auth, declineFriendRequest);
 router.post('/send-bug-report', auth, uploadBugReport.single('screenshot'), convertAndCompress, sendBugReport);
 

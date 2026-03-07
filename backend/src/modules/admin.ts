@@ -7,10 +7,12 @@ import { componentsPath, isProduction, rootDir } from '../config.js';
 import BugReport from '../models/bugReport.js';
 import User from '../models/user.js';
 import { authenticate } from '../routes/auth/auth.service.js';
-
+import Sector from '../models/sector.js';
 import express from 'express';
 import logger from '../utils/logger.js';
 import { Express } from 'express';
+import Restaurant from '../models/restaurant.js';
+import MongoStore from 'connect-mongo';
 
 AdminJS.registerAdapter({
     Resource: AdminJSMongoose.Resource,
@@ -18,9 +20,28 @@ AdminJS.registerAdapter({
 });
 
 const componentLoader = new ComponentLoader();
-logger.info('componentsPath: ' + componentsPath);
 
 const admin = new AdminJS({
+    branding: {
+        companyName: 'Projet ru',
+        theme: {
+            colors: {
+                primary100: '#E01020',
+                primary80: '#E01020',
+                primary60: '#E01020',
+                primary40: '#E01020',
+                primary20: '#E01020',
+                accent: '#E01020',
+                filterBg: '#E01020',
+                hoverBg: '#E01020',
+                hoverText: '#E01020',
+                danger: '#E01020',
+                success: '#E01020',
+                info: '#E01020',
+            },
+        },
+    },
+
     resources: [
         {
             resource: BugReport,
@@ -69,6 +90,31 @@ const admin = new AdminJS({
                 },
             },
         },
+        {
+            resource: Restaurant,
+            options: {
+                properties: {
+                    _id: {
+                        isVisible: { list: false, show: true, edit: false },
+                    },
+                },
+            },
+
+        },
+        {
+            resource: Sector,
+            options: {
+                sort: {
+                    sortBy: 'sectorId',
+                    direction: 'asc',
+                },
+                properties: {
+                    _id: {
+                        isVisible: { list: false, show: true, edit: false },
+                    },
+                },
+            },
+        },
     ],
     rootPath: '/admin',
     componentLoader,
@@ -98,6 +144,13 @@ const authProvider = new DefaultAuthProvider({
     authenticate: authenticateAdmin,
 });
 
+const sessionStore = isProduction
+    ? MongoStore.create({
+            mongoUrl: process.env.MONGO_URI,
+            ttl: 14 * 24 * 60 * 60,
+        })
+    : undefined; // MemoryStore sera utilisé par défaut
+
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
     cookiePassword: process.env.JWT_ACCESS_SECRET ?? 'truc',
     provider: authProvider,
@@ -106,15 +159,17 @@ const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
     resave: false,
     saveUninitialized: true,
     secret: process.env.JWT_ACCESS_SECRET ?? 'truc',
+    store: sessionStore,
 });
 
 customRouter.use(admin.options.rootPath, adminRouter);
 
 logger.info(`admin JS running on http://localhost:${5000}${admin.options.rootPath}`);
 
-const adminJsSetup = (app: Express) => {
+const adminJsSetup = async (app: Express) => {
     app.use(admin.options.rootPath, adminRouter);
     if (isProduction) {
+        await admin.initialize();
         app.use('/admin', express.static(join(rootDir, '.adminjs')));
     } else {
         admin.watch();

@@ -1,40 +1,65 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
+import 'package:ru_project/services/friend_service.dart';
+import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/services/user_service.dart';
 
 class UserProvider with ChangeNotifier {
-  User? _user; // Utilisateur actuellement connecté
-  List<User> _friends = []; // Liste des amis de l'utilisateur
+  final SecureStorage secureStorage;
 
+  User? _user;
+  List<Friend> _friends = [];
   bool _isConnected = false;
 
   bool get isConnected => _isConnected;
-
-  UserProvider();
-
   User? get user => _user;
-  List<User> get friends => _friends;
+  List<Friend> get friends => _friends;
 
-  // Met à jour l'utilisateur et notifie les widgets écoutant cet état
-  void setUser(User? user) {
-    if (user == null) {
-      clearUserData();
-      _isConnected = false;
-      notifyListeners();
-      return;
+  UserProvider({required this.secureStorage});
+
+  Future<void> init(UserService userService, FriendService friendService,
+      RestaurantProvider restaurantProvider) async {
+    final accessToken = await secureStorage.getAccessToken();
+    if (accessToken != null) {
+      try {
+        final user = await userService.getUser();
+        if (user == null) {
+          clearUserData();
+          return;
+        }
+
+        final friends = await friendService.getFriends();
+
+        await restaurantProvider.loadRestaurant(user.restaurantId);
+
+        _user = user;
+        _friends = friends;
+        _isConnected = true;
+      } catch (_) {
+        clearUserData();
+      }
     }
-    _user = user;
-    _isConnected = true;
     notifyListeners();
   }
 
-  void setFriends(List<User> friends) {
+  void setUser(User? user) {
+    if (user == null) {
+      clearUserData();
+    } else {
+      _user = user;
+      _isConnected = true;
+      notifyListeners();
+    }
+  }
+
+  void setFriends(List<Friend> friends) {
     _friends = friends;
     notifyListeners();
   }
 
-  // Réinitialise les données utilisateur et notifie les widgets
   void clearUserData() {
     _user = null;
     _friends = [];

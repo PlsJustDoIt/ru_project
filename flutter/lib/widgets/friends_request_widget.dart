@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/friend_request.dart';
 import 'package:ru_project/models/user.dart';
-import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/models/message.dart';
+import 'package:ru_project/services/api_client.dart';
+import 'package:ru_project/services/friend_service.dart';
 
 class FriendsRequestWidget extends StatefulWidget {
   final List<FriendRequest>? initialFriendsRequests;
-  final ApiService apiService;
-  final void Function(User friend) onAddFriend;
+  final FriendService friendService;
+  final void Function(Friend friend) onAddFriend;
 
   const FriendsRequestWidget({
     super.key,
     required this.initialFriendsRequests,
-    required this.apiService,
+    required this.friendService,
     required this.onAddFriend,
   });
 
@@ -38,6 +40,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final ApiClient apiClient = Provider.of<ApiClient>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -66,7 +69,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                       padding: const EdgeInsets.all(8),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: NetworkImage(widget.apiService
+                          backgroundImage: NetworkImage(apiClient
                               .getImageNetworkUrl(request.sender["avatarUrl"])),
                         ),
                         shape: RoundedRectangleBorder(
@@ -83,11 +86,11 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                             IconButton(
                               icon: const Icon(Icons.check),
                               onPressed: () async {
-                                bool res = await widget.apiService
+                                bool res = await widget.friendService
                                     .acceptFriendRequest(request.requestId);
                                 if (res) {
                                   _removeFriendRequest(index);
-                                  widget.onAddFriend(User(
+                                  widget.onAddFriend(Friend(
                                       id: request.sender["id"],
                                       username: request.sender["username"],
                                       status: 'absent',
@@ -110,7 +113,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                             IconButton(
                               icon: const Icon(Icons.close),
                               onPressed: () async {
-                                bool res = await widget.apiService
+                                bool res = await widget.friendService
                                     .declineFriendRequest(request.requestId);
                                 if (res) {
                                   _removeFriendRequest(index);

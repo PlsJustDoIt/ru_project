@@ -1,3 +1,5 @@
+import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/services/socket_service.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -8,7 +10,6 @@ import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:cross_cache/cross_cache.dart';
 import 'audio_player_widget.dart';
@@ -22,6 +23,7 @@ import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter_chat_core/src/models/builders.dart';
 import 'package:flutter_chat_core/src/models/message_group_status.dart';
+import 'package:ru_project/services/socket_service.dart';
 
 class ChatUi extends StatefulWidget {
   ChatUi(
@@ -35,7 +37,7 @@ class ChatUi extends StatefulWidget {
         );
 
   final ru_project.User actualUser;
-  final List<ru_project.User>? friends;
+  final List<ru_project.Friend>? friends;
   final types.User user;
   final String roomName;
 
@@ -48,7 +50,8 @@ class ChatUiState extends State<ChatUi> {
   final _uuid = const Uuid();
   late final List<types.Message> initialMessages;
   List<types.Message> _messages = [];
-  late final ApiService apiService;
+  late final SocketService socketService;
+  late final SecureStorage secureStorage;
   io.Socket? socket;
   //chat controller
   late final types.ChatController chatController;
@@ -59,7 +62,8 @@ class ChatUiState extends State<ChatUi> {
   @override
   void initState() {
     super.initState();
-    apiService = Provider.of<ApiService>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    secureStorage = Provider.of<SecureStorage>(context, listen: false);
 
     //initialisation du chat controller
     chatController = types.InMemoryChatController();
@@ -149,7 +153,7 @@ class ChatUiState extends State<ChatUi> {
         'transports': ['websocket'],
         'autoConnect': false,
         'query': {
-          'token': await apiService.secureStorage.getAccessToken(),
+          'token': await secureStorage.getAccessToken(),
         },
         // 'withCredentials': true,
       });
@@ -257,7 +261,7 @@ class ChatUiState extends State<ChatUi> {
   Future<List<types.Message>> setMessages() async {
     List<types.Message> messagesList = [];
     List<ru_project.Message>? messagesReceived =
-        await apiService.getMessagesFromRoom(widget.roomName);
+        await socketService.getMessagesFromRoom(widget.roomName);
     if (messagesReceived != null) {
       for (ru_project.Message message in messagesReceived) {
         messagesList.add(types.TextMessage(
@@ -402,7 +406,7 @@ class ChatUiState extends State<ChatUi> {
 
     try {
       ru_project.Message? response =
-          await apiService.sendMessageToRoom(widget.roomName, text);
+          await socketService.sendMessageToRoom(widget.roomName, text);
       if (response != null) {
         final nextMessage = message.copyWith(
           id: response.id,
@@ -487,7 +491,7 @@ class ChatUiState extends State<ChatUi> {
                 });
 
                 bool res =
-                    await apiService.deleteMessage(item.id, widget.roomName);
+                    await socketService.deleteMessage(item.id, widget.roomName);
                 if (res) {
                   logger.i('Message deleted');
                 } else {

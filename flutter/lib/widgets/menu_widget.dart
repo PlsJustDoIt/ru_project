@@ -3,8 +3,8 @@ import 'package:ru_project/models/color.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/menu.dart';
-import 'package:ru_project/services/api_service.dart'; // Import UserProvider
 import 'package:intl/intl.dart';
+import 'package:ru_project/services/restaurant_service.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -35,6 +35,7 @@ class _MenuWidgetState extends State<MenuWidget>
   PageController _pageController = PageController();
   int _currentPage = 0;
   var screenSize = 0.0;
+  late final RestaurantService restaurantService;
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _MenuWidgetState extends State<MenuWidget>
     // if (_menus.isEmpty) {
     //   _checkLoginStatus();
     // }
+    restaurantService = Provider.of<RestaurantService>(context, listen: false);
 
     setMenus(context);
   }
@@ -54,12 +56,10 @@ class _MenuWidgetState extends State<MenuWidget>
 
   //set the menus
   void setMenus(BuildContext context) async {
-    final apiService = Provider.of<ApiService>(context, listen: false);
-
     if (_menus.isNotEmpty) {
       logger.i('Les menus ne sont pas vides');
     }
-    List<Menu> menus = await apiService.getMenus(); // OK
+    List<Menu> menus = await restaurantService.getMenus(); // OK
     if (menus.isEmpty) {
       logger.i('Les menus sont vides');
       return;

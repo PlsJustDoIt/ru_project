@@ -3,7 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/services/api_client.dart';
+import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:ru_project/widgets/custom_snack_bar.dart';
@@ -24,18 +26,22 @@ final Map<String, String> _apiErrors = {};
 final Duration _snackBarDuration = const Duration(seconds: 3);
 
 class _ProfileWidgetState extends State<ProfileWidget> {
-  late final ApiService _apiService;
   late final UserProvider _userProvider;
+  late final UserService userService;
   late User? user;
   final ImagePicker _picker = ImagePicker();
   late String _selectedStatus;
   final _formKeyStatus = GlobalKey<FormState>();
+  late final ApiClient apiClient;
+  late final AuthService authService;
 
   @override
   void initState() {
     super.initState();
-    _apiService = Provider.of<ApiService>(context, listen: false);
+    userService = Provider.of<UserService>(context, listen: false);
     _userProvider = Provider.of<UserProvider>(context, listen: false);
+    apiClient = Provider.of<ApiClient>(context, listen: false);
+    authService = Provider.of<AuthService>(context, listen: false);
   }
 
   // Fonction pour choisir une image et l'envoyer au serveur via l'API
@@ -49,7 +55,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       if (pickedFile == null || mounted != true) {
         return;
       }
-      String? avatarUrl = await _apiService.updateProfilePicture(pickedFile);
+      String? avatarUrl = await userService.updateProfilePicture(pickedFile);
       if (mounted != true) {
         return;
       }
@@ -94,10 +100,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     //TODO : voir amélioration?
     Image imageAvatar = user!.avatarUrl.isEmpty
         ? Image.network(
-            _apiService.getImageNetworkUrl("uploads/avatar/default-avatar.png"))
+            apiClient.getImageNetworkUrl("uploads/avatar/default-avatar.png"))
         : _isAvatarChanged
             ? Image.network(
-                _apiService.getImageNetworkUrl(user!.avatarUrl),
+                apiClient.getImageNetworkUrl(user!.avatarUrl),
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
                   return const Center(child: CircularProgressIndicator());
@@ -105,7 +111,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                 errorBuilder: (context, error, stackTrace) {
                   logger.e('Error loading avatar image: $error');
                   return Image.network(
-                    _apiService.getImageNetworkUrl(
+                    apiClient.getImageNetworkUrl(
                         "uploads/avatar/default-avatar.png"),
                   );
                 },
@@ -114,7 +120,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                 // },
               )
             : Image.network(
-                _apiService.getImageNetworkUrl(user!.avatarUrl),
+                apiClient.getImageNetworkUrl(user!.avatarUrl),
               );
 
     if (_isAvatarChanged) {
@@ -203,9 +209,9 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   void deleteAccount(BuildContext context) async {
     try {
-      bool isSuccess = await _apiService.deleteAccount();
+      bool isSuccess = await authService.deleteAccount();
       if (isSuccess) {
-        await _apiService.logout();
+        await authService.logout();
 
         if (context.mounted == false) {
           return;
@@ -257,7 +263,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                         newUsername; // Met à jour le nom d'utilisateur
                   });
                 },
-                updateData: _apiService.updateUsername,
+                updateData: userService.updateUsername,
                 optionDialog: 'username',
                 username: user!.username,
                 title: 'Changer le nom d\'utilisateur',
@@ -296,7 +302,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           context: context,
           builder: (context) {
             return ProfileDialog(
-                updateData: _apiService.updatePassword,
+                updateData: userService.updatePassword,
                 optionDialog: 'password',
                 title: 'Changer le mot de passe');
           },
@@ -350,7 +356,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
 
     try {
-      var response = await _apiService.updateStatus(_selectedStatus);
+      var response = await userService.updateStatus(_selectedStatus);
       bool success = response['success'];
 
       if (!success) {

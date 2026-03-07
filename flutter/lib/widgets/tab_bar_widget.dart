@@ -1,19 +1,24 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
-import 'package:ru_project/services/api_service.dart';
+import 'package:ru_project/config.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
+import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/feedback_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/widgets/chat_widget.dart';
+import 'package:ru_project/widgets/map_widget.dart';
 import 'package:ru_project/widgets/menu_widget.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
-import 'package:ru_project/widgets/tables.dart';
+import 'package:ru_project/widgets/settings_widget.dart';
+import 'package:ru_project/widgets/old_map_widget.dart';
 import 'package:ru_project/widgets/profile.dart';
 import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:liquid_swipe/liquid_swipe.dart';
+import 'package:ru_project/widgets/chat_widget.dart';
 
 class TabBarWidget extends StatelessWidget {
   const TabBarWidget({super.key});
@@ -21,7 +26,10 @@ class TabBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final apiService = Provider.of<ApiService>(context, listen: false);
+    final feedbackService =
+        Provider.of<FeedbackService>(context, listen: false);
+    final AuthService authService =
+        Provider.of<AuthService>(context, listen: false);
 
     return DefaultTabController(
       length: 7,
@@ -37,7 +45,7 @@ class TabBarWidget extends StatelessWidget {
               color: Colors.white,
               onPressed: () {
                 BetterFeedback.of(context).show((UserFeedback feedback) async {
-                  bool res = await apiService.sendFeedback(feedback);
+                  bool res = await feedbackService.sendFeedback(feedback);
                   if (!context.mounted) {
                     return;
                   }
@@ -52,10 +60,20 @@ class TabBarWidget extends StatelessWidget {
               }),
           actions: [
             IconButton(
+                icon: const Icon(Icons.settings),
+                color: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsWidget()),
+                  );
+                }),
+            IconButton(
                 icon: const Icon(Icons.logout),
                 color: Colors.white,
                 onPressed: () async {
-                  bool res = await apiService.logout();
+                  bool res = await authService.logout();
                   userProvider.clearUserData();
                   //log out apiservice (test bool)
                   if (!context.mounted) {
@@ -74,6 +92,7 @@ class TabBarWidget extends StatelessWidget {
           ],
           backgroundColor: AppColors.primaryColor,
           bottom: const TabBar(
+            // physics: NeverScrollableScrollPhysics(),
             labelColor:
                 Colors.white, // Couleur du texte et de l'icône sélectionnés
             unselectedLabelColor: AppColors
@@ -81,7 +100,7 @@ class TabBarWidget extends StatelessWidget {
             indicatorColor: Colors
                 .yellow, // Couleur de l'indicateur sous l'onglet sélectionné
             tabs: [
-              Tab(icon: Icon(Icons.login), text: 'Carte ru'),
+              Tab(icon: Icon(Icons.map), text: 'Carte ru'),
               Tab(icon: Icon(Icons.restaurant_menu), text: 'Menu ru'),
               Tab(icon: Icon(Icons.fiber_new), text: 'amis'),
               Tab(icon: Icon(Icons.messenger), text: 'Chat'),
@@ -93,13 +112,13 @@ class TabBarWidget extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            const CafeteriaLayout(),
+            SimpleMapWidget(),
             const MenuWidget(),
             FriendsListSheet(),
-            ChatWidget(actualUser: userProvider.user!, roomname: "Global"),
+            ChatWidget(roomname: 'Global', actualUser: userProvider.user!),
             ProfileWidget(),
             TransportTimeWidget(),
-            DebugWidget(),
+            if (Config.env == "development") DebugWidget(),
           ],
         ),
       ),

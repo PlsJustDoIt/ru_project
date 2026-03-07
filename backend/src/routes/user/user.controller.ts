@@ -5,12 +5,30 @@ import { compare } from 'bcrypt';
 import { getUserByUsername, levenshteinDistance, TEXT_MAX_LENGTH, TEXT_MIN_LENGTH } from './user.service.js';
 import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
+import { bugReportPath } from '../../config.js';
 import { join } from 'path';
 
 const getUserInformation = async (req: Request, res: Response) => {
     try {
-        const user = await User.findById(req.user.id).populate('friends', 'username status');
-        return res.json({ user: user });
+        const user = await User.findById(req.user.id);
+        if (user === null) {
+            logger.error('User not found');
+            return res.status(404).json({ error: 'User not found' });
+        }
+        // const userRestaurant = await findRestaurantById(user.restaurant, 'name restaurantId address description -_id');
+        // if (userRestaurant === null) {
+        //     logger.error('Restaurant not found');
+        //     return res.status(404).json({ error: 'Restaurant not found' });
+        // }
+        const userData = {
+            username: user.username,
+            status: user.status,
+            avatarUrl: user.avatarUrl,
+            friends: user.friends,
+            id: user._id,
+            restaurantId: user.restaurant?.toString(),
+        };
+        return res.json({ user: userData });
     } catch (err: unknown) {
         logger.error('Could not retrieve user : ' + err);
         return res.status(500).json({ error: 'An error has occured' });
@@ -285,8 +303,6 @@ const getFriendRequests = async (req: Request, res: Response) => {
         }
         const resFriendRequests = await FriendRequest.find({ receiver: user._id }).populate<{ sender: IUser }>('sender', 'username avatarUrl');
 
-        logger.info('res : %o', resFriendRequests);
-
         const friendRequests = resFriendRequests.map(request => ({
             id: request._id,
             sender: {
@@ -382,6 +398,7 @@ const acceptFriendRequest = async (req: Request, res: Response) => {
 
         const friendRequest = await FriendRequest.findById(requestId);
         if (friendRequest === null) {
+            logger.error('Friend request not found');
             return res.status(404).json({ error: 'Friend request not found' });
         }
 
@@ -416,6 +433,7 @@ const declineFriendRequest = async (req: Request, res: Response) => {
         }
 
         const friendRequest = await FriendRequest.findById(requestId);
+
         if (friendRequest === null) {
             return res.status(404).json({ error: 'Friend request not found' });
         }
@@ -435,7 +453,7 @@ const declineFriendRequest = async (req: Request, res: Response) => {
 const sendBugReport = async (req: Request, res: Response) => {
     try {
         const { description, app_version, platform } = req.body;
-        const screenshot_url = req.file ? 'uploads/bugReport/' + req.file.filename : '';
+        const screenshot_url = req.file ? join(bugReportPath, req.file.filename) : '';
         const bugReport = new BugReport({
             description,
             screenshot_url: screenshot_url,

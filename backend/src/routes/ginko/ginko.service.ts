@@ -78,6 +78,8 @@ const transformResponse = (nomExact: string, listeTemps: TempsInfo[]) => {
         lignes,
     };
 
+    logger.info('Horaires récupérés : %o', result);
+
     return result;
 };
 
