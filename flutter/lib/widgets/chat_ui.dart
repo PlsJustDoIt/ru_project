@@ -1,7 +1,9 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
 import 'package:image_picker/image_picker.dart';
@@ -9,14 +11,17 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:cross_cache/cross_cache.dart';
+import 'audio_player_widget.dart';
 
-import 'package:flutter_chat_core/flutter_chat_core.dart';
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
-import 'package:flyer_chat_image_message/flyer_chat_image_message.dart';
-import 'package:flyer_chat_text_message/flyer_chat_text_message.dart';
+import 'package:flutter_chat_core/flutter_chat_core.dart' as types;
+import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
 import 'package:uuid/uuid.dart';
 import 'package:flutter_lorem/flutter_lorem.dart';
 import 'dart:math';
+import 'package:record/record.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:flutter_chat_core/src/models/builders.dart';
+import 'package:flutter_chat_core/src/models/message_group_status.dart';
 
 class ChatUi extends StatefulWidget {
   ChatUi(
@@ -24,39 +29,118 @@ class ChatUi extends StatefulWidget {
       required this.roomName,
       required this.actualUser,
       this.friends})
-      : user = User(
+      : user = types.User(
           id: actualUser.username,
-          firstName: actualUser.username,
+          name: actualUser.username,
         );
 
   final ru_project.User actualUser;
   final List<ru_project.User>? friends;
-  final User user;
+  final types.User user;
   final String roomName;
 
   @override
   ChatUiState createState() => ChatUiState();
 }
 
-//TODO
 class ChatUiState extends State<ChatUi> {
   CrossCache? _crossCache = CrossCache();
   final _uuid = const Uuid();
-  late final List<Message> initialMessages;
-  ChatController? _chatController;
+  late final List<types.Message> initialMessages;
+  List<types.Message> _messages = [];
   late final ApiService apiService;
   io.Socket? socket;
+  //chat controller
+  late final types.ChatController chatController;
+
+  final _record = AudioRecorder();
+  String? _recordPath;
 
   @override
   void initState() {
     super.initState();
     apiService = Provider.of<ApiService>(context, listen: false);
 
+    //initialisation du chat controller
+    chatController = types.InMemoryChatController();
+
     //récupérer les messages de la room
     _initializeMessages();
 
     //conexion au serveur
     connectToServer();
+  }
+
+  Future<void> _startRecording() async {
+    if (await _record.hasPermission()) {
+      final path =
+          '/tmp/${_uuid.v4()}.mp3'; // tu peux adapter selon ta plateforme
+      await _record.start(
+          const RecordConfig(
+            encoder: kIsWeb
+                ? AudioEncoder.wav // Web → wav (PCM)
+                : AudioEncoder.aacLc, // Mobile → AAC
+          ),
+          path: path);
+      _recordPath = kIsWeb ? null : path;
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    final pathOrUri =
+        await _record.stop(); // Mobile = path | Web = blob:... URL
+    if (pathOrUri == null) return;
+
+    final player = AudioPlayer();
+    Duration duration = Duration.zero;
+
+    if (!kIsWeb) {
+      // --- MOBILE ---
+      await player.setFilePath(pathOrUri);
+      duration = player.duration ?? Duration.zero;
+
+      final file = File(pathOrUri);
+      final audioMessage = types.AudioMessage(
+          id: _uuid.v4(),
+          authorId: widget.user.id,
+          createdAt: DateTime.now(),
+          duration: duration,
+          source: pathOrUri,
+          size: await file.length(),
+          waveform: [2, 3, 5, 6]);
+
+      setState(() {
+        _messages.insert(0, audioMessage);
+        chatController.insertMessage(audioMessage);
+      });
+
+      // 👉 Upload si besoin
+      // await apiService.sendAudioToRoom(widget.roomName, file);
+    } else {
+      // --- WEB ---
+      // pathOrUri est une URL de type "blob:...."
+      await player.setUrl(pathOrUri);
+      duration = player.duration ?? Duration.zero;
+
+      final audioMessage = types.AudioMessage(
+        id: _uuid.v4(),
+        authorId: widget.user.id,
+        createdAt: DateTime.now(),
+        duration: duration,
+        source: pathOrUri, // <- blob utilisable directement avec <audio>
+        size: 0, // pas dispo en web
+      );
+
+      setState(() {
+        _messages.insert(0, audioMessage);
+        chatController.insertMessage(audioMessage);
+      });
+
+      // 👉 Upload côté web : tu envoies le blobUrl,
+      // ton backend devra recevoir le blob via JS/HTML (pas possible direct Flutter)
+    }
+
+    await player.dispose();
   }
 
   void connectToServer() async {
@@ -70,7 +154,6 @@ class ChatUiState extends State<ChatUi> {
         // 'withCredentials': true,
       });
       socket?.connect();
-      //TODO change join_global_room to join_room
       if (widget.roomName == 'Global') {
         socket?.emit("join_global_room");
       } else {
@@ -79,7 +162,8 @@ class ChatUiState extends State<ChatUi> {
           ...widget.friends!.map((e) => e.id)
         ];
         logger.i('Participants: $participants');
-        socket?.emit("join_room", {participants});
+        // emit a map with participants
+        socket?.emit("join_room", {'participants': participants});
       }
       socket?.on('receive_message', (response, [ack]) {
         try {
@@ -91,15 +175,15 @@ class ChatUiState extends State<ChatUi> {
             ack({'status': 'ok'});
           }
           if (mounted) {
+            final types.TextMessage incoming = types.TextMessage(
+              id: message.id,
+              authorId: message.sender,
+              text: message.content,
+              createdAt: message.createdAt,
+            );
             setState(() {
-              _chatController?.insert(Message.text(
-                  id: message.id,
-                  author: User(
-                    id: message.sender,
-                    firstName: message.sender,
-                  ),
-                  text: message.content,
-                  createdAt: message.createdAt));
+              _messages.insert(0, incoming);
+              chatController.insertMessage(incoming);
             });
           }
         } catch (e) {
@@ -125,12 +209,15 @@ class ChatUiState extends State<ChatUi> {
       });
 
       socket?.on('receive_delete_all_messages', (response, [ack]) {
+        //TODO ?
         logger.i('All messages deleted');
         if (ack != null) {
           ack({'status': 'ok'});
         }
         if (mounted) {
-          _chatController?.set([]);
+          setState(() {
+            _messages.clear();
+          });
         }
       });
 
@@ -141,10 +228,15 @@ class ChatUiState extends State<ChatUi> {
           ack({'status': 'ok'});
         }
         if (mounted) {
-          Message? message = _chatController?.messages.firstWhere(
-            (element) => element.id == data['messageId'],
-          );
-          if (message != null) _chatController?.remove(message);
+          setState(() {
+            final index =
+                _messages.indexWhere((m) => m.id == data['messageId']);
+            if (index != -1) {
+              final messageToRemove = chatController.messages[index];
+              chatController.removeMessage(messageToRemove);
+              _messages.removeAt(index);
+            }
+          });
         }
       });
     } catch (e) {
@@ -156,24 +248,21 @@ class ChatUiState extends State<ChatUi> {
     initialMessages = await setMessages();
     if (mounted) {
       setState(() {
-        _chatController = InMemoryChatController(messages: initialMessages);
+        _messages = initialMessages;
+        chatController.insertAllMessages(_messages);
       });
     }
   }
 
-  //todo demander a leo pour les messages
-  Future<List<Message>> setMessages() async {
-    List<Message> messagesList = [];
+  Future<List<types.Message>> setMessages() async {
+    List<types.Message> messagesList = [];
     List<ru_project.Message>? messagesReceived =
         await apiService.getMessagesFromRoom(widget.roomName);
     if (messagesReceived != null) {
       for (ru_project.Message message in messagesReceived) {
-        messagesList.add(Message.text(
+        messagesList.add(types.TextMessage(
           id: message.id,
-          author: User(
-            id: message.sender,
-            firstName: message.sender,
-          ),
+          authorId: message.sender,
           text: message.content,
           createdAt: message.createdAt,
         ));
@@ -194,92 +283,123 @@ class ChatUiState extends State<ChatUi> {
   @override
   void dispose() {
     disconnectFromServer();
-    _chatController?.dispose();
-    _chatController = null;
     _crossCache?.dispose();
     _crossCache = null;
+    chatController.dispose();
     super.dispose();
   }
 
   void disconnectFromServer() {
-    socket?.off('receive_message');
-    socket?.disconnect();
-    socket?.emit(('leave_room'), widget.roomName);
-    socket?.dispose(); // Dispose the socket
+    if (socket != null) {
+      try {
+        socket!.emit('leave_room', widget.roomName);
+      } catch (e) {
+        logger.w('Error emitting leave_room: $e');
+      }
+      try {
+        socket!.off('receive_message');
+        socket!.off('receive_delete_message');
+        socket!.off('receive_delete_all_messages');
+        socket!.off('userOnline');
+        socket!.off('room_joined');
+        socket!.disconnect();
+      } catch (e) {
+        logger.w('Error during socket cleanup: $e');
+      }
+    }
     socket = null;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_chatController == null) {
+    if (_messages.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Chat(
+    return ui.Chat(
+      currentUserId: widget.user.id,
+      resolveUser: (types.UserID id) async {
+        return types.User(
+            id: id, name: 'John Doe'); //TODO fetch user info from server?
+      },
+      chatController: chatController,
+      onMessageSend: (text) {
+        _addItem(text);
+      },
+      onMessageTap: (context, message, {TapUpDetails? details, index = 0}) {
+        logger.i('Message tapped: ${details}, index: $index');
+        _removeItem(message);
+      },
+      onAttachmentTap: () async {
+        // Ici on déclenche l’enregistrement audio
+        await _startRecording();
+
+        // on attend que l’utilisateur relâche le bouton (par ex. via un dialogue)
+        await Future.delayed(const Duration(seconds: 8));
+        await _stopRecording();
+      },
       builders: Builders(
-        textMessageBuilder: (context, message, index) =>
-            FlyerChatTextMessage(message: message, index: index),
-        imageMessageBuilder: (context, message, index) =>
-            FlyerChatImageMessage(message: message, index: index),
-        inputBuilder: (context) => ChatInput(
-          topWidget: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shuffle),
-                onPressed: () => _addItem(null),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_sweep),
-                onPressed: () async {
-                  if (mounted) {
-                    await _chatController!.set([]);
-                    //TODO retirer les messages du serveur avec apiService
-                    apiService.deleteMessages(widget.roomName).then((value) {
-                      if (value == false && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed to delete messages'),
-                          ),
-                        );
-                      }
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
+        audioMessageBuilder: (
+          BuildContext context,
+          types.AudioMessage message,
+          int index, {
+          required bool isSentByMe,
+          MessageGroupStatus? groupStatus,
+        }) {
+          // You may want to use index, isSentByMe, groupStatus for custom UI
+          return Container(
+            // Example: fixed width or from message metadata
+            width: 250,
+            child: AudioPlayerWidget(message: message),
+          );
+        },
       ),
-      chatController: _chatController!,
-      crossCache: _crossCache,
-      user: widget.user,
-      onMessageSend: _addItem,
-      onMessageTap: _removeItem,
-      onAttachmentTap: _handleAttachmentTap,
-      theme: ChatTheme.fromThemeData(Theme.of(context)),
-      themeMode: ThemeMode.light,
+
+      // builders: audioMessageBuilder(
+      //   customMessageBuilder: (message, {required int messageWidth}) {
+      //     if (message is types.CustomMessage &&
+      //         message.metadata?['type'] == 'audio') {
+      //       final player = AudioPlayer();
+      //       final uri = message.metadata!['uri'] as String;
+
+      //       return Row(
+      //         children: [
+      //           IconButton(
+      //             icon: const Icon(Icons.play_arrow),
+      //             onPressed: () async {
+      //               await player.setFilePath(uri);
+      //               await player.play();
+      //             },
+      //           ),
+      //           const Text("Message audio"),
+      //         ],
+      //       );
+      //     }
+      //     return const SizedBox();
+      //   },
+      // ),
     );
   }
 
-  //TODO refléchire a une fonction create message
   void _addItem(String? text) async {
     text ??=
         lorem(paragraphs: 1, words: Random().nextInt(30) + 1); //text aléatoire
     logger.i('Adding text $text to chat');
 
     final tempId = _uuid.v4();
-    final message = Message.text(
+    final types.TextMessage message = types.TextMessage(
       id: tempId,
-      author: widget.user,
-      createdAt: DateTime.now(),
+      authorId: widget.user.id,
       text: text,
+      createdAt: DateTime.now(),
     );
 
+    chatController.insertMessage(message);
     if (mounted) {
-      //ajout du message dans le chat local
-      await _chatController!.insert(message);
+      setState(() {
+        _messages.insert(0, message);
+      });
     }
 
-    //TODO envoyer le message au serveur avec apiService voir comme dans l'exemple
     try {
       ru_project.Message? response =
           await apiService.sendMessageToRoom(widget.roomName, text);
@@ -288,7 +408,13 @@ class ChatUiState extends State<ChatUi> {
           id: response.id,
           createdAt: response.createdAt,
         );
-        await _chatController!.update(message, nextMessage);
+        if (mounted) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.id == tempId);
+            if (idx != -1) _messages[idx] = nextMessage;
+            chatController.updateMessage(message, nextMessage);
+          });
+        }
         return;
       }
       logger.e('Error sending message to server');
@@ -304,33 +430,38 @@ class ChatUiState extends State<ChatUi> {
     }
   }
 
-  void _handleAttachmentTap() async {
-    final picker = ImagePicker();
+  // this feature is disabled for now
+  // void _handleAttachmentTap() async {
+  //   final picker = ImagePicker();
 
-    final image = await picker.pickImage(source: ImageSource.gallery);
+  //   final image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image == null) return;
+  //   if (image == null) return;
 
-    final bytes = await image.readAsBytes();
-    // Saves image to persistent cache using image.path as key
-    await _crossCache?.set(image.path, bytes);
+  //   final bytes = await image.readAsBytes();
+  //   // Saves image to persistent cache using image.path as key
+  //   await _crossCache?.set(image.path, bytes);
 
-    final id = _uuid.v4();
+  //   final id = _uuid.v4();
 
-    final imageMessage = ImageMessage(
-      id: id,
-      author: widget.user,
-      createdAt: DateTime.now().toUtc(),
-      source: image.path,
-    );
+  //   final bytesLength = bytes.length;
+  //   final types.ImageMessage imageMessage = types.ImageMessage(
+  //     id: id,
+  //     authorId: widget.user.id,
+  //     createdAt: DateTime.now(),
+  //     source: image.path,
+  //     size: bytesLength,
+  //   );
 
-    // Insert message to UI before uploading (local)
-    await _chatController!.insert(imageMessage);
+  //   // Insert message to UI before uploading (local)
+  //   setState(() {
+  //     _messages.insert(0, imageMessage);
+  //   });
 
-    //TODO envoyer l'image au serveur avec apiService
-  }
+  //   //envoyer l'image au serveur avec apiService
+  // }
 
-  void _removeItem(Message item) async {
+  void _removeItem(types.Message item) async {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -350,7 +481,11 @@ class ChatUiState extends State<ChatUi> {
               child: const Text('Supprimer'),
               onPressed: () async {
                 Navigator.of(context).pop();
-                await _chatController!.remove(item);
+                setState(() {
+                  _messages.removeWhere((m) => m.id == item.id);
+                  chatController.removeMessage(item);
+                });
+
                 bool res =
                     await apiService.deleteMessage(item.id, widget.roomName);
                 if (res) {
@@ -366,31 +501,32 @@ class ChatUiState extends State<ChatUi> {
     );
   }
 
-  Future<void> _showDeleteConfirmationDialog(Message item) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Message'),
-          content: const Text('Are you sure you want to delete this message?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Delete'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _removeItem(item);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // deprecated
+  // Future<void> _showDeleteConfirmationDialog(types.Message item) async {
+  //   return showDialog<void>(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: const Text('Delete Message'),
+  //         content: const Text('Are you sure you want to delete this message?'),
+  //         actions: <Widget>[
+  //           TextButton(
+  //             child: const Text('Cancel'),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //             },
+  //           ),
+  //           TextButton(
+  //             child: const Text('Delete'),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //               _removeItem(item);
+  //             },
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 }

@@ -5,6 +5,9 @@ import 'package:ru_project/services/api_service.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:duration/duration.dart';
+import 'package:ru_project/widgets/test_statefull.dart';
+import 'package:ru_project/widgets/video_widget.dart';
+import 'package:video_player/video_player.dart';
 
 class DebugWidget extends StatefulWidget {
   @override
@@ -13,6 +16,12 @@ class DebugWidget extends StatefulWidget {
 
 class _DebugWidgetState extends State<DebugWidget> {
   final SecureStorage _secureStorage = SecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    logger.d('DebugWidget initState');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,35 +47,55 @@ class _DebugWidgetState extends State<DebugWidget> {
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Access Token:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                SelectableText(accessToken ?? 'No Access Token'),
-                Text('isExpired: ${JwtDecoder.isExpired(accessToken ?? '')}'),
-                Text(
-                    'expires in ${prettyDuration(JwtDecoder.getRemainingTime(accessToken ?? ''))}'),
-                SizedBox(height: 16),
-                Text('Refresh Token:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                SelectableText(refreshToken ?? 'No Refresh Token'),
-                Text('isExpired: ${JwtDecoder.isExpired(refreshToken ?? '')}'),
-                Text(
-                    'expires in ${prettyDuration(JwtDecoder.getRemainingTime(refreshToken ?? ''))}'),
-                ElevatedButton(
-                    onPressed: refreshTokent,
-                    child: Text('rafraichir le token')),
-                SizedBox(height: 16),
-                Image.asset(
-                  "assets/images/jm.jpg",
-                ),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Access Token:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  SelectableText(accessToken ?? 'No Access Token'),
+                  Text('isExpired: ${JwtDecoder.isExpired(accessToken ?? '')}'),
+                  Text(
+                      'expires in ${prettyDuration(JwtDecoder.getRemainingTime(accessToken ?? ''))}'),
+                  SizedBox(height: 16),
+                  Text('Refresh Token:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  SelectableText(refreshToken ?? 'No Refresh Token'),
+                  Text('isExpired: ${JwtDecoder.isExpired(refreshToken ?? '')}'),
+                  Text(
+                      'expires in ${prettyDuration(JwtDecoder.getRemainingTime(refreshToken ?? ''))}'),
+                  ElevatedButton(
+                      onPressed: refreshTokent,
+                      child: Text('rafraichir le token')),
+                  SizedBox(height: 16),
+                  Image.asset(
+                    "assets/images/jm.jpg",
+                  ),
+                  SizedBox(height: 16),
+                  Column(
+                    children: [
+                      Text(
+                        'Video Player',
+                        style: TextStyle(fontSize: 24),
+                      ),
+                      VideoWidget(
+                        videoUrl: 'assets/images/video.mp4',
+                      ),
+                      const StateWidget(),
+                    ],
+                  ),
+                ],
+              )
             ),
           );
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   void refreshTokent() async {
