@@ -1,16 +1,5 @@
 import { Schema, model } from 'mongoose';
 
-interface IBugReport extends Document {
-    _id: Schema.Types.ObjectId;
-    description: string;
-    screenshot_url?: string;
-    app_version?: string;
-    platform?: string;
-    status: 'open' | 'resolved' | 'closed';
-    severity?: 'low' | 'medium' | 'high' | 'critical';
-    user: Schema.Types.ObjectId;
-}
-
 const BugReportSchema = new Schema({
     description: {
         type: String,
@@ -37,6 +26,6 @@ const BugReportSchema = new Schema({
 
 }, { timestamps: true });
 
-const BugReport = model<IBugReport>('BugReport', BugReportSchema);
+const BugReport = model('BugReport', BugReportSchema);
 
 export default BugReport;

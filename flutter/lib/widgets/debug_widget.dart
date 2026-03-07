@@ -6,6 +6,9 @@ import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:duration/duration.dart';
+import 'package:ru_project/widgets/test_statefull.dart';
+import 'package:ru_project/widgets/video_widget.dart';
+import 'package:video_player/video_player.dart';
 
 class DebugWidget extends StatefulWidget {
   @override
@@ -23,6 +26,12 @@ class _DebugWidgetState extends State<DebugWidget> {
     super.initState();
     apiClient = Provider.of<ApiClient>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    logger.d('DebugWidget initState');
   }
 
   @override
@@ -49,7 +58,8 @@ class _DebugWidgetState extends State<DebugWidget> {
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
+            child: SingleChildScrollView(
+                child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Access Token:',
@@ -69,20 +79,33 @@ class _DebugWidgetState extends State<DebugWidget> {
                     onPressed: refreshTokent,
                     child: Text('rafraichir le token')),
                 SizedBox(height: 16),
-                Text('User Info: ${userProvider.user}',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 16),
-                Text('Friends: ${userProvider.friends}',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Image.asset(
                   "assets/images/jm.jpg",
                 ),
+                SizedBox(height: 16),
+                Column(
+                  children: [
+                    Text(
+                      'Video Player',
+                      style: TextStyle(fontSize: 24),
+                    ),
+                    VideoWidget(
+                      videoUrl: 'assets/images/video.mp4',
+                    ),
+                    const StateWidget(),
+                  ],
+                ),
               ],
-            ),
+            )),
           );
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   void refreshTokent() async {

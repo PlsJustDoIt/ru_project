@@ -14,7 +14,7 @@ import 'package:ru_project/widgets/debug_widget.dart';
 import 'package:ru_project/widgets/settings_widget.dart';
 import 'package:ru_project/widgets/old_map_widget.dart';
 import 'package:ru_project/widgets/profile.dart';
-import 'package:ru_project/widgets/welcome.dart';
+import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:liquid_swipe/liquid_swipe.dart';

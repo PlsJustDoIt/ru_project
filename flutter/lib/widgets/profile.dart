@@ -5,9 +5,9 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/auth_service.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/user_service.dart';
-import 'package:ru_project/widgets/welcome.dart';
+import 'package:ru_project/services/logger.dart';
+import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:ru_project/widgets/custom_snack_bar.dart';
 
 class ProfileWidget extends StatefulWidget {

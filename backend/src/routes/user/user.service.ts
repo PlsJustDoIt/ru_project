@@ -45,11 +45,4 @@ const getUserByUsername = async (username: string) => {
     return await User.findOne({ username });
 };
 
-const getUserById = async (userId: string, select?: string) => {
-    if (!select) {
-        return await User.findById(userId);
-    }
-    return await User.findById(userId).select(select);
-};
-
-export { levenshteinDistance, validateUsername, getUserByUsername, getUserById };
+export { levenshteinDistance, validateUsername, getUserByUsername, TEXT_MIN_LENGTH, TEXT_MAX_LENGTH };
