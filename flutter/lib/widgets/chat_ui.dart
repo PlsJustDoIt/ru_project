@@ -23,6 +23,7 @@ import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter_chat_core/src/models/builders.dart';
 import 'package:flutter_chat_core/src/models/message_group_status.dart';
+import 'package:ru_project/services/socket_service.dart';
 
 class ChatUi extends StatefulWidget {
   ChatUi(
@@ -36,7 +37,7 @@ class ChatUi extends StatefulWidget {
         );
 
   final ru_project.User actualUser;
-  final List<ru_project.User>? friends;
+  final List<ru_project.Friend>? friends;
   final types.User user;
   final String roomName;
 
@@ -49,7 +50,8 @@ class ChatUiState extends State<ChatUi> {
   final _uuid = const Uuid();
   late final List<types.Message> initialMessages;
   List<types.Message> _messages = [];
-  late final ApiService apiService;
+  late final SocketService socketService;
+  late final SecureStorage secureStorage;
   io.Socket? socket;
   //chat controller
   late final types.ChatController chatController;

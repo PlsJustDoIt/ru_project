@@ -29,12 +29,6 @@ class _DebugWidgetState extends State<DebugWidget> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    logger.d('DebugWidget initState');
-  }
-
-  @override
   Widget build(BuildContext context) {
     logger.d('DebugWidget build');
 

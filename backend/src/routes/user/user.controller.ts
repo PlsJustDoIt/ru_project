@@ -5,6 +5,7 @@ import { compare } from 'bcrypt';
 import { getUserByUsername, levenshteinDistance, TEXT_MAX_LENGTH, TEXT_MIN_LENGTH } from './user.service.js';
 import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
+import { bugReportPath } from '../../config.js';
 import { join } from 'path';
 
 const getUserInformation = async (req: Request, res: Response) => {
