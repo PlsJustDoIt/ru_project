@@ -75,14 +75,6 @@ describe('Ginko controller Tests', () => {
     //     jest.resetModules(); // 🔥 Réinitialise les modules après chaque test
     // });
 
-    it('should return the schedules from JSON in dev', async () => {
-        req.query = { lieu: 'Crous Université' };
-        const cache = new NodeCache();
-        cache.get = jest.fn();
-        await (getSchedules(req as Request, res as Response, false));
-        expect(jsonMock).toHaveBeenCalledWith(apiResponse);
-    });
-
     it('should return 400 if lieu is empty', async () => {
         req.query = { lieu: '' };
         await (getSchedules(req as Request, res as Response, true));

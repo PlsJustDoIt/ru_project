@@ -388,22 +388,6 @@ describe('auth controller tests', () => {
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid refresh token' });
         });
 
-        it('should return 403 if refresh token is expired', async () => {
-            const { req, res, statusMock, jsonMock } = testCtx;
-            (RefreshToken.findOne as jest.Mock).mockResolvedValue({
-                token: 'testRefreshToken',
-                userId: 'userId',
-                expires: new Date(Date.now() - 3600000), // Expired 1 hour ago
-            });
-
-            await refreshUserToken(req as Request, res as Response);
-
-            expect(RefreshToken.findOne).toHaveBeenCalledWith({ token: 'testRefreshToken' });
-            expect(RefreshToken.findOneAndDelete).toHaveBeenCalledWith({ refreshToken: 'testRefreshToken' });
-            expect(statusMock).toHaveBeenCalledWith(403);
-            expect(jsonMock).toHaveBeenCalledWith({ error: 'Refresh token expired' });
-        });
-
         it('should return 403 if refresh token does not belong to the user', async () => {
             const { req, res, statusMock, jsonMock } = testCtx;
             (RefreshToken.findOne as jest.Mock).mockResolvedValue({

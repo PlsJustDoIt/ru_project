@@ -36,31 +36,38 @@ describe('User Controller tests', () => {
     });
 
     describe('getUserInformation', () => {
-        let mockUser: { _id: string; username: string; friends: never[]; status: string };
+        let mockUser: { _id: string; username: string; friends: never[]; status: string; avatarUrl: string; restaurant: string };
         beforeEach(() => {
             mockUser = {
                 _id: '1',
                 username: 'testUser',
                 friends: [],
                 status: 'en ligne',
+                avatarUrl: 'uploads/avatar/1.jpg',
+                restaurant: 'resto1',
             };
         });
         it('should return user information on successful retrieval', async () => {
-            (User.findById as jest.Mock).mockReturnValue({
-                populate: jest.fn().mockResolvedValue(mockUser),
-            });
+            (User.findById as jest.Mock).mockResolvedValue(mockUser);
             mockRequest.user = { id: '1' };
 
             await userController.getUserInformation(mockRequest as Request, mockResponse as Response);
 
             expect(User.findById).toHaveBeenCalledWith('1');
-            expect(mockResponse.json).toHaveBeenCalledWith({ user: mockUser });
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                user: {
+                    username: 'testUser',
+                    status: 'en ligne',
+                    avatarUrl: 'uploads/avatar/1.jpg',
+                    friends: [],
+                    id: '1',
+                    restaurantId: 'resto1',
+                },
+            });
         });
 
         it('should return 500 error if user retrieval fails', async () => {
-            (User.findById as jest.Mock).mockReturnValue({
-                populate: jest.fn().mockRejectedValue(new Error('Database error')),
-            });
+            (User.findById as jest.Mock).mockRejectedValue(new Error('Database error'));
             mockRequest.user = { id: '1' };
 
             await userController.getUserInformation(mockRequest as Request, mockResponse as Response);

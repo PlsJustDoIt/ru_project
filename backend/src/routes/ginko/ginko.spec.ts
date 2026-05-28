@@ -59,15 +59,25 @@ describe('Ginko Router Tests', () => {
         await mongoServer.stop();
     });
 
-    it('should return cached data if available', async () => {
+    it('should return schedules for a valid lieu', async () => {
         const testLieu = 'TestStop';
-        (axios.post as jest.Mock).mockResolvedValueOnce(mockApiResponse);
-        // First call to populate cache
-        const response = await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`); // Ajouter le token dans l'en-tête;
+        (axios.post as jest.Mock).mockResolvedValueOnce({
+            status: 200,
+            data: {
+                objets: {
+                    nomExact: 'Crous Université',
+                    listeTemps: [
+                        { temps: '5 min', numLignePublic: 'L3', destination: 'Pôle Temis' },
+                    ],
+                },
+            },
+        });
+
+        const response = await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
         expect(response.body.nomExact).toBe('Crous Université');
-        expect(axios.post).toHaveBeenCalledTimes(0); // car on est pas en prod
+        expect(axios.post).toHaveBeenCalledTimes(1);
     });
 
     // it('should return 400 if lieu is empty', async () => {
