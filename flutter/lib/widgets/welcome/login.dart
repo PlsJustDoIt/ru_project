@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/friend_service.dart';
@@ -21,8 +22,11 @@ class LoginWidget extends StatelessWidget {
       onSuccess: (response, context) async {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final friendService = Provider.of<FriendService>(context, listen: false);
+        final restaurantProvider =
+            Provider.of<RestaurantProvider>(context, listen: false);
         final User user = response['user'];
         userProvider.setUser(user);
+        await restaurantProvider.loadRestaurant(user.restaurantId);
         List<Friend> fetchedFriends = await friendService.getFriends();
         userProvider.setFriends(fetchedFriends);
         if (!context.mounted) return;

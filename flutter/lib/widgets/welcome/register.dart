@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/widgets/tab_bar_widget.dart';
@@ -17,10 +18,14 @@ class RegisterWidget extends StatelessWidget {
       title: 'S\'inscrire',
       buttonText: 'S\'inscrire',
       apiCall: authService.register,
-      onSuccess: (response, context) {
+      onSuccess: (response, context) async {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final restaurantProvider =
+            Provider.of<RestaurantProvider>(context, listen: false);
         final User user = response['user'];
         userProvider.setUser(user);
+        await restaurantProvider.loadRestaurant(user.restaurantId);
+        if (!context.mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
