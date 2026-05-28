@@ -8,10 +8,7 @@ import logger from './utils/logger.js';
 import rateLimit from 'express-rate-limit';
 import routes from './routes/routes.js';
 
-import { handleImageRequest } from './middleware/imageHandler.js'; // Import image request handler
-import ruRoutes from './routes/ru.js';
-
-import api from './routes/routes.js';
+import { handleImageRequest } from './middleware/imageHandler.js';
 
 const app = express();
 
@@ -40,26 +37,21 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Image handling routes
-app.use('/admin/resources/:model/records/:recordId/uploads/*', handleImageRequest);
-app.use('/admin/api/resources/:model/records/:recordId/uploads/*', handleImageRequest);
-app.use('/resources/:model/records/:recordId/uploads/*', handleImageRequest);
-app.use('/api/resources/:model/records/:recordId/uploads/*', handleImageRequest);
-app.use('/admin/resources/uploads/*', handleImageRequest);
-app.use('/admin/api/resources/uploads/*', handleImageRequest);
-app.use('/resources/uploads/*', handleImageRequest);
-app.use('/api/resources/uploads/*', handleImageRequest);
+app.use('/admin/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
+app.use('/admin/api/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
+app.use('/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
+app.use('/api/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
+app.use('/admin/resources/uploads/*path', handleImageRequest);
+app.use('/admin/api/resources/uploads/*path', handleImageRequest);
+app.use('/resources/uploads/*path', handleImageRequest);
+app.use('/api/resources/uploads/*path', handleImageRequest);
 
 app.get('/test-socket', (req, res) => {
     return res.sendFile(join(rootDir, 'public', 'socket-test.html'));
 });
 
 const setupRoutes = (app: Express) => {
-    app.use('/api/ru', ruRoutes);
-
-    app.use(api);
-
-    // Routes
-    app.use('/api', routes);
+    app.use(routes);
 };
 
 export default app;

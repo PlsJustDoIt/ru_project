@@ -54,7 +54,7 @@ const getMenus = async (req: Request, res: Response) => {
 };
 
 const getSectors = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
 
     try {
         if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
@@ -84,7 +84,7 @@ const getRestaurants = async (req: Request, res: Response) => {
 };
 
 const getSectorsSessions = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
@@ -183,7 +183,7 @@ const getSectorsSessions = async (req: Request, res: Response) => {
 
 // Return ALL sessions in restaurant sectors, not only friends
 const getAllSectorsSessions = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
@@ -263,12 +263,12 @@ const getAllSectorsSessions = async (req: Request, res: Response) => {
     }
 };
 
-const getApiDoc = (res: Response) => {
+const getApiDoc = (_req: Request, res: Response) => {
     return res.json(apiDoc);
 };
 
 const getRestaurantInfo = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
@@ -285,7 +285,7 @@ const getRestaurantInfo = async (req: Request, res: Response) => {
 };
 
 const getRestaurantByOwnId = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     if (!Types.ObjectId.isValid(restaurantId)) {
         return res.status(400).json({ error: 'Invalid restaurant ID format' });
     }

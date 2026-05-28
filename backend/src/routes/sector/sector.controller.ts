@@ -5,7 +5,7 @@ import { createSectorSession, findSectorById, findSectorSessionByUserId, findSec
 import { Request, Response } from 'express';
 
 const joinSector = async (req: Request, res: Response) => {
-    const { sectorId } = req.params;
+    const sectorId = req.params.sectorId as string;
     const { duration } = req.body;
 
     try {
@@ -62,7 +62,7 @@ const joinSector = async (req: Request, res: Response) => {
 };
 
 const leaveSector = async (req: Request, res: Response) => {
-    const { sectorId } = req.params;
+    const sectorId = req.params.sectorId as string;
 
     try {
         if (!sectorId || !Types.ObjectId.isValid(sectorId)) {
@@ -96,7 +96,7 @@ const leaveSector = async (req: Request, res: Response) => {
 };
 
 const getFriendsInSector = async (req: Request, res: Response) => {
-    const { sectorId } = req.params;
+    const sectorId = req.params.sectorId as string;
 
     try {
         if (!sectorId) {

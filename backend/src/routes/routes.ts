@@ -15,7 +15,7 @@ const api = Router()
     .use('/ru', ruRoutes)
     .use('/sectors', sectorRoutes)
     .use('/uploads', static_(uploadsPath))
-    .use('/health', (res: Response) => {
+    .get('/health', (_req, res: Response) => {
         res.status(200).json({ message: 'API is alive !' });
     });
 
