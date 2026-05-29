@@ -24,7 +24,7 @@ class RegisterWidget extends StatelessWidget {
             Provider.of<RestaurantProvider>(context, listen: false);
         final User user = response['user'];
         userProvider.setUser(user);
-        await restaurantProvider.loadRestaurant(user.restaurantId);
+        await restaurantProvider.tryLoadRestaurant(user.restaurantId);
         if (!context.mounted) return;
         Navigator.pushReplacement(
           context,

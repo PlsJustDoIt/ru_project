@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/services/friend_service.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/services/user_service.dart';
 
@@ -21,25 +22,30 @@ class UserProvider with ChangeNotifier {
   Future<void> init(UserService userService, FriendService friendService,
       RestaurantProvider restaurantProvider) async {
     final accessToken = await secureStorage.getAccessToken();
-    if (accessToken != null) {
-      try {
-        final user = await userService.getUser();
-        if (user == null) {
-          clearUserData();
-          return;
-        }
-
-        final friends = await friendService.getFriends();
-
-        await restaurantProvider.loadRestaurant(user.restaurantId);
-
-        _user = user;
-        _friends = friends;
-        _isConnected = true;
-      } catch (_) {
-        clearUserData();
-      }
+    if (accessToken == null) {
+      notifyListeners();
+      return;
     }
+
+    final user = await userService.getUser();
+    if (user == null) {
+      // Token présent mais session invalide : vraie déconnexion.
+      clearUserData();
+      return;
+    }
+
+    // Session valide : on est connecté, quoi qu'il advienne des données annexes.
+    _user = user;
+    _isConnected = true;
+
+    // Chargements best-effort : un échec ne doit JAMAIS déconnecter.
+    try {
+      _friends = await friendService.getFriends();
+    } catch (e) {
+      logger.e('init: chargement des amis échoué (non bloquant): $e');
+    }
+    await restaurantProvider.tryLoadRestaurant(user.restaurantId);
+
     notifyListeners();
   }
 
