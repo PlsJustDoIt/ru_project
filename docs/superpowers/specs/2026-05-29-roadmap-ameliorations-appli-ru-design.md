@@ -26,13 +26,13 @@ L'appli RU (Flutter + backend Node/Express/TS + MongoDB) date un peu : visuel vi
 
 L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle transversal dont chat et menu héritent), puis les deux gros chantiers fonctionnels, puis la finition.
 
-| Phase | Chantier | Effort | Note |
-|------|----------|--------|------|
-| 0 | Bug refresh web | S–M | Bloquant de lancement |
-| 1 | Identité visuelle (thème direction A) | M | Socle transversal |
-| 2 | Chat (refonte + vocal) | L | Cœur de la demande |
-| 3 | Menu (refonte + social) | M | « Mieux exploité » |
-| 4 | Polish & dette | M | Finition |
+| Phase | Chantier | Effort | Note | Statut |
+|------|----------|--------|------|--------|
+| 0 | Bug refresh web | S–M | Bloquant de lancement | ✅ fait |
+| 1 | Identité visuelle (thème direction A) | M | Socle transversal | ✅ fait |
+| 2 | Chat (refonte + vocal) | L | Cœur de la demande | 🟡 2a fait — 2b/2c/2d à venir |
+| 3 | Menu (refonte + social) | M | « Mieux exploité » | ⬜ à faire |
+| 4 | Polish & dette | M | Finition | ⬜ à faire |
 
 ---
 
@@ -73,7 +73,7 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 **Vérification technique faite :** `flutter_chat_ui 2.11.1` / `flutter_chat_core 2.9.0` **ne fournissent pas** de bouton micro intégré (seulement un `composer` + `onAttachmentTap`). Le type `AudioMessage` existe pour l'affichage (via `AudioPlayerWidget` déjà présent), mais **l'enregistrement et son UX sont à notre charge**.
 
 **Sous-chantiers (ordre recommandé) :**
-- **2a — Socle :** socket **unique persistante** dans `SocketService` (ouverte au login, plus par écran) + **un seul composant `ChatUi`** paramétré par room. Corrige le churn de socket et la duplication, et nettoie les bugs (« John Doe », fallback *lorem*). *(C'est la fondation : équivaut à l'option « fiabiliser » et capte déjà ~70 % du bénéfice technique.)*
+- **2a — Socle :** ✅ **FAIT** (branche `feat/phase2a-socle-socket`, fusionnée dans `dev`). Socket **unique persistante** extraite de `ChatUi` vers le service dédié `ChatConnection` (ouverte au login, fermée au logout, survit aux changements d'écran) + **un seul composant `ChatUi`** paramétré par room ; `ChatWidget` supprimé. Bugs corrigés : jointure de room privée (Map → tableau de 2), « John Doe », fallback *lorem* ; hack vocal retiré (revient en 2d) ; dépendances mortes retirées. Spec : `specs/2026-05-29-phase2a-socle-socket-design.md` ; plan : `plans/2026-05-29-phase2a-socle-socket.md`. *Reste à valider : test manuel temps-réel à 2 comptes (Task 7 du plan).*
 - **2b — Boîte de réception unifiée :** nouvel écran liste de conversations (Global + amis, aperçus/horodatage). Backend : endpoint « résumé des conversations ».
 - **2c — Notifs in-app** *(appli ouverte, débloqué par la socket persistante, coût faible)* : pastille sur l'onglet Messages, compteur de non-lus par conversation, bandeau « X t'a écrit », son/vibration légère.
 - **2d — Vocal complet :** bouton micro propre (appui-maintien) + **upload** + **stockage backend** + lecture pour tous les participants. Remplace le hack actuel (délai fixe 8 s, pas d'upload).
