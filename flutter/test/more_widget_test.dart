@@ -10,7 +10,9 @@ void main() {
     expect(find.text('Profil'), findsOneWidget);
     expect(find.text('Bus'), findsOneWidget);
     expect(find.text('Réglages'), findsOneWidget);
-    expect(find.text('Signaler un bug'), findsOneWidget);
     expect(find.text('Déconnexion'), findsOneWidget);
+    // « Signaler un bug » est désormais une action globale d'AppBar, plus une
+    // entrée du hub Plus.
+    expect(find.text('Signaler un bug'), findsNothing);
   });
 }

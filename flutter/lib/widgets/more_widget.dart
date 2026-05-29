@@ -37,11 +37,6 @@ class MoreWidget extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const SettingsWidget()),
           ),
         ),
-        ListTile(
-          leading: const Icon(Icons.bug_report_outlined),
-          title: const Text('Signaler un bug'),
-          onTap: () => showBugReport(context),
-        ),
         if (Config.env == 'development')
           ListTile(
             leading: const Icon(Icons.developer_mode),
