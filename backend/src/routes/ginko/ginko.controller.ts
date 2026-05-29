@@ -5,14 +5,8 @@ import { getTempsLieu } from './ginko.service.js';
 
 const cache = new NodeCache({ stdTTL: 60 }); // 1 minute // TODO : faire un service de cache
 
-const getSchedules = async (req: Request, res: Response, isProduction: boolean) => {
+const getSchedules = async (req: Request, res: Response) => {
     try {
-        // if (!isProduction) {
-        //     const data = readFileSync(join(resolve(), 'horaires.json'));
-        //     const horaires = JSON.parse(data.toString());
-        //     return res.json(horaires);
-        // }
-
         const lieu = req.query.lieu as string;
         if (!lieu || lieu.length === 0) {
             logger.error('Le lieu est vide');
@@ -29,7 +23,7 @@ const getSchedules = async (req: Request, res: Response, isProduction: boolean) 
         return res.json(result);
     } catch (err: unknown) {
         logger.error('Impossible de récupérer les horaires : ', err);
-        return res.status(500).json({ error: err });
+        return res.status(500).json({ error: 'Impossible de récupérer les horaires' });
     }
 };
 

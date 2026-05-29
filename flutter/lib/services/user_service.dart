@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ru_project/models/searchResult.dart';
+import 'package:ru_project/models/search_result.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 
@@ -118,7 +118,7 @@ class UserService {
   //update user profile picture
   Future<String?> updateProfilePicture(XFile pickedFile) async {
     try {
-      var file;
+      MultipartFile file;
 
       if (kIsWeb) {
         // For web

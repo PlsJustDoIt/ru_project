@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:video_player/video_player.dart';
 
 class VideoWidget extends StatefulWidget {

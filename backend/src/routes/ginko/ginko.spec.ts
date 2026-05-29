@@ -11,32 +11,6 @@ let mongoServer: MongoMemoryServer;
 let accessToken: string;
 
 describe('Ginko Router Tests', () => {
-    const mockApiResponse = {
-        nomExact: 'Crous Université',
-        lignes: {
-            7: {
-                'Palente Espace Industriel': [
-                    '18 min',
-                    '42 min',
-                ],
-                'Hauts du Chazal': [
-                    '11 min',
-                    '37 min',
-                ],
-            },
-            L3: {
-                'Centre-ville - 8 Septembre': [
-                    '1 min',
-                    '13 min',
-                ],
-                'Pôle Temis': [
-                    '5 min',
-                    '21 min',
-                ],
-            },
-        },
-    };
-
     beforeAll(async () => {
         process.env.GINKO_API_KEY = 'test-api-key';
         logger.info = jest.fn(); // pour mute les logs

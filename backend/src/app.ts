@@ -3,7 +3,7 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 import { join } from 'path';
-import { rootDir } from './config.js';
+import { isProduction, rootDir } from './config.js';
 import logger from './utils/logger.js';
 import rateLimit from 'express-rate-limit';
 import routes from './routes/routes.js';
@@ -12,13 +12,21 @@ import { handleImageRequest } from './middleware/imageHandler.js';
 
 const app = express();
 
+// CORS : en production, restreindre aux origines explicitement autorisées
+// (CORS_ORIGINS, séparées par des virgules). L'app mobile n'envoie pas d'en-tête
+// Origin et n'est donc pas impactée ; CORS ne concerne ici que le navigateur.
+const corsOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean);
+const corsOptions = isProduction && corsOrigins && corsOrigins.length > 0
+    ? { origin: corsOrigins }
+    : {}; // dev : réflexion de l'origine (comportement par défaut de cors())
+
 // Middleware setup
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(compression());
 
-// Rate limiting
+// Rate limiting global
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
     limit: 50, // Limit each IP to 50 requests per windows
@@ -29,10 +37,27 @@ const limiter = rateLimit({
         return res.status(429).json({ error: 'Too many requests, please try again later.' });
     },
     skip: (req) => {
-        // Skip rate limiting for specific routes
+        // Le dashboard AdminJS charge beaucoup d'assets : on l'exclut du limiteur
+        // global, mais la route de login admin garde un limiteur dédié (cf. authLimiter).
         return req.path.startsWith('/admin');
     },
 });
+
+// Limiteur strict anti-brute-force pour les routes sensibles d'authentification.
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 10, // 10 tentatives par IP par fenêtre
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    handler: (req, res) => {
+        logger.error(`Too many auth attempts from ${req.ip}`);
+        return res.status(429).json({ error: 'Too many attempts, please try again later.' });
+    },
+});
+
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/admin/login', authLimiter);
 
 app.use(limiter);
 

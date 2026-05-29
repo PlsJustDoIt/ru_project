@@ -8,11 +8,12 @@ import 'package:ru_project/services/secure_storage.dart';
 import 'package:duration/duration.dart';
 import 'package:ru_project/widgets/test_statefull.dart';
 import 'package:ru_project/widgets/video_widget.dart';
-import 'package:video_player/video_player.dart';
 
 class DebugWidget extends StatefulWidget {
+  const DebugWidget({super.key});
+
   @override
-  _DebugWidgetState createState() => _DebugWidgetState();
+  State<DebugWidget> createState() => _DebugWidgetState();
 }
 
 class _DebugWidgetState extends State<DebugWidget> {

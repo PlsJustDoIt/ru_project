@@ -8,6 +8,10 @@ import BugReport from '../../models/bugReport.js';
 import { bugReportPath } from '../../config.js';
 import { join } from 'path';
 
+// Échappe les caractères spéciaux d'une regex pour neutraliser l'injection / le ReDoS
+// lorsqu'on construit un RegExp à partir d'une entrée utilisateur.
+const escapeRegExp = (input: string): string => input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const getUserInformation = async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user.id);
@@ -200,7 +204,7 @@ const searchUsers = async (req: Request, res: Response) => { // TODO : factorise
         }
 
         const searchTerm = query.toLowerCase().trim();
-        const searchItem = new RegExp(query, 'i');
+        const searchItem = new RegExp(escapeRegExp(searchTerm), 'i');
 
         let foundUsers = await User.find({ username: searchItem })
             .select('id username avatarUrl status')
@@ -223,7 +227,7 @@ const searchUsers = async (req: Request, res: Response) => { // TODO : factorise
 
         const searchResults = foundUsers.map((user) => {
             const username = user.username.toLowerCase();
-            let relevanceScore = 0;
+            let relevanceScore: number;
 
             // Exact match gets highest score
             if (username === searchTerm) {

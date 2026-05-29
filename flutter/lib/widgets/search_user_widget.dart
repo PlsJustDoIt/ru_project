@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/logger.dart';
-import '../models/searchResult.dart';
+import '../models/search_result.dart';
 
 // Cache manager with LRU (Least Recently Used)
 class SearchCache {

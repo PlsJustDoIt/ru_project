@@ -1,4 +1,3 @@
-import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/services/logger.dart';
 
 class User {

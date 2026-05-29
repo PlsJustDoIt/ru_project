@@ -2,7 +2,6 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
-import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
@@ -14,7 +13,8 @@ import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/services/socket_service.dart';
 import 'package:ru_project/services/user_service.dart';
-import 'package:ru_project/widgets/tab_bar_widget.dart';
+import 'package:ru_project/theme/app_theme.dart';
+import 'package:ru_project/widgets/main_scaffold.dart';
 import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -109,25 +109,9 @@ class MyApp extends StatelessWidget {
       ],
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        colorScheme: const ColorScheme(
-          primary: AppColors.primaryColor,
-          secondary: Colors.blue,
-          surface: Colors.white,
-          error: Colors.red,
-          onPrimary: Colors.white,
-          onSecondary: Colors.white,
-          onSurface: Colors.black,
-          onError: Colors.white,
-          brightness: Brightness.light,
-          surfaceContainerHigh:
-              Color.fromARGB(255, 196, 201, 202), //TODO a voir si on garde
-        ),
-        fontFamily: 'Marianne',
-      ),
+      theme: buildAppTheme(),
       home: userProvider.isConnected
-          ? const TabBarWidget()
+          ? const MainScaffold()
           : const WelcomeWidget(),
     );
   }

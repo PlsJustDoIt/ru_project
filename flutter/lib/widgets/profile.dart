@@ -319,7 +319,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedStatus,
+            initialValue: _selectedStatus,
             decoration: const InputDecoration(
               labelText: 'Status',
               border: OutlineInputBorder(),

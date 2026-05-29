@@ -50,3 +50,6 @@ uploads
 env.sh
 /backend/.adminjs/**
 backend/menus.xml
+
+# Maquettes de brainstorming (visual companion)
+.superpowers/

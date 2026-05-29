@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:ru_project/models/friendsInSector.dart';
+import 'package:ru_project/models/friend_in_sector.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/sector.dart';

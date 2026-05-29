@@ -2,12 +2,9 @@ import jwt from 'jsonwebtoken';
 
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger.js';
+import { jwtAccessSecret } from '../config.js';
 
 export default function (req: Request, res: Response, next: NextFunction): void {
-    if (req.url.includes('/token')) {
-        next();
-        return;
-    }
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) {
@@ -16,8 +13,8 @@ export default function (req: Request, res: Response, next: NextFunction): void 
         return;
     }
     try {
-        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as jwt.Secret);
-        if (typeof decoded === 'string') { // token expired
+        const decoded = jwt.verify(token, jwtAccessSecret);
+        if (typeof decoded === 'string') {
             logger.error('Invalid token');
             throw new Error('Invalid token');
         }
@@ -26,6 +23,7 @@ export default function (req: Request, res: Response, next: NextFunction): void 
         return;
     } catch (err: unknown) {
         logger.error(err);
-        res.status(403).json({ error: err });
+        // Ne pas renvoyer l'objet d'erreur brut au client (fuite d'info interne)
+        res.status(403).json({ error: 'Invalid or expired token' });
     }
 };

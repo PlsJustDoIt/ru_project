@@ -8,7 +8,6 @@ import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:cross_cache/cross_cache.dart';
@@ -21,9 +20,6 @@ import 'package:flutter_lorem/flutter_lorem.dart';
 import 'dart:math';
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:flutter_chat_core/src/models/builders.dart';
-import 'package:flutter_chat_core/src/models/message_group_status.dart';
-import 'package:ru_project/services/socket_service.dart';
 
 class ChatUi extends StatefulWidget {
   ChatUi(
@@ -57,7 +53,6 @@ class ChatUiState extends State<ChatUi> {
   late final types.ChatController chatController;
 
   final _record = AudioRecorder();
-  String? _recordPath;
 
   @override
   void initState() {
@@ -86,7 +81,6 @@ class ChatUiState extends State<ChatUi> {
                 : AudioEncoder.aacLc, // Mobile → AAC
           ),
           path: path);
-      _recordPath = kIsWeb ? null : path;
     }
   }
 
@@ -330,7 +324,7 @@ class ChatUiState extends State<ChatUi> {
         _addItem(text);
       },
       onMessageTap: (context, message, {TapUpDetails? details, index = 0}) {
-        logger.i('Message tapped: ${details}, index: $index');
+        logger.i('Message tapped: $details, index: $index');
         _removeItem(message);
       },
       onAttachmentTap: () async {
@@ -341,16 +335,16 @@ class ChatUiState extends State<ChatUi> {
         await Future.delayed(const Duration(seconds: 8));
         await _stopRecording();
       },
-      builders: Builders(
+      builders: types.Builders(
         audioMessageBuilder: (
           BuildContext context,
           types.AudioMessage message,
           int index, {
           required bool isSentByMe,
-          MessageGroupStatus? groupStatus,
+          types.MessageGroupStatus? groupStatus,
         }) {
           // You may want to use index, isSentByMe, groupStatus for custom UI
-          return Container(
+          return SizedBox(
             // Example: fixed width or from message metadata
             width: 250,
             child: AudioPlayerWidget(message: message),

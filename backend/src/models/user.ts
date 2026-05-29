@@ -50,7 +50,7 @@ const createUser = async (user: baseUser) => {
     try {
         return await User.create(user);
     } catch (error: unknown) {
-        throw new Error(error as string);
+        throw new Error('Failed to create user', { cause: error });
     }
 };
 

@@ -1,9 +1,7 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/services/friend_service.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/services/user_service.dart';
 

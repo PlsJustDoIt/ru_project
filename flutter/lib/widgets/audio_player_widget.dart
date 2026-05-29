@@ -1,13 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-// For web support
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:ru_project/widgets/audio/web_audio.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final dynamic message; // Accepts types.AudioMessage or similar
-  const AudioPlayerWidget({Key? key, required this.message}) : super(key: key);
+  const AudioPlayerWidget({super.key, required this.message});
 
   @override
   State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
@@ -16,7 +14,7 @@ class AudioPlayerWidget extends StatefulWidget {
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   AudioPlayer? _player;
   bool _isPlaying = false;
-  html.AudioElement? _webAudio;
+  WebAudio? _webAudio;
   Duration? _duration;
   double _iconRotation = 0.0;
 
@@ -30,24 +28,20 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   Future<void> _play() async {
     if (kIsWeb) {
       // Web: play using HTML audio element
-      if (_webAudio == null) {
-        _webAudio = html.AudioElement(widget.message.source);
-        _webAudio!.onLoadedMetadata.listen((_) {
-          if (!(_webAudio!.duration.isNaN)) {
-            setState(() {
-              _duration =
-                  Duration(milliseconds: (_webAudio!.duration * 1000).toInt());
-            });
-          }
-        });
-      }
+      _webAudio ??= WebAudio()
+        ..load(
+          widget.message.source,
+          onDuration: (duration) {
+            if (mounted) setState(() => _duration = duration);
+          },
+          onEnded: () {
+            if (mounted) setState(() => _isPlaying = false);
+          },
+        );
       _webAudio!.play();
       setState(() {
         _isPlaying = true;
         _iconRotation += 1.0;
-      });
-      _webAudio!.onEnded.listen((_) {
-        setState(() => _isPlaying = false);
       });
     } else {
       // Mobile/Desktop: play using just_audio

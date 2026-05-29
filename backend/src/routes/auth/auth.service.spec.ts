@@ -4,7 +4,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import logger from '../../utils/logger.js';
 import User from '../../models/user.js';
 import bcrypt from 'bcrypt';
-import { authenticate, generateTokens, validateCredentials } from './auth.service.js';
+import { authenticate, generateTokens, validateCredentials, validateLoginFields } from './auth.service.js';
 
 jest.mock('bcrypt', () => ({
     compare: jest.fn(), // ✅ Mock manuel de compare
@@ -53,6 +53,33 @@ describe('auth service tests', () => {
         const { valid: undefinedValid2, error: undefinedError2 } = validateCredentials('sh', 'testtest');
         expect(undefinedValid2).toBe(false);
         expect(undefinedError2).toBeDefined();
+    });
+
+    it('should reject passwords shorter than the policy minimum (8)', () => {
+        const { valid, error } = validateCredentials('validuser', 'short7!');
+        expect(valid).toBe(false);
+        expect(error).toBeDefined();
+    });
+
+    it('should reject passwords longer than the bcrypt limit (72)', () => {
+        const { valid } = validateCredentials('validuser', 'a'.repeat(73));
+        expect(valid).toBe(false);
+    });
+
+    describe('validateLoginFields', () => {
+        it('should accept any short legacy password as long as it is present', () => {
+            const { valid } = validateLoginFields('user', 'abc');
+            expect(valid).toBe(true);
+        });
+
+        it('should reject when a field is missing', () => {
+            expect(validateLoginFields('', 'password').valid).toBe(false);
+            expect(validateLoginFields('user', '').valid).toBe(false);
+        });
+
+        it('should reject an oversized password (avoids costly hashing)', () => {
+            expect(validateLoginFields('user', 'a'.repeat(73)).valid).toBe(false);
+        });
     });
 
     test('should authenticate a user', async () => {
