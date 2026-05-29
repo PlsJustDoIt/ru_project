@@ -6,6 +6,7 @@ import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/chat_connection.dart';
 import 'package:ru_project/services/feedback_service.dart';
 import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/services/ginko_service.dart';
@@ -41,6 +42,8 @@ void main() async {
       userService: userService);
   final restaurantService = RestaurantService(dio: apiClient.dio);
   final socketService = SocketService(dio: apiClient.dio);
+  final chatConnection =
+      ChatConnection(tokenProvider: secureStorage.getAccessToken);
   final ginkoService = GinkoService(dio: apiClient.dio);
   final feedbackService = FeedbackService(dio: apiClient.dio);
 
@@ -48,6 +51,10 @@ void main() async {
 
   // Initialisation de l'état utilisateur
   await userProvider.init(userService, friendService, restaurantProvider);
+
+  if (userProvider.isConnected) {
+    await chatConnection.connect();
+  }
 
   runApp(
     MultiProvider(
@@ -58,6 +65,7 @@ void main() async {
         Provider<FriendService>.value(value: friendService),
         Provider<RestaurantService>.value(value: restaurantService),
         Provider<SocketService>.value(value: socketService),
+        ChangeNotifierProvider<ChatConnection>.value(value: chatConnection),
         Provider<GinkoService>.value(value: ginkoService),
         Provider<FeedbackService>.value(value: feedbackService),
         Provider<SecureStorage>.value(value: secureStorage),
