@@ -36,6 +36,21 @@ class RestaurantProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Charge le restaurant en best-effort : ne fait rien si [restaurantId] est
+  /// nul/vide, et n'a jamais d'effet bloquant (erreurs loggées, pas propagées).
+  /// Utilisé pendant la restauration de session et le login pour qu'un échec de
+  /// chargement ne déconnecte pas un utilisateur authentifié.
+  Future<void> tryLoadRestaurant(String? restaurantId) async {
+    if (restaurantId == null || restaurantId.isEmpty) {
+      return;
+    }
+    try {
+      await loadRestaurant(restaurantId);
+    } catch (e) {
+      logger.e('tryLoadRestaurant: chargement du restaurant échoué (non bloquant): $e');
+    }
+  }
+
   /// Récupère les users dans un secteur et met à jour l’état
   Future<void> fetchUsersInSector(String sectorId) async {
     if (_restaurant == null) return;
