@@ -5,6 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "dev": "tsx watch src/server.ts",
     "build": "npx tsc",
     "test:unit": "jest --config jest.unit.config.js",
