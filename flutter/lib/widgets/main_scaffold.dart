@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ru_project/widgets/bug_report_action.dart';
 import 'package:ru_project/widgets/navigation/main_destinations.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -20,7 +21,10 @@ class _MainScaffoldState extends State<MainScaffold> {
     final current = destinations[_index];
 
     return Scaffold(
-      appBar: AppBar(title: Text(current.label)),
+      appBar: AppBar(
+        title: Text(current.label),
+        actions: const [BugReportButton()],
+      ),
       body: current.builder(context),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

@@ -1,11 +1,10 @@
-import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
-import 'package:ru_project/services/feedback_service.dart';
+import 'package:ru_project/widgets/bug_report_action.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
 import 'package:ru_project/widgets/profile.dart';
@@ -41,7 +40,7 @@ class MoreWidget extends StatelessWidget {
         ListTile(
           leading: const Icon(Icons.bug_report_outlined),
           title: const Text('Signaler un bug'),
-          onTap: () => _sendFeedback(context),
+          onTap: () => showBugReport(context),
         ),
         if (Config.env == 'development')
           ListTile(
@@ -69,25 +68,14 @@ class MoreWidget extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: Text(title)),
+          appBar: AppBar(
+            title: Text(title),
+            actions: const [BugReportButton()],
+          ),
           body: child,
         ),
       ),
     );
-  }
-
-  void _sendFeedback(BuildContext context) {
-    final feedbackService =
-        Provider.of<FeedbackService>(context, listen: false);
-    BetterFeedback.of(context).show((UserFeedback feedback) async {
-      final res = await feedbackService.sendFeedback(feedback);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res ? 'Feedback envoyé :)' : 'Echec de l\'envoi :('),
-        ),
-      );
-    });
   }
 
   Future<void> _logout(BuildContext context) async {
