@@ -8,6 +8,15 @@
 
 **Tech Stack :** Flutter 3.35, Provider, `flutter_test`. Pas de mockito/mocktail dans le projet → doublures de test écrites à la main (`extends`/`implements`).
 
+## Avancement (2026-05-29)
+
+- ✅ **Task 1** — `tryLoadRestaurant` (4 tests verts) — commit `feat(flutter): RestaurantProvider.tryLoadRestaurant`
+- ✅ **Task 2** — `init()` résilient (5 tests, dont régression) — commit `fix(flutter): init() résilient`
+- ✅ **Task 3** — `restaurantId` nullable + login/register (2 tests) — commit `fix(flutter): restaurantId nullable`
+- ✅ **Task 4** — `flutter analyze` propre + **17 tests** verts (Phase 1 + Phase 0)
+- ⏳ **Task 5** — vérification manuelle sur web (F5) : **à faire par l'utilisateur** (`flutter run -d chrome` + backend local).
+- 🛠️ **Rappel ops (hors code)** : la prod renvoyait « Cannot GET /api/ru/:id » → **redéployer le backend** avant lancement.
+
 > Branche : `fix/phase0-refresh-web` (déjà créée). Toutes les commandes `flutter` se lancent depuis `flutter/` (`cd flutter`).
 > Spec de référence : `docs/superpowers/specs/2026-05-29-phase0-fix-refresh-web-design.md`.
 
