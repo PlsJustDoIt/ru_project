@@ -1,0 +1,98 @@
+import 'package:feedback/feedback.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ru_project/config.dart';
+import 'package:ru_project/models/color.dart';
+import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/services/auth_service.dart';
+import 'package:ru_project/services/feedback_service.dart';
+import 'package:ru_project/widgets/bus_widget.dart';
+import 'package:ru_project/widgets/debug_widget.dart';
+import 'package:ru_project/widgets/profile.dart';
+import 'package:ru_project/widgets/settings_widget.dart';
+import 'package:ru_project/widgets/welcome/welcome.dart';
+
+class MoreWidget extends StatelessWidget {
+  const MoreWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.person_outline),
+          title: const Text('Profil'),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ProfileWidget()),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.directions_bus_outlined),
+          title: const Text('Bus'),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TransportTimeWidget()),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.settings_outlined),
+          title: const Text('Réglages'),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsWidget()),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.bug_report_outlined),
+          title: const Text('Signaler un bug'),
+          onTap: () => _sendFeedback(context),
+        ),
+        if (Config.env == 'development')
+          ListTile(
+            leading: const Icon(Icons.developer_mode),
+            title: const Text('Debug'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DebugWidget()),
+            ),
+          ),
+        const Divider(),
+        ListTile(
+          leading: const Icon(Icons.logout, color: AppColors.accent),
+          title: const Text('Déconnexion'),
+          onTap: () => _logout(context),
+        ),
+      ],
+    );
+  }
+
+  void _sendFeedback(BuildContext context) {
+    final feedbackService =
+        Provider.of<FeedbackService>(context, listen: false);
+    BetterFeedback.of(context).show((UserFeedback feedback) async {
+      final res = await feedbackService.sendFeedback(feedback);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res ? 'Feedback envoyé :)' : 'Echec de l\'envoi :('),
+        ),
+      );
+    });
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await authService.logout();
+    userProvider.clearUserData();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Déconnexion réussie')),
+    );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeWidget()),
+    );
+  }
+}
