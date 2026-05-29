@@ -1,25 +1,18 @@
-import 'package:ru_project/services/secure_storage.dart';
-import 'package:ru_project/services/socket_service.dart';
-import 'dart:io';
+import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'package:ru_project/config.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
-import 'package:provider/provider.dart';
+import 'package:ru_project/services/chat_connection.dart';
+import 'package:ru_project/services/chat_event.dart';
 import 'package:ru_project/services/logger.dart';
-import 'package:cross_cache/cross_cache.dart';
-import 'audio_player_widget.dart';
+import 'package:ru_project/services/socket_service.dart';
+import 'package:ru_project/widgets/audio_player_widget.dart';
 
 import 'package:flutter_chat_core/flutter_chat_core.dart' as types;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
 import 'package:uuid/uuid.dart';
-import 'package:flutter_lorem/flutter_lorem.dart';
-import 'dart:math';
-import 'package:record/record.dart';
-import 'package:just_audio/just_audio.dart';
 
 class ChatUi extends StatefulWidget {
   ChatUi(
@@ -42,211 +35,69 @@ class ChatUi extends StatefulWidget {
 }
 
 class ChatUiState extends State<ChatUi> {
-  CrossCache? _crossCache = CrossCache();
   final _uuid = const Uuid();
-  late final List<types.Message> initialMessages;
   List<types.Message> _messages = [];
   late final SocketService socketService;
-  late final SecureStorage secureStorage;
-  io.Socket? socket;
-  //chat controller
+  late final ChatConnection chatConnection;
+  StreamSubscription<ChatEvent>? _sub;
   late final types.ChatController chatController;
-
-  final _record = AudioRecorder();
 
   @override
   void initState() {
     super.initState();
     socketService = Provider.of<SocketService>(context, listen: false);
-    secureStorage = Provider.of<SecureStorage>(context, listen: false);
-
-    //initialisation du chat controller
+    chatConnection = Provider.of<ChatConnection>(context, listen: false);
     chatController = types.InMemoryChatController();
 
-    //récupérer les messages de la room
+    if (widget.roomName == 'Global') {
+      chatConnection.joinGlobal();
+    } else if (widget.friends != null && widget.friends!.isNotEmpty) {
+      chatConnection.joinPrivate(
+          widget.actualUser.id, widget.friends!.first.id);
+    }
+
+    _sub = chatConnection.events
+        .where((e) => e.roomName == widget.roomName)
+        .listen(_onChatEvent);
+
     _initializeMessages();
-
-    //conexion au serveur
-    connectToServer();
   }
 
-  Future<void> _startRecording() async {
-    if (await _record.hasPermission()) {
-      final path =
-          '/tmp/${_uuid.v4()}.mp3'; // tu peux adapter selon ta plateforme
-      await _record.start(
-          const RecordConfig(
-            encoder: kIsWeb
-                ? AudioEncoder.wav // Web → wav (PCM)
-                : AudioEncoder.aacLc, // Mobile → AAC
-          ),
-          path: path);
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    final pathOrUri =
-        await _record.stop(); // Mobile = path | Web = blob:... URL
-    if (pathOrUri == null) return;
-
-    final player = AudioPlayer();
-    Duration duration = Duration.zero;
-
-    if (!kIsWeb) {
-      // --- MOBILE ---
-      await player.setFilePath(pathOrUri);
-      duration = player.duration ?? Duration.zero;
-
-      final file = File(pathOrUri);
-      final audioMessage = types.AudioMessage(
-          id: _uuid.v4(),
-          authorId: widget.user.id,
-          createdAt: DateTime.now(),
-          duration: duration,
-          source: pathOrUri,
-          size: await file.length(),
-          waveform: [2, 3, 5, 6]);
-
-      setState(() {
-        _messages.insert(0, audioMessage);
-        chatController.insertMessage(audioMessage);
-      });
-
-      // 👉 Upload si besoin
-      // await apiService.sendAudioToRoom(widget.roomName, file);
-    } else {
-      // --- WEB ---
-      // pathOrUri est une URL de type "blob:...."
-      await player.setUrl(pathOrUri);
-      duration = player.duration ?? Duration.zero;
-
-      final audioMessage = types.AudioMessage(
-        id: _uuid.v4(),
-        authorId: widget.user.id,
-        createdAt: DateTime.now(),
-        duration: duration,
-        source: pathOrUri, // <- blob utilisable directement avec <audio>
-        size: 0, // pas dispo en web
-      );
-
-      setState(() {
-        _messages.insert(0, audioMessage);
-        chatController.insertMessage(audioMessage);
-      });
-
-      // 👉 Upload côté web : tu envoies le blobUrl,
-      // ton backend devra recevoir le blob via JS/HTML (pas possible direct Flutter)
-    }
-
-    await player.dispose();
-  }
-
-  void connectToServer() async {
-    try {
-      socket = io.io(Config.serverUrl, <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': false,
-        'query': {
-          'token': await secureStorage.getAccessToken(),
-        },
-        // 'withCredentials': true,
-      });
-      socket?.connect();
-      if (widget.roomName == 'Global') {
-        socket?.emit("join_global_room");
-      } else {
-        List<String> participants = [
-          widget.actualUser.id,
-          ...widget.friends!.map((e) => e.id)
-        ];
-        logger.i('Participants: $participants');
-        // emit a map with participants
-        socket?.emit("join_room", {'participants': participants});
-      }
-      socket?.on('receive_message', (response, [ack]) {
-        try {
-          Map<String, dynamic> data = response[0];
-          logger.i('Received_message: $data');
-          ru_project.Message message =
-              ru_project.Message.fromJson(data['message']);
-          if (ack != null) {
-            ack({'status': 'ok'});
+  void _onChatEvent(ChatEvent event) {
+    if (!mounted) return;
+    switch (event) {
+      case MessageReceived(:final message):
+        final incoming = types.TextMessage(
+          id: message.id,
+          authorId: message.sender,
+          text: message.content,
+          createdAt: message.createdAt,
+        );
+        setState(() {
+          _messages.insert(0, incoming);
+          chatController.insertMessage(incoming);
+        });
+      case MessageDeleted(:final messageId):
+        setState(() {
+          final index = _messages.indexWhere((m) => m.id == messageId);
+          if (index != -1) {
+            final toRemove = chatController.messages[index];
+            chatController.removeMessage(toRemove);
+            _messages.removeAt(index);
           }
-          if (mounted) {
-            final types.TextMessage incoming = types.TextMessage(
-              id: message.id,
-              authorId: message.sender,
-              text: message.content,
-              createdAt: message.createdAt,
-            );
-            setState(() {
-              _messages.insert(0, incoming);
-              chatController.insertMessage(incoming);
-            });
-          }
-        } catch (e) {
-          logger.e('Error parsing message data: $e');
-        }
-      });
-
-      socket?.on('userOnline', (response, [ack]) {
-        Map<String, dynamic> data = response[0] ?? {};
-        if (ack != null) {
-          ack({'status': 'ok'});
-        }
-        logger.i('User online: $data');
-      });
-
-      socket?.on('room_joined', (response, [ack]) {
-        Map<String, dynamic> data = response[0];
-        if (ack != null) {
-          ack({'status': 'ok'});
-        }
-        logger.i("room joined, data: $data");
-        logger.i('Room joined: ${data['roomName']}');
-      });
-
-      socket?.on('receive_delete_all_messages', (response, [ack]) {
-        //TODO ?
-        logger.i('All messages deleted');
-        if (ack != null) {
-          ack({'status': 'ok'});
-        }
-        if (mounted) {
-          setState(() {
-            _messages.clear();
-          });
-        }
-      });
-
-      socket?.on('receive_delete_message', (response, [ack]) {
-        Map<String, dynamic> data = response[0];
-        logger.i('Message deleted: ${data['messageId']}');
-        if (ack != null) {
-          ack({'status': 'ok'});
-        }
-        if (mounted) {
-          setState(() {
-            final index =
-                _messages.indexWhere((m) => m.id == data['messageId']);
-            if (index != -1) {
-              final messageToRemove = chatController.messages[index];
-              chatController.removeMessage(messageToRemove);
-              _messages.removeAt(index);
-            }
-          });
-        }
-      });
-    } catch (e) {
-      logger.e('Error connecting to server: $e');
+        });
+      case AllMessagesDeleted():
+        setState(() {
+          _messages.clear();
+        });
     }
   }
 
   Future<void> _initializeMessages() async {
-    initialMessages = await setMessages();
+    final messages = await setMessages();
     if (mounted) {
       setState(() {
-        _messages = initialMessages;
+        _messages = messages;
         chatController.insertAllMessages(_messages);
       });
     }
@@ -280,32 +131,10 @@ class ChatUiState extends State<ChatUi> {
 
   @override
   void dispose() {
-    disconnectFromServer();
-    _crossCache?.dispose();
-    _crossCache = null;
+    _sub?.cancel();
+    chatConnection.leave(widget.roomName);
     chatController.dispose();
     super.dispose();
-  }
-
-  void disconnectFromServer() {
-    if (socket != null) {
-      try {
-        socket!.emit('leave_room', widget.roomName);
-      } catch (e) {
-        logger.w('Error emitting leave_room: $e');
-      }
-      try {
-        socket!.off('receive_message');
-        socket!.off('receive_delete_message');
-        socket!.off('receive_delete_all_messages');
-        socket!.off('userOnline');
-        socket!.off('room_joined');
-        socket!.disconnect();
-      } catch (e) {
-        logger.w('Error during socket cleanup: $e');
-      }
-    }
-    socket = null;
   }
 
   @override
@@ -316,8 +145,7 @@ class ChatUiState extends State<ChatUi> {
     return ui.Chat(
       currentUserId: widget.user.id,
       resolveUser: (types.UserID id) async {
-        return types.User(
-            id: id, name: 'John Doe'); //TODO fetch user info from server?
+        return types.User(id: id, name: id);
       },
       chatController: chatController,
       onMessageSend: (text) {
@@ -327,14 +155,6 @@ class ChatUiState extends State<ChatUi> {
         logger.i('Message tapped: $details, index: $index');
         _removeItem(message);
       },
-      onAttachmentTap: () async {
-        // Ici on déclenche l’enregistrement audio
-        await _startRecording();
-
-        // on attend que l’utilisateur relâche le bouton (par ex. via un dialogue)
-        await Future.delayed(const Duration(seconds: 8));
-        await _stopRecording();
-      },
       builders: types.Builders(
         audioMessageBuilder: (
           BuildContext context,
@@ -343,44 +163,16 @@ class ChatUiState extends State<ChatUi> {
           required bool isSentByMe,
           types.MessageGroupStatus? groupStatus,
         }) {
-          // You may want to use index, isSentByMe, groupStatus for custom UI
           return SizedBox(
-            // Example: fixed width or from message metadata
             width: 250,
             child: AudioPlayerWidget(message: message),
           );
         },
       ),
-
-      // builders: audioMessageBuilder(
-      //   customMessageBuilder: (message, {required int messageWidth}) {
-      //     if (message is types.CustomMessage &&
-      //         message.metadata?['type'] == 'audio') {
-      //       final player = AudioPlayer();
-      //       final uri = message.metadata!['uri'] as String;
-
-      //       return Row(
-      //         children: [
-      //           IconButton(
-      //             icon: const Icon(Icons.play_arrow),
-      //             onPressed: () async {
-      //               await player.setFilePath(uri);
-      //               await player.play();
-      //             },
-      //           ),
-      //           const Text("Message audio"),
-      //         ],
-      //       );
-      //     }
-      //     return const SizedBox();
-      //   },
-      // ),
     );
   }
 
-  void _addItem(String? text) async {
-    text ??=
-        lorem(paragraphs: 1, words: Random().nextInt(30) + 1); //text aléatoire
+  void _addItem(String text) async {
     logger.i('Adding text $text to chat');
 
     final tempId = _uuid.v4();
@@ -428,37 +220,6 @@ class ChatUiState extends State<ChatUi> {
     }
   }
 
-  // this feature is disabled for now
-  // void _handleAttachmentTap() async {
-  //   final picker = ImagePicker();
-
-  //   final image = await picker.pickImage(source: ImageSource.gallery);
-
-  //   if (image == null) return;
-
-  //   final bytes = await image.readAsBytes();
-  //   // Saves image to persistent cache using image.path as key
-  //   await _crossCache?.set(image.path, bytes);
-
-  //   final id = _uuid.v4();
-
-  //   final bytesLength = bytes.length;
-  //   final types.ImageMessage imageMessage = types.ImageMessage(
-  //     id: id,
-  //     authorId: widget.user.id,
-  //     createdAt: DateTime.now(),
-  //     source: image.path,
-  //     size: bytesLength,
-  //   );
-
-  //   // Insert message to UI before uploading (local)
-  //   setState(() {
-  //     _messages.insert(0, imageMessage);
-  //   });
-
-  //   //envoyer l'image au serveur avec apiService
-  // }
-
   void _removeItem(types.Message item) async {
     showDialog<void>(
       context: context,
@@ -498,33 +259,4 @@ class ChatUiState extends State<ChatUi> {
       },
     );
   }
-
-  // deprecated
-  // Future<void> _showDeleteConfirmationDialog(types.Message item) async {
-  //   return showDialog<void>(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         title: const Text('Delete Message'),
-  //         content: const Text('Are you sure you want to delete this message?'),
-  //         actions: <Widget>[
-  //           TextButton(
-  //             child: const Text('Cancel'),
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //             },
-  //           ),
-  //           TextButton(
-  //             child: const Text('Delete'),
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //               _removeItem(item);
-  //             },
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
 }
