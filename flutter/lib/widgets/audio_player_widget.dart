@@ -1,9 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-// For web support
-import 'dart:js_interop';
-import 'package:web/web.dart' as web;
+import 'package:ru_project/widgets/audio/web_audio.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final dynamic message; // Accepts types.AudioMessage or similar
@@ -16,7 +14,7 @@ class AudioPlayerWidget extends StatefulWidget {
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   AudioPlayer? _player;
   bool _isPlaying = false;
-  web.HTMLAudioElement? _webAudio;
+  WebAudio? _webAudio;
   Duration? _duration;
   double _iconRotation = 0.0;
 
@@ -30,26 +28,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   Future<void> _play() async {
     if (kIsWeb) {
       // Web: play using HTML audio element
-      if (_webAudio == null) {
-        _webAudio = web.HTMLAudioElement()..src = widget.message.source;
-        _webAudio!.addEventListener(
-          'loadedmetadata',
-          (web.Event _) {
-            if (!(_webAudio!.duration.isNaN)) {
-              setState(() {
-                _duration = Duration(
-                    milliseconds: (_webAudio!.duration * 1000).toInt());
-              });
-            }
-          }.toJS,
+      _webAudio ??= WebAudio()
+        ..load(
+          widget.message.source,
+          onDuration: (duration) {
+            if (mounted) setState(() => _duration = duration);
+          },
+          onEnded: () {
+            if (mounted) setState(() => _isPlaying = false);
+          },
         );
-        _webAudio!.addEventListener(
-          'ended',
-          (web.Event _) {
-            setState(() => _isPlaying = false);
-          }.toJS,
-        );
-      }
       _webAudio!.play();
       setState(() {
         _isPlaying = true;
