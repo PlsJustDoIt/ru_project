@@ -5,13 +5,13 @@ class User {
   String username;
   String status; // status : en ligne, au ru, absent
   String avatarUrl;
-  String restaurantId;
+  String? restaurantId;
 
   User(
       {required this.id,
       required this.username,
       required this.status,
-      required this.restaurantId,
+      this.restaurantId,
       required this.avatarUrl});
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -21,7 +21,7 @@ class User {
         id: json['id'] ?? '',
         username: json['username'] ?? 'ton pere',
         status: json['status'] ?? 'status non défini',
-        restaurantId: json['restaurantId'] ?? 'r135', // todo eviter confusion
+        restaurantId: json['restaurantId'],
         avatarUrl: json['avatarUrl'] ?? 'uploads/avatar/default-avatar.png',
       );
     } catch (e) {
