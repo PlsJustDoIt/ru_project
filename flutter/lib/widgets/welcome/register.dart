@@ -5,7 +5,7 @@ import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
-import 'package:ru_project/widgets/tab_bar_widget.dart';
+import 'package:ru_project/widgets/main_scaffold.dart';
 import 'package:ru_project/widgets/welcome/auth_form.dart';
 
 class RegisterWidget extends StatelessWidget {
@@ -29,7 +29,7 @@ class RegisterWidget extends StatelessWidget {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const TabBarWidget(),
+            builder: (context) => const MainScaffold(),
           ),
         );
       },
