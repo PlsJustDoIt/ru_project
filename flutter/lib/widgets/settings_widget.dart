@@ -13,7 +13,6 @@ class SettingsWidget extends StatefulWidget {
 class _SettingsWidgetState extends State<SettingsWidget> {
   List<RestaurantPartial> _restaurants = [];
   String? _selectedRestaurantId;
-  bool _isLoading = true;
   late final RestaurantService _restaurantService;
 
   @override
@@ -27,48 +26,17 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   void _loadRestaurants() async {
     try {
       final restaurants = await _restaurantService.getRestaurants();
+      if (!mounted) return;
       setState(() {
         _restaurants = restaurants;
-        _isLoading = false;
         // Sélectionner le premier restaurant par défaut s'il existe
         if (restaurants.isNotEmpty) {
           _selectedRestaurantId = restaurants.first.restaurantId;
         }
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // En cas d'erreur, la liste reste vide
     }
-  }
-
-  Widget _buildRestaurantDropdown() {
-    if (_isLoading) {
-      return const CircularProgressIndicator();
-    }
-
-    if (_restaurants.isEmpty) {
-      return const Text('Aucun restaurant disponible');
-    }
-
-    return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        labelText: 'Restaurant universitaire',
-      ),
-      value: _selectedRestaurantId,
-      items: _restaurants.map((restaurant) {
-        return DropdownMenuItem<String>(
-          value: restaurant.restaurantId,
-          child: Text(restaurant.name),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          _selectedRestaurantId = value;
-        });
-      },
-    );
   }
 
   @override
@@ -99,7 +67,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                     border: OutlineInputBorder(),
                     labelText: 'Restaurant universitaire',
                   ),
-                  value: _selectedRestaurantId,
+                  initialValue: _selectedRestaurantId,
                   items: _restaurants.map((restaurant) {
                     return DropdownMenuItem<String>(
                       value: restaurant.restaurantId,

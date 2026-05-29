@@ -143,7 +143,7 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
           });
         } catch (e) {
           logger.e('Error loading friend requests: $e');
-          if (!mounted) return;
+          if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error loading friend requests: $e')),
           );

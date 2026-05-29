@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 
 //TODO save colors in hex format

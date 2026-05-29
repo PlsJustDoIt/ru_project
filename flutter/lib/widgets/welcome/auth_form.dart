@@ -1,7 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/validators/auth_validator.dart';
 
 typedef AuthApiCall = Future<Map<String, dynamic>> Function(String, String);
@@ -95,7 +93,7 @@ class _AuthFormWidgetState extends State<AuthFormWidget> {
                           await widget.apiCall(
                               _usernameController.text, _passwordController.text);
 
-                      if (!mounted) return;
+                      if (!context.mounted) return;
 
                       if (response.containsKey('error')) {
                         setState(() {
@@ -111,7 +109,7 @@ class _AuthFormWidgetState extends State<AuthFormWidget> {
 
                       widget.onSuccess(response, context);
                     } catch (e) {
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Erreur de connexion.')),
                       );

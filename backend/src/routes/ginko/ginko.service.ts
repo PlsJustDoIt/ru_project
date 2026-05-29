@@ -39,7 +39,7 @@ const getTempsLieu = async (lieu: string) => {
         return result;
     } catch (error) {
         logger.error('Erreur lors de la récupération des horaires : %o', error);
-        throw new Error(`Erreur lors de la récupération des horaires pour ${lieu} : ${error}`);
+        throw new Error(`Erreur lors de la récupération des horaires pour ${lieu}`, { cause: error });
     }
 };
 

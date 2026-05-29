@@ -121,7 +121,7 @@ describe('auth controller tests', () => {
             testContext = setupTest();
             (User.findOne as jest.Mock).mockReset();
             (authService.authenticate as jest.Mock).mockReset();
-            jest.spyOn(authService, 'validateCredentials').mockReset();
+            jest.spyOn(authService, 'validateLoginFields').mockReset();
             jest.spyOn(authService, 'generateTokens').mockReset();
         });
 
@@ -134,7 +134,7 @@ describe('auth controller tests', () => {
             };
             req.body.username = 'testuser';
             req.body.password = 'password123';
-            jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: true });
 
             (User.findOne as jest.Mock).mockResolvedValue(mockUser);
             (authService.authenticate as jest.Mock).mockResolvedValue(mockUser);
@@ -163,7 +163,7 @@ describe('auth controller tests', () => {
             const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
-            jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: false, error: 'Invalid credentials' });
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: false, error: 'Invalid credentials' });
 
             await loginUser(req as Request, res as Response);
             expect(statusMock).toHaveBeenCalledWith(400);
@@ -174,8 +174,8 @@ describe('auth controller tests', () => {
             const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
-            jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
-            (User.findOne as jest.Mock).mockRejectedValue(new Error('Database error'));
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: true });
+            (authService.authenticate as jest.Mock).mockRejectedValue(new Error('Database error'));
 
             await loginUser(req as Request, res as Response);
             expect(statusMock).toHaveBeenCalledWith(500);

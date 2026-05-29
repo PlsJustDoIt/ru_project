@@ -1,10 +1,8 @@
 import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:ru_project/config.dart';
-import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/feedback_service.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/widgets/map_widget.dart';
 import 'package:ru_project/widgets/menu_widget.dart';
@@ -12,12 +10,10 @@ import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
 import 'package:ru_project/widgets/settings_widget.dart';
-import 'package:ru_project/widgets/old_map_widget.dart';
 import 'package:ru_project/widgets/profile.dart';
 import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
-import 'package:liquid_swipe/liquid_swipe.dart';
 import 'package:ru_project/widgets/chat_widget.dart';
 
 class TabBarWidget extends StatelessWidget {
@@ -73,9 +69,8 @@ class TabBarWidget extends StatelessWidget {
                 icon: const Icon(Icons.logout),
                 color: Colors.white,
                 onPressed: () async {
-                  bool res = await authService.logout();
+                  await authService.logout();
                   userProvider.clearUserData();
-                  //log out apiservice (test bool)
                   if (!context.mounted) {
                     return;
                   }

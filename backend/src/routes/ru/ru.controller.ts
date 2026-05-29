@@ -11,6 +11,59 @@ import friendsInSector from '../../interfaces/friendsInSector.js';
 
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
+/**
+ * Construit le pipeline d'agrégation des sessions de secteur, groupées par sectorId.
+ * Si `userIds` est fourni, on ne renvoie que les sessions de ces utilisateurs
+ * (ex. les amis) ; sinon, toutes les sessions des secteurs du restaurant.
+ */
+const buildSectorSessionsPipeline = (sectors: Types.ObjectId[], userIds?: Types.ObjectId[]) => [
+    {
+        $match: {
+            sector: { $in: sectors },
+            ...(userIds ? { user: { $in: userIds } } : {}),
+        },
+    },
+    {
+        $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: 'userDetails',
+        },
+    },
+    {
+        $lookup: {
+            from: 'sectors',
+            localField: 'sector',
+            foreignField: '_id',
+            as: 'sectorDetails',
+        },
+    },
+    { $unwind: '$userDetails' },
+    { $unwind: '$sectorDetails' },
+    {
+        $project: {
+            _id: 0,
+            sectorId: '$sectorDetails.sectorId',
+            sessions: {
+                friend: {
+                    _id: '$userDetails._id',
+                    username: '$userDetails.username',
+                    avatarUrl: '$userDetails.avatarUrl',
+                    status: '$userDetails.status',
+                },
+                expiresAt: '$expiresAt',
+            },
+        },
+    },
+    {
+        $group: {
+            _id: '$sectorId',
+            sessions: { $push: '$sessions' },
+        },
+    },
+];
+
 const apiDoc = {
     message: 'API pour récupérer les prochains repas du ru lumière',
     author: {
@@ -48,7 +101,7 @@ const getMenus = async (req: Request, res: Response) => {
         cache.set('menus', menus);
         return res.json({ menus: menus });
     } catch (error) {
-        console.error('Erreur lors de la récupération des menus:', error);
+        logger.error('Erreur lors de la récupération des menus:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des menus' });
     }
 };
@@ -104,57 +157,9 @@ const getSectorsSessions = async (req: Request, res: Response) => {
         // Conversion correcte des IDs d'amis en ObjectId
         const friendObjectIds = user.friends.map(id => new Types.ObjectId(id));
 
-        const tmp_sectorsSessions = await SectorSession.find({}).populate('user', 'username avatarUrl status -_id');
-
-        const friendsInSectors = await SectorSession.aggregate([
-            {
-                $match: {
-                    user: { $in: friendObjectIds },
-                    sector: { $in: restaurant.sectors },
-                },
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'user',
-                    foreignField: '_id',
-                    as: 'userDetails',
-                },
-            },
-            {
-                $lookup: {
-                    from: 'sectors',
-                    localField: 'sector',
-                    foreignField: '_id',
-                    as: 'sectorDetails',
-                },
-            },
-            { $unwind: '$userDetails' },
-            { $unwind: '$sectorDetails' },
-            {
-                $project: {
-                    _id: 0,
-                    sectorId: '$sectorDetails.sectorId',
-                    sessions: {
-                        friend: {
-                            _id: '$userDetails._id',
-                            username: '$userDetails.username',
-                            avatarUrl: '$userDetails.avatarUrl',
-                            status: '$userDetails.status',
-                        },
-                        expiresAt: '$expiresAt',
-                    },
-
-                },
-            },
-            {
-                $group: {
-                    _id: '$sectorId',
-                    sessions: { $push: '$sessions' },
-                    // sector: { $first: '$sectorDetails' }, // Facultatif si tu veux encore les infos du secteur
-                },
-            },
-        ]);
+        const friendsInSectors = await SectorSession.aggregate(
+            buildSectorSessionsPipeline(restaurant.sectors, friendObjectIds),
+        );
 
         if (!friendsInSectors || friendsInSectors.length === 0) {
             logger.info('No friends found in sectors');
@@ -181,7 +186,9 @@ const getSectorsSessions = async (req: Request, res: Response) => {
     }
 };
 
-// Return ALL sessions in restaurant sectors, not only friends
+// Renvoie TOUTES les sessions des secteurs du restaurant (pas seulement les amis).
+// Comportement volontairement public à tout utilisateur authentifié : il sert à
+// visualiser l'affluence globale du RU (cf. AUDIT.md, décision conservée).
 const getAllSectorsSessions = async (req: Request, res: Response) => {
     const restaurantId = req.params.restaurantId as string;
     try {
@@ -194,52 +201,9 @@ const getAllSectorsSessions = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        const allSessions = await SectorSession.aggregate([
-            {
-                $match: {
-                    sector: { $in: restaurant.sectors },
-                },
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'user',
-                    foreignField: '_id',
-                    as: 'userDetails',
-                },
-            },
-            {
-                $lookup: {
-                    from: 'sectors',
-                    localField: 'sector',
-                    foreignField: '_id',
-                    as: 'sectorDetails',
-                },
-            },
-            { $unwind: '$userDetails' },
-            { $unwind: '$sectorDetails' },
-            {
-                $project: {
-                    _id: 0,
-                    sectorId: '$sectorDetails.sectorId',
-                    sessions: {
-                        friend: {
-                            _id: '$userDetails._id',
-                            username: '$userDetails.username',
-                            avatarUrl: '$userDetails.avatarUrl',
-                            status: '$userDetails.status',
-                        },
-                        expiresAt: '$expiresAt',
-                    },
-                },
-            },
-            {
-                $group: {
-                    _id: '$sectorId',
-                    sessions: { $push: '$sessions' },
-                },
-            },
-        ]);
+        const allSessions = await SectorSession.aggregate(
+            buildSectorSessionsPipeline(restaurant.sectors),
+        );
 
         if (!allSessions || allSessions.length === 0) {
             logger.info('No sessions found in sectors');

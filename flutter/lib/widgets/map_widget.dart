@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/models/friendsInSector.dart';
+import 'package:ru_project/models/friend_in_sector.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
@@ -44,7 +44,7 @@ class _FloorPlanState extends State<FloorPlan> {
         Provider.of<RestaurantProvider>(context, listen: false);
 
     restaurant = restaurantProvider.restaurant!; // ca bouge pas
-    logger.d('Restaurant: ${restaurant}');
+    logger.d('Restaurant: $restaurant');
 
     getRestaurantData = machin();
   }
@@ -53,7 +53,7 @@ class _FloorPlanState extends State<FloorPlan> {
   //   await setRestaurantSectors();
   // }
 
-  machin() async {
+  Future<void> machin() async {
     return await setSectorSessions();
   }
 
@@ -160,7 +160,7 @@ class _FloorPlanState extends State<FloorPlan> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
                 Positioned(
                   right: 16,
                   bottom: 16,
@@ -254,7 +254,7 @@ class SectorInfoWidget extends StatefulWidget {
   });
 
   @override
-  _SectorInfoWidgetState createState() => _SectorInfoWidgetState();
+  State<SectorInfoWidget> createState() => _SectorInfoWidgetState();
 }
 
 class _SectorInfoWidgetState extends State<SectorInfoWidget> {
@@ -454,8 +454,9 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                           final parts = <String>[];
                           if (h != 0) parts.add('$h heure${h > 1 ? 's' : ''}');
                           if (m != 0) parts.add('$m minute${m > 1 ? 's' : ''}');
-                          if (sec != 0)
+                          if (sec != 0) {
                             parts.add('$sec seconde${sec > 1 ? 's' : ''}');
+                          }
                           remainingLabel = 'Restant: ${parts.join(', ')}';
                         }
 

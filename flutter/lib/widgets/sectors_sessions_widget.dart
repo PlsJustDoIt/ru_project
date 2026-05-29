@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/models/friendsInSector.dart';
+import 'package:ru_project/models/friend_in_sector.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/api_client.dart';
@@ -82,12 +82,15 @@ class _SectorsSessionsWidgetState extends State<SectorsSessionsWidget> {
                               final m = remaining.inMinutes.remainder(60);
                               final sec = remaining.inSeconds.remainder(60);
                               final parts = <String>[];
-                              if (h != 0)
+                              if (h != 0) {
                                 parts.add('$h heure${h > 1 ? 's' : ''}');
-                              if (m != 0)
+                              }
+                              if (m != 0) {
                                 parts.add('$m minute${m > 1 ? 's' : ''}');
-                              if (sec != 0)
+                              }
+                              if (sec != 0) {
                                 parts.add('$sec seconde${sec > 1 ? 's' : ''}');
+                              }
                               return Text('Restant: ${parts.join(', ')}');
                             }()),
                           ],

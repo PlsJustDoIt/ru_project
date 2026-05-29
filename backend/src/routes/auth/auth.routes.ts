@@ -8,7 +8,9 @@ router.post('/register', registerUser);
 
 router.post('/login', loginUser);
 
-router.post('/token', auth, refreshUserToken);
+// Pas de middleware `auth` ici : le refresh s'authentifie via le refresh token
+// (dans le body), pas via l'access token qui est justement expiré à ce moment-là.
+router.post('/token', refreshUserToken);
 
 router.post('/logout', auth, logoutUser);
 

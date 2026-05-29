@@ -19,7 +19,7 @@ const initGlobalRoom = async () => {
         }
     } catch (error) {
         logger.error('Failed to initialize global room:', error);
-        throw new Error('Failed to initialize global room');
+        throw new Error('Failed to initialize global room', { cause: error });
     }
 };
 
@@ -106,7 +106,7 @@ const sendMessageToRoom = (userId: string, roomName: string, message: messageCha
         return true;
     } catch (error) {
         logger.error('Error sending message to room:', error);
-        throw new Error('Failed to send message to room');
+        throw new Error('Failed to send message to room', { cause: error });
     }
 };
 
@@ -134,7 +134,7 @@ const deleteMessageFromRoom = async (userId: string, roomName: string, messageId
         return true;
     } catch (error) {
         logger.error('Error deleting message:', error);
-        throw new Error('Failed to delete message');
+        throw new Error('Failed to delete message', { cause: error });
     }
 };
 
@@ -149,7 +149,7 @@ const deleteAllMessagesFromRoom = async (userId: string, roomId: string, roomNam
         return true;
     } catch (error) {
         logger.error('Error deleting all messages:', error);
-        throw new Error('Failed to delete all messages');
+        throw new Error('Failed to delete all messages', { cause: error });
     }
 };
 

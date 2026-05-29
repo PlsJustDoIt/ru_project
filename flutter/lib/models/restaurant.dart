@@ -1,4 +1,3 @@
-import 'package:ru_project/services/logger.dart';
 
 import 'sector.dart';
 

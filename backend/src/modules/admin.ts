@@ -3,7 +3,7 @@ import * as AdminJSMongoose from '@adminjs/mongoose';
 import { ComponentLoader } from 'adminjs';
 import AdminJSExpress from '@adminjs/express';
 import { join } from 'path';
-import { componentsPath, isProduction, rootDir } from '../config.js';
+import { componentsPath, isProduction, jwtAccessSecret, mongoUri, rootDir } from '../config.js';
 import BugReport from '../models/bugReport.js';
 import User from '../models/user.js';
 import { authenticate } from '../routes/auth/auth.service.js';
@@ -146,19 +146,19 @@ const authProvider = new DefaultAuthProvider({
 
 const sessionStore = isProduction
     ? MongoStore.create({
-            mongoUrl: process.env.MONGO_URI,
+            mongoUrl: mongoUri,
             ttl: 14 * 24 * 60 * 60,
         })
     : undefined; // MemoryStore sera utilisé par défaut
 
 const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
-    cookiePassword: process.env.JWT_ACCESS_SECRET ?? 'truc',
+    cookiePassword: jwtAccessSecret,
     provider: authProvider,
 
 }, null, {
     resave: false,
-    saveUninitialized: true,
-    secret: process.env.JWT_ACCESS_SECRET ?? 'truc',
+    saveUninitialized: false,
+    secret: jwtAccessSecret,
     store: sessionStore,
 });
 
