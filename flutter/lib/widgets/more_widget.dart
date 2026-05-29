@@ -22,18 +22,13 @@ class MoreWidget extends StatelessWidget {
         ListTile(
           leading: const Icon(Icons.person_outline),
           title: const Text('Profil'),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => ProfileWidget()),
-          ),
+          onTap: () => _openPage(context, 'Profil', ProfileWidget()),
         ),
         ListTile(
           leading: const Icon(Icons.directions_bus_outlined),
           title: const Text('Bus'),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TransportTimeWidget()),
-          ),
+          onTap: () =>
+              _openPage(context, 'Bus', const TransportTimeWidget()),
         ),
         ListTile(
           leading: const Icon(Icons.settings_outlined),
@@ -64,6 +59,20 @@ class MoreWidget extends StatelessWidget {
           onTap: () => _logout(context),
         ),
       ],
+    );
+  }
+
+  /// Ouvre une sous-page qui ne porte pas son propre Scaffold (Profil, Bus) :
+  /// on lui fournit une AppBar (donc un bouton retour) et un fond opaque.
+  void _openPage(BuildContext context, String title, Widget child) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text(title)),
+          body: child,
+        ),
+      ),
     );
   }
 
