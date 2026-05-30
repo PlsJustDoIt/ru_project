@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/services/logger.dart';
 
@@ -108,13 +110,25 @@ class SocketService {
   }
 
   /// Upload d'un message vocal (multipart). [durationSeconds] estimé côté client.
+  /// Sur web, [filePath] est une URL blob: ; on en récupère les octets.
   Future<Message?> sendAudioMessage(
       String roomName, String filePath, int durationSeconds) async {
     try {
+      final MultipartFile audio;
+      if (kIsWeb) {
+        final bytes = await http.readBytes(Uri.parse(filePath));
+        audio = MultipartFile.fromBytes(
+          bytes,
+          filename: 'vocal.webm',
+          contentType: DioMediaType('audio', 'webm'),
+        );
+      } else {
+        audio = await MultipartFile.fromFile(filePath);
+      }
       final formData = FormData.fromMap({
         'roomName': roomName,
         'duration': durationSeconds,
-        'audio': await MultipartFile.fromFile(filePath),
+        'audio': audio,
       });
       final Response response =
           await _dio.post('/socket/send-audio', data: formData);

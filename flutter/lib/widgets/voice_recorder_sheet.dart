@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -34,25 +35,45 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
   }
 
   Future<void> _start() async {
-    if (!await _recorder.hasPermission()) {
+    try {
+      // Déclenche la demande de permission micro (prompt navigateur sur web).
+      if (!await _recorder.hasPermission()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission micro refusée')),
+          );
+        }
+        return;
+      }
+
+      if (kIsWeb) {
+        // Sur web : pas de système de fichiers (path_provider plante).
+        // L'encodeur opus produit un blob webm ; stop() renvoie une URL blob:.
+        await _recorder.start(
+          const RecordConfig(encoder: AudioEncoder.opus),
+          path: '',
+        );
+      } else {
+        final dir = await getTemporaryDirectory();
+        final path =
+            '${dir.path}/vocal_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _recorder.start(const RecordConfig(), path: path);
+      }
+
+      setState(() {
+        _recording = true;
+        _seconds = 0;
+      });
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _seconds++);
+      });
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permission micro refusée')),
+          SnackBar(content: Text('Enregistrement impossible : $e')),
         );
       }
-      return;
     }
-    final dir = await getTemporaryDirectory();
-    final path =
-        '${dir.path}/vocal_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(const RecordConfig(), path: path);
-    setState(() {
-      _recording = true;
-      _seconds = 0;
-    });
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _seconds++);
-    });
   }
 
   Future<void> _stopAndSend() async {

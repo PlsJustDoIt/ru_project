@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/models/color.dart';
 import 'package:ru_project/services/ginko_service.dart';
 import 'package:ru_project/services/logger.dart';
 
@@ -55,7 +54,7 @@ class _TransportWidgetState extends State<TransportTimeWidget> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(
             child: CircularProgressIndicator(
-              color: AppColors.accent,
+              color: Colors.blue[800],
             ),
           );
         }
@@ -99,10 +98,10 @@ class _TransportWidgetState extends State<TransportTimeWidget> {
               children: [
                 Text(
                   transportData['nomExact'] ?? 'Transport Times',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: Colors.blue[800],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -127,10 +126,10 @@ Widget _buildLineSection(String lineNumber, Map<String, dynamic> destinations) {
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Text(
           'Ligne $lineNumber',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: AppColors.accent,
+            color: Colors.blue[600],
           ),
         ),
       ),
@@ -170,13 +169,13 @@ Widget _buildDestinationRow(String destination, List<dynamic> times) {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.12),
+                          color: Colors.blue[100],
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           time,
-                          style: const TextStyle(
-                            color: AppColors.accent,
+                          style: TextStyle(
+                            color: Colors.blue[800],
                             fontWeight: FontWeight.w600,
                           ),
                         ),
