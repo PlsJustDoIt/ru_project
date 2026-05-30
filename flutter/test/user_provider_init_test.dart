@@ -10,6 +10,7 @@ import 'package:ru_project/services/user_service.dart';
 
 class _FakeSecureStorage implements SecureStorage {
   String? accessToken;
+  String? guestRestaurantId;
 
   @override
   Future<String?> getAccessToken() async => accessToken;
@@ -25,6 +26,16 @@ class _FakeSecureStorage implements SecureStorage {
   Future<String?> getRefreshToken() async => null;
   @override
   Future<void> clearTokens() async {}
+  @override
+  Future<void> storeGuestRestaurantId(String restaurantId) async {
+    guestRestaurantId = restaurantId;
+  }
+  @override
+  Future<String?> getGuestRestaurantId() async => guestRestaurantId;
+  @override
+  Future<void> clearGuestRestaurantId() async {
+    guestRestaurantId = null;
+  }
 }
 
 class _FakeUserService extends UserService {
