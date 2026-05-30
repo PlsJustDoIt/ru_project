@@ -109,10 +109,9 @@ async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise
         const restaurants = result.root.resto;
         const resto = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_id);
         const menus = decodeJsonValues(resto.menu);
-        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-        const filteredMenus = menus.filter((menu: MenuXml) => menu.$.date >= today);
-
-        const transformedMenus: MenuResponse[] = filteredMenus.map((menu: MenuXml) => transformToMenu(menu));
+        // On renvoie tous les jours du flux ; le filtrage par date et le comblement
+        // des jours fermés sont faits par requête dans le controller (dépendent de `today`).
+        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
         return transformedMenus;
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);

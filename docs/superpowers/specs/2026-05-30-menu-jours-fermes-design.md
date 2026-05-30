@@ -63,10 +63,20 @@ reprend du sens, et c'est testable en Jest. Le frontend n'a qu'à afficher.
   toujours des jours de semaine à venir).
 - Tri défensif des entrées par date croissante.
 
+**`ru.service.ts` — `fetchMenusFromExternalAPI`** ne filtre plus par date : il
+renvoie **tous** les jours du flux. Le filtrage est une préoccupation d'affichage,
+déplacée dans le controller (responsabilité unique + permet l'ancrage dev/prod).
+
+**Ancrage `today` selon l'environnement (`isProduction`)**
+- **Prod** : `today` = vraie date du jour → filtre `>= today` normal.
+- **Dev** : `today` = **1er jour du fixture** (`menus.xml` est statique ; sinon tout
+  serait filtré). On voit ainsi toujours une **semaine exemple** navigable. Fallback
+  sur la vraie date si le fixture est vide.
+
 **`ru.controller.ts` — `getMenus`**
 - Unifier les deux branches (cache hit / miss) : récupérer la liste (cache ou
   `fetchMenusFromExternalAPI`), puis appliquer **par requête** `filtre date >= today`
-  puis `fillClosedDays(filtered, today)`.
+  (avec le `today` ancré ci-dessus) puis `fillClosedDays(filtered, today)`.
 - Le comblement n'est **pas** mis en cache (il dépend de `today`). Le cache continue
   de stocker la liste transformée brute.
 - Effet de bord positif : supprime la duplication actuelle du filtre `>= today`

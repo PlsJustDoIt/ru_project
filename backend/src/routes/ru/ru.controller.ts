@@ -8,6 +8,7 @@ import { getUserById } from '../user/user.service.js';
 import SectorSession from '../../models/sectorSession.js';
 import { Types } from 'mongoose';
 import friendsInSector from '../../interfaces/friendsInSector.js';
+import { isProduction } from '../../config.js';
 
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
 
@@ -94,8 +95,16 @@ const getMenus = async (req: Request, res: Response) => {
             cache.set('menus', menus); // On met les menus en cache pour une semaine
         }
 
+        // En prod : on ancre sur la vraie date du jour (filtre `>= today`).
+        // En dev : on ancre sur le 1er jour du fixture pour toujours afficher une
+        // semaine exemple (le fixture est statique, sinon tout serait filtré).
+        const realToday = new Date().toISOString().split('T')[0];
+        const fixtureStart = menus.length > 0
+            ? menus.map((m) => m.date).sort((a, b) => a.localeCompare(b))[0]
+            : realToday;
+        const today = isProduction ? realToday : fixtureStart;
+
         // Filtre + comblement appliqués par requête (dépendent de `today`, donc non cachés)
-        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
         const filtered = menus.filter((menu: MenuResponse) => menu.date >= today);
         return res.json({ menus: fillClosedDays(filtered, today) });
     } catch (error) {
