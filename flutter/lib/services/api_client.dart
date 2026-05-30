@@ -76,7 +76,9 @@ class ApiClient {
           if (!options.path.contains('/login') &&
               !options.path.contains('/register')) {
             final token = await secureStorage.getAccessToken();
-            options.headers['Authorization'] = 'Bearer $token';
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
           }
           return handler.next(options);
         },
