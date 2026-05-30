@@ -175,7 +175,7 @@ class _MenuWidgetState extends State<MenuWidget>
             Icon(Icons.no_meals,
                 size: 64, color: theme.colorScheme.primary),
             const SizedBox(height: 16),
-            Text('Pas de menu aujourd\'hui',
+            Text('Pas de menu',
                 style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
@@ -218,9 +218,13 @@ class _MenuWidgetState extends State<MenuWidget>
     );
   }
 
-  /// Vue détaillée d'un jour : toutes les catégories en cartes, lisibles d'un coup.
+  /// Vue détaillée d'un jour : grande vue « Pas de menu » si fermé,
+  /// sinon toutes les catégories en cartes, lisibles d'un coup.
   Widget _dayView(Menu menu) {
     final theme = Theme.of(context);
+    if (menu.isClosed()) {
+      return _noMenuView();
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
@@ -231,10 +235,7 @@ class _MenuWidgetState extends State<MenuWidget>
             style: theme.textTheme.titleMedium,
           ),
         ),
-        if (menu.isClosed())
-          _closedCard(menu.fermeture ?? 'Fermé')
-        else
-          ..._categoryCards(menu.plats),
+        ..._categoryCards(menu.plats),
       ],
     );
   }
