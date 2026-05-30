@@ -4,7 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 class Config {
   static final String env = kReleaseMode ? "production" : "development";
   static final String apiUrl = env == "production"
-      ? "https://ru.api.mehmetates.fr/"
+      ? "https://ru.api.mehmetates.fr/api"
       : "http://localhost:5000/api";
 
   static final String serverUrl = env == "production"
