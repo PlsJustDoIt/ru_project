@@ -140,6 +140,8 @@ const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> =
             createdAt: message.createdAt,
             username: message.user.username,
             id: message._id.toString(),
+            audioUrl: message.audioUrl,
+            duration: message.duration,
         };
     });
 };
@@ -159,7 +161,7 @@ const getConversationsSummary = async (userId: string) => {
                 roomName: room.name,
                 lastMessage: last
                     ? {
-                          content: last.content,
+                          content: last.audioUrl ? '🎤 Message vocal' : last.content,
                           createdAt: last.createdAt,
                           username: last.user.username,
                           id: last._id.toString(),

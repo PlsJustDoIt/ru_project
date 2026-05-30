@@ -18,21 +18,29 @@ class Message {
   String content;
   final String sender;
   final DateTime createdAt; // TODO : faire bien parce que voila
+  final String? audioUrl;
+  final int? duration; // secondes
 
   Message({
     required this.id,
     required this.content,
     required this.sender,
     required this.createdAt,
+    this.audioUrl,
+    this.duration,
   });
+
+  bool get isAudio => audioUrl != null && audioUrl!.isNotEmpty;
 
   factory Message.fromJson(Map<String, dynamic> json) {
     try {
       return Message(
         id: json['id'],
-        content: json['content'],
+        content: json['content'] ?? '',
         sender: json['username'],
         createdAt: DateTime.parse((json['createdAt'])),
+        audioUrl: json['audioUrl'],
+        duration: json['duration'],
       );
     } catch (e) {
       throw Exception('Error parsing message data: $e');

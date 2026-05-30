@@ -46,7 +46,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     } else {
       // Mobile/Desktop: play using just_audio
       _player ??= AudioPlayer();
-      await _player!.setFilePath(widget.message.source);
+      final String source = widget.message.source;
+      if (source.startsWith('http')) {
+        await _player!.setUrl(source);
+      } else {
+        await _player!.setFilePath(source);
+      }
       _duration = _player!.duration;
       await _player!.play();
       setState(() {

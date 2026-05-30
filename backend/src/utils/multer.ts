@@ -5,12 +5,13 @@ import sharp from 'sharp';
 import { unlink, mkdir } from 'fs/promises';
 
 import { NextFunction, Request, Response } from 'express';
-import { bugReportPath, avatarPath } from '../config.js';
+import { bugReportPath, avatarPath, audioPath } from '../config.js';
 
 (async () => {
     try {
         await mkdir(avatarPath, { recursive: true });
         await mkdir(bugReportPath, { recursive: true });
+        await mkdir(audioPath, { recursive: true });
     } catch (error) {
         logger.error('Error creating upload directory:', error);
     }
@@ -61,6 +62,27 @@ const uploadBugReport = multer({
     },
 });
 
+const storageAudio = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, audioPath);
+    },
+    filename: (req, file, cb) => {
+        // Nom sûr : id utilisateur + timestamp ; on garde l'extension d'origine si saine.
+        const ext = extname(file.originalname).toLowerCase().match(/^\.(m4a|aac|mp3|ogg|wav|webm)$/)
+            ? extname(file.originalname).toLowerCase()
+            : '.m4a';
+        cb(null, `${req.user.id}-${Date.now()}${ext}`);
+    },
+});
+
+const uploadAudio = multer({
+    storage: storageAudio,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+        cb(null, file.mimetype.startsWith('audio/'));
+    },
+});
+
 // Middleware de conversion et compression
 const convertAndCompress = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.file) {
@@ -102,4 +124,4 @@ const convertAndCompress = async (req: Request, res: Response, next: NextFunctio
     }
 };
 
-export { uploadAvatar, convertAndCompress, uploadBugReport };
+export { uploadAvatar, convertAndCompress, uploadBugReport, uploadAudio };
