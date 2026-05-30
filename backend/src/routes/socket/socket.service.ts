@@ -107,6 +107,27 @@ const sendMessageToRoom = (userId: string, roomName: string, message: messageCha
     }
 };
 
+// Notif in-app : prévient les participants d'un nouveau message, qu'ils aient
+// rejoint la room socket ou non (la socket persistante les rend conscients
+// partout). Privé -> ciblé sur l'autre participant ; Global -> tous.
+const notifyNewMessage = (
+    senderId: string,
+    room: { name: string; participants?: { toString(): string }[] },
+    message: messageChat,
+) => {
+    const payload = { roomName: room.name, message };
+    if (room.name === 'Global') {
+        socketHandler.broadcastToEveryone('notify_message', payload);
+        return;
+    }
+    for (const participant of room.participants ?? []) {
+        const participantId = participant.toString();
+        if (participantId !== senderId) {
+            socketHandler.emitToUser('notify_message', participantId, payload);
+        }
+    }
+};
+
 const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> => {
     const messages = await Message.find({ room: roomId })
         .populate<{ user: { username: string } }>('user', 'username')
@@ -218,4 +239,4 @@ async function getUserRooms(userId: Types.ObjectId) {
 // emitToUser
 // initGlobalRoom
 
-export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, getConversationsSummary, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };
+export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, getConversationsSummary, notifyNewMessage, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };

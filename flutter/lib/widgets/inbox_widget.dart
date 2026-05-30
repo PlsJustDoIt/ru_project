@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/models/user.dart';
+import 'package:ru_project/providers/notification_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/chat_connection.dart';
@@ -70,6 +71,7 @@ class _InboxWidgetState extends State<InboxWidget> {
 
     final user = Provider.of<UserProvider>(context).user!;
     final friends = Provider.of<UserProvider>(context).friends;
+    final notifications = context.watch<NotificationProvider>();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -84,22 +86,36 @@ class _InboxWidgetState extends State<InboxWidget> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: _summaries['Global'] != null
-                ? Text(timeAgo(_summaries['Global']!.createdAt))
-                : null,
+            trailing: _trailing(_summaries['Global'], notifications.unreadFor('Global')),
             onTap: () => _openRoom('Global', 'Global'),
           ),
           const Divider(height: 1),
 
           // Une ligne par ami
           for (final friend in friends)
-            _friendTile(user, friend),
+            _friendTile(user, friend, notifications),
         ],
       ),
     );
   }
 
-  Widget _friendTile(User user, Friend friend) {
+  Widget? _trailing(Message? last, int unread) {
+    if (last == null && unread == 0) return null;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (last != null) Text(timeAgo(last.createdAt)),
+        if (unread > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Badge(label: Text('$unread')),
+          ),
+      ],
+    );
+  }
+
+  Widget _friendTile(User user, Friend friend, NotificationProvider notifications) {
     final roomName = ChatConnection.privateRoomName(user.id, friend.id);
     final last = _summaries[roomName];
     return ListTile(
@@ -113,7 +129,7 @@ class _InboxWidgetState extends State<InboxWidget> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: last != null ? Text(timeAgo(last.createdAt)) : null,
+      trailing: _trailing(last, notifications.unreadFor(roomName)),
       onTap: () =>
           _openRoom(roomName, friend.username, friends: [friend]),
     );
