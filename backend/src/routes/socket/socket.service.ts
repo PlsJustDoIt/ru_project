@@ -123,6 +123,32 @@ const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> =
     });
 };
 
+// Résumé des conversations de l'utilisateur : Global + ses rooms privées,
+// chacune avec son dernier message (ou null si vide).
+const getConversationsSummary = async (userId: string) => {
+    const rooms = await Room.find({ $or: [{ name: 'Global' }, { participants: userId }] });
+
+    return Promise.all(
+        rooms.map(async (room) => {
+            const last = await Message.findOne({ room: room._id })
+                .populate<{ user: { username: string } }>('user', 'username')
+                .sort({ createdAt: -1 });
+
+            return {
+                roomName: room.name,
+                lastMessage: last
+                    ? {
+                          content: last.content,
+                          createdAt: last.createdAt,
+                          username: last.user.username,
+                          id: last._id.toString(),
+                      }
+                    : null,
+            };
+        }),
+    );
+};
+
 const deleteMessageFromRoom = async (userId: string, roomName: string, messageId: string) => {
     try {
         await Message.deleteOne({ _id: messageId });
@@ -192,4 +218,4 @@ async function getUserRooms(userId: Types.ObjectId) {
 // emitToUser
 // initGlobalRoom
 
-export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };
+export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, getConversationsSummary, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };

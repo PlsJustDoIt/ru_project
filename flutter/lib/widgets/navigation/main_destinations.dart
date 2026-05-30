@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/widgets/chat_ui.dart';
 import 'package:ru_project/widgets/friends_widget.dart';
+import 'package:ru_project/widgets/inbox_widget.dart';
 import 'package:ru_project/widgets/map_widget.dart';
 import 'package:ru_project/widgets/menu_widget.dart';
 import 'package:ru_project/widgets/more_widget.dart';
@@ -33,10 +31,7 @@ final List<MainDestination> kMainDestinations = [
   MainDestination(
     label: 'Messages',
     icon: Icons.chat_bubble_outline,
-    builder: (context) {
-      final user = Provider.of<UserProvider>(context, listen: false).user!;
-      return ChatUi(roomName: 'Global', actualUser: user);
-    },
+    builder: (_) => const InboxWidget(),
   ),
   MainDestination(
     label: 'Amis',
