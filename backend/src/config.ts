@@ -31,6 +31,7 @@ const uploadsPath = join(rootDir, 'uploads');
 const logsPath = join(rootDir, 'logs');
 const avatarPath = join(uploadsPath, 'avatar');
 const bugReportPath = join(uploadsPath, 'bugReport');
+const audioPath = join(uploadsPath, 'audio');
 let componentsPath: string;
 if (!isProduction) {
     componentsPath = join(rootDir, 'src/components');
@@ -46,6 +47,7 @@ export {
     logsPath,
     avatarPath,
     bugReportPath,
+    audioPath,
     componentsPath,
     ginkoApiKey,
     mongoUri,

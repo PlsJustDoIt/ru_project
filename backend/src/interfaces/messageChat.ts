@@ -3,4 +3,6 @@ export interface messageChat {
     createdAt: Date;
     username: string;
     id: string;
+    audioUrl?: string;
+    duration?: number;
 }

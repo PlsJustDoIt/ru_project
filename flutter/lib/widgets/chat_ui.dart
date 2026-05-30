@@ -5,11 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
 import 'package:ru_project/providers/notification_provider.dart';
+import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/chat_connection.dart';
 import 'package:ru_project/services/chat_event.dart';
 import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/socket_service.dart';
 import 'package:ru_project/widgets/audio_player_widget.dart';
+import 'package:ru_project/widgets/voice_recorder_sheet.dart';
 
 import 'package:flutter_chat_core/flutter_chat_core.dart' as types;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
@@ -40,6 +42,7 @@ class ChatUiState extends State<ChatUi> {
   List<types.Message> _messages = [];
   late final SocketService socketService;
   late final ChatConnection chatConnection;
+  late final ApiClient apiClient;
   late final NotificationProvider notifications;
   StreamSubscription<ChatEvent>? _sub;
   late final types.ChatController chatController;
@@ -49,6 +52,7 @@ class ChatUiState extends State<ChatUi> {
     super.initState();
     socketService = Provider.of<SocketService>(context, listen: false);
     chatConnection = Provider.of<ChatConnection>(context, listen: false);
+    apiClient = Provider.of<ApiClient>(context, listen: false);
     notifications = Provider.of<NotificationProvider>(context, listen: false);
     notifications.setCurrentRoom(widget.roomName);
     chatController = types.InMemoryChatController();
@@ -67,16 +71,30 @@ class ChatUiState extends State<ChatUi> {
     _initializeMessages();
   }
 
+  /// Convertit un message métier en message d'UI (texte ou vocal).
+  types.Message _toUiMessage(ru_project.Message message) {
+    if (message.isAudio) {
+      return types.AudioMessage(
+        id: message.id,
+        authorId: message.sender,
+        source: apiClient.getImageNetworkUrl(message.audioUrl!),
+        duration: Duration(seconds: message.duration ?? 0),
+        createdAt: message.createdAt,
+      );
+    }
+    return types.TextMessage(
+      id: message.id,
+      authorId: message.sender,
+      text: message.content,
+      createdAt: message.createdAt,
+    );
+  }
+
   void _onChatEvent(ChatEvent event) {
     if (!mounted) return;
     switch (event) {
       case MessageReceived(:final message):
-        final incoming = types.TextMessage(
-          id: message.id,
-          authorId: message.sender,
-          text: message.content,
-          createdAt: message.createdAt,
-        );
+        final incoming = _toUiMessage(message);
         setState(() {
           _messages.insert(0, incoming);
           chatController.insertMessage(incoming);
@@ -117,12 +135,7 @@ class ChatUiState extends State<ChatUi> {
         await socketService.getMessagesFromRoom(widget.roomName);
     if (messagesReceived != null) {
       for (ru_project.Message message in messagesReceived) {
-        messagesList.add(types.TextMessage(
-          id: message.id,
-          authorId: message.sender,
-          text: message.content,
-          createdAt: message.createdAt,
-        ));
+        messagesList.add(_toUiMessage(message));
       }
     } else {
       if (mounted) {
@@ -160,6 +173,7 @@ class ChatUiState extends State<ChatUi> {
       onMessageSend: (text) {
         _addItem(text);
       },
+      onAttachmentTap: _recordAndSendAudio,
       onMessageTap: (context, message, {TapUpDetails? details, index = 0}) {
         logger.i('Message tapped: $details, index: $index');
         _removeItem(message);
@@ -179,6 +193,34 @@ class ChatUiState extends State<ChatUi> {
         },
       ),
     );
+  }
+
+  // Ouvre la feuille d'enregistrement ; à l'envoi, upload puis insertion
+  // optimiste (le serveur ne ré-émet pas à l'expéditeur).
+  Future<void> _recordAndSendAudio() async {
+    final result = await showModalBottomSheet<RecordedAudio>(
+      context: context,
+      builder: (_) => const VoiceRecorderSheet(),
+    );
+    if (result == null || !mounted) return;
+
+    final sent = await socketService.sendAudioMessage(
+        widget.roomName, result.path, result.duration);
+    if (sent == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Échec de l\'envoi du vocal')),
+        );
+      }
+      return;
+    }
+    final uiMessage = _toUiMessage(sent);
+    if (mounted) {
+      setState(() {
+        _messages.insert(0, uiMessage);
+        chatController.insertMessage(uiMessage);
+      });
+    }
   }
 
   void _addItem(String text) async {

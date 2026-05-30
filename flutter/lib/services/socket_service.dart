@@ -107,6 +107,28 @@ class SocketService {
     }
   }
 
+  /// Upload d'un message vocal (multipart). [durationSeconds] estimé côté client.
+  Future<Message?> sendAudioMessage(
+      String roomName, String filePath, int durationSeconds) async {
+    try {
+      final formData = FormData.fromMap({
+        'roomName': roomName,
+        'duration': durationSeconds,
+        'audio': await MultipartFile.fromFile(filePath),
+      });
+      final Response response =
+          await _dio.post('/socket/send-audio', data: formData);
+      if (response.statusCode == 201) {
+        return Message.fromJson(response.data['message']);
+      }
+      logger.e('Invalid response from server: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to send audio: $e');
+      return null;
+    }
+  }
+
   // router.delete('/delete-messages
   Future<bool> deleteMessages(String roomName) async {
     try {
