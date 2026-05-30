@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:intl/intl.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -91,7 +92,7 @@ class _MenuWidgetState extends State<MenuWidget>
   Widget build(BuildContext context) {
     super.build(context);
     if (_menus.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return _noMenuView();
     }
     return Column(
       children: [
@@ -160,6 +161,33 @@ class _MenuWidgetState extends State<MenuWidget>
     } finally {
       if (mounted) setState(() => _joining = false);
     }
+  }
+
+  /// Aucun menu disponible (RU fermé / pas de données) — pas de spinner.
+  Widget _noMenuView() {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.no_meals,
+                size: 64, color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text('Pas de menu aujourd\'hui',
+                style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Le RU est probablement fermé. Reviens un autre jour !',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Bandeau de jours cliquables, jour sélectionné mis en avant.
