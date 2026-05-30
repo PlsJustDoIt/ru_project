@@ -30,7 +30,7 @@ class _FloorPlanState extends State<FloorPlan> {
   late final UserProvider userProvider;
   late final bool isGuest;
   late final RestaurantTmp restaurant;
-  late FriendsInSectors? sectorSessions;
+  FriendsInSectors? sectorSessions; // null tant que non chargé (ex: mode invité)
   late Future<void> getRestaurantData;
   late final RestaurantService restaurantService;
   late final RestaurantProvider restaurantProvider;
