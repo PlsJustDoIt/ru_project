@@ -96,6 +96,25 @@ class UserService {
     }
   }
 
+  //update user restaurant (persist le choix de RU)
+  Future<bool> updateRestaurant(String restaurantId) async {
+    try {
+      final Response response = await _dio.put('/users/update-restaurant', data: {
+        'restaurantId': restaurantId,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Restaurant updated: $restaurantId');
+        return true;
+      }
+      logger.e(
+          'Invalid response: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to update restaurant: $e');
+      return false;
+    }
+  }
+
   //update user username
   Future<Map<String, dynamic>> updateUsername(String username) async {
     try {
