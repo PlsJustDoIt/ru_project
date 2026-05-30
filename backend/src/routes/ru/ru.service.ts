@@ -229,4 +229,30 @@ const getSectorsFromRestaurant = async (restaurantId: Types.ObjectId) => {
     }));
 };
 
-export { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, createRestaurant, setupRestaurant, getSectorsFromRestaurant };
+// Avance d'un jour calendaire (en UTC, pour coller au `today` calculé via toISOString).
+function nextDay(date: string): string {
+    const d = new Date(date + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().split('T')[0];
+}
+
+/**
+ * Comble les jours fermés : à partir des jours ouverts (déjà filtrés `>= today`),
+ * renvoie une plage continue de `today` jusqu'au dernier jour reçu, en insérant
+ * chaque jour manquant comme `{ date, fermeture: 'Restaurant fermé' }`.
+ * Liste vide -> un seul jour fermé (aujourd'hui).
+ */
+function fillClosedDays(menus: MenuResponse[], today: string): MenuResponse[] {
+    const sorted = [...menus].sort((a, b) => a.date.localeCompare(b.date));
+    const lastDate = sorted.length > 0 ? sorted[sorted.length - 1].date : today;
+    const end = today > lastDate ? today : lastDate;
+    const byDate = new Map(sorted.map((m) => [m.date, m]));
+
+    const result: MenuResponse[] = [];
+    for (let d = today; d <= end; d = nextDay(d)) {
+        result.push(byDate.get(d) ?? { date: d, fermeture: 'Restaurant fermé' });
+    }
+    return result;
+}
+
+export { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, createRestaurant, setupRestaurant, getSectorsFromRestaurant, fillClosedDays };
