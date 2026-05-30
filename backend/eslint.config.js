@@ -6,9 +6,12 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import noInvalidResJson from './eslint-rules/no-invalid-res-json.js'; // Règle personnalisée
 
 export default [
+    // Exclusions globales : build + bundles générés par AdminJS (non lintables).
+    {
+        ignores: ['dist/**/*', '.adminjs/**/*'],
+    },
     {
         files: ['**/*.{js,mjs,cjs,ts}'], // Fichiers à inclure
-        ignores: ['dist/**/*'], // Dossiers à exclure
         languageOptions: {
             globals: globals.browser, // Options de langage et globaux
         },

@@ -161,11 +161,11 @@ const getConversationsSummary = async (userId: string) => {
                 roomName: room.name,
                 lastMessage: last
                     ? {
-                          content: last.audioUrl ? '🎤 Message vocal' : last.content,
-                          createdAt: last.createdAt,
-                          username: last.user.username,
-                          id: last._id.toString(),
-                      }
+                            content: last.audioUrl ? '🎤 Message vocal' : last.content,
+                            createdAt: last.createdAt,
+                            username: last.user.username,
+                            id: last._id.toString(),
+                        }
                     : null,
             };
         }),
