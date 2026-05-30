@@ -31,7 +31,7 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 | 0 | Bug refresh web | S–M | Bloquant de lancement | ✅ fait |
 | 1 | Identité visuelle (thème direction A) | M | Socle transversal | ✅ fait |
 | 2 | Chat (refonte + vocal) | L | Cœur de la demande | ✅ fait (2a/2b/2c/2d) |
-| 3 | Menu (refonte + social) | M | « Mieux exploité » | ⬜ à faire |
+| 3 | Menu (refonte + social) | M | « Mieux exploité » | ✅ fait (3a/3b) |
 | 4 | Polish & dette | M | Finition | ⬜ à faire |
 
 ---
@@ -92,10 +92,9 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 
 **État actuel :** affiche toutes les catégories d'un jour ; navigation par flèches ‹ › pour changer de jour ; déco basique (bordures épaisses, TODO « à revoir »). Besoin clé exprimé : **voir les repas de la semaine à l'avance** (la navigation flèche-par-flèche est lente pour ça). *À vérifier : une ligne du code (`menu_widget.dart`, condition `key == "Entrées"`) saute les entrées — confirmer qu'elle ne masque rien d'utile.*
 
-**À livrer :**
-- Refonte « coup d'œil » direction A : toutes les catégories d'un jour en **cartes + icônes**, lisibles d'un coup.
-- Navigation **bandeau de jours + jour détaillé** (option A retenue) : rangée de jours cliquables en haut, jour choisi affiché en entier dessous (+ swipe). Saut direct à n'importe quel jour pour voir la semaine à l'avance.
-- **Accroche sociale :** depuis un menu, « on y mange ? » → passe le statut à *au ru* et/ou prévient les amis / poste dans le Global. Relie menu ↔ secteurs ↔ chat (c'est le sens de « mieux exploité »).
+**À livrer :** ✅ **FAIT** (branches `feat/phase3a-menu-refonte` + `feat/phase3b-menu-social`, fusionnées dans `dev`).
+- ✅ **3a** Refonte « coup d'œil » direction A : toutes les catégories d'un jour en **cartes + icônes** (Entrées désormais incluses) ; bandeau de jours cliquables + swipe synchronisé (saut direct à n'importe quel jour) ; gère fermeture / menu non communiqué.
+- ✅ **3b** Accroche sociale : bouton « On y mange ? » → statut *au ru* + post dans le Global (« X mange au RU aujourd'hui »). Relie menu ↔ statut ↔ chat.
 
 *Effort : M.*
 
