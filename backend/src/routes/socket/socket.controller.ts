@@ -78,10 +78,14 @@ const sendAudioMessage = async (req: Request, res: Response) => {
         }
 
         const audioUrl = `uploads/audio/${req.file.filename}`;
+        const parsedDuration = duration !== undefined ? Number(duration) : undefined;
+        if (parsedDuration !== undefined && (!Number.isFinite(parsedDuration) || parsedDuration < 0)) {
+            return res.status(400).json({ error: 'Invalid duration' });
+        }
         const message = new Message({
             content: '',
             audioUrl,
-            duration: duration ? Number(duration) : undefined,
+            duration: parsedDuration,
             user: user,
             room: room,
         });
