@@ -236,11 +236,19 @@ function nextDay(date: string): string {
     return d.toISOString().split('T')[0];
 }
 
+// Samedi (6) ou dimanche (0) — en UTC pour rester cohérent avec `nextDay`.
+function isWeekend(date: string): boolean {
+    const day = new Date(date + 'T00:00:00Z').getUTCDay();
+    return day === 0 || day === 6;
+}
+
 /**
- * Comble les jours fermés : à partir des jours ouverts (déjà filtrés `>= today`),
- * renvoie une plage continue de `today` jusqu'au dernier jour reçu, en insérant
- * chaque jour manquant comme `{ date, fermeture: 'Restaurant fermé' }`.
- * Liste vide -> un seul jour fermé (aujourd'hui).
+ * Comble les jours fermés EN SEMAINE : à partir des jours ouverts (déjà filtrés
+ * `>= today`), renvoie une plage de `today` jusqu'au dernier jour reçu, en insérant
+ * chaque jour de semaine manquant comme `{ date, fermeture: 'Restaurant fermé' }`.
+ * Les week-ends ne sont jamais comblés (toujours fermés, inutile de les afficher),
+ * mais un menu réel tombant un week-end (RU ouvert le samedi) est conservé.
+ * Liste vide un jour de semaine -> un seul jour fermé (aujourd'hui) ; un week-end -> [].
  */
 function fillClosedDays(menus: MenuResponse[], today: string): MenuResponse[] {
     const sorted = [...menus].sort((a, b) => a.date.localeCompare(b.date));
@@ -250,7 +258,12 @@ function fillClosedDays(menus: MenuResponse[], today: string): MenuResponse[] {
 
     const result: MenuResponse[] = [];
     for (let d = today; d <= end; d = nextDay(d)) {
-        result.push(byDate.get(d) ?? { date: d, fermeture: 'Restaurant fermé' });
+        const existing = byDate.get(d);
+        if (existing) {
+            result.push(existing); // menu réel : toujours conservé, week-end inclus
+        } else if (!isWeekend(d)) {
+            result.push({ date: d, fermeture: 'Restaurant fermé' });
+        }
     }
     return result;
 }

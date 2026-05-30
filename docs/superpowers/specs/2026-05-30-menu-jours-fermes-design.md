@@ -51,10 +51,16 @@ reprend du sens, et c'est testable en Jest. Le frontend n'a qu'à afficher.
 - Calcule `start = today`, `end = max(today, date du dernier menu)`.
 - Pour chaque jour calendaire de `start` à `end` (itération en UTC, pour coller au
   `today` calculé via `toISOString`) :
-  - si un menu existe pour cette date → on le garde tel quel ;
-  - sinon → on insère un jour fermé `{ date, fermeture: 'Restaurant fermé' }`.
-- Liste vide en entrée → renvoie un seul jour fermé : `[{ date: today, fermeture:
-  'Restaurant fermé' }]`.
+  - si un menu existe pour cette date → on le garde tel quel (y compris un week-end,
+    pour les RU ouverts le samedi : on ne masque jamais un menu réel) ;
+  - sinon, **et seulement si ce n'est pas un samedi/dimanche** → on insère un jour
+    fermé `{ date, fermeture: 'Restaurant fermé' }`.
+- **Les week-ends ne sont jamais comblés** : ils sont toujours fermés, inutile de les
+  afficher. Seules les fermetures **en semaine** (férié, grève) apparaissent comme
+  « Pas de menu ».
+- Liste vide un jour de semaine → un seul jour fermé `[{ date: today, fermeture }]`.
+  Liste vide un week-end → `[]` (rien à afficher ; en pratique le flux réel a presque
+  toujours des jours de semaine à venir).
 - Tri défensif des entrées par date croissante.
 
 **`ru.controller.ts` — `getMenus`**
@@ -96,9 +102,12 @@ mécanique des chips et de la navigation `PageView`.
 ## Tests
 
 - Backend (Jest, `fillClosedDays`) :
-  - week-end intercalé entre deux semaines → jours du week-end insérés comme fermés ;
-  - aujourd'hui absent du flux → aujourd'hui inséré en tête comme fermé ;
-  - liste vide → un seul jour fermé (aujourd'hui) ;
+  - week-end intercalé entre deux semaines → **non inséré** (pas de chip sam/dim) ;
+  - jour férié/grève en semaine absent → inséré en tête comme fermé ;
+  - aujourd'hui = samedi → démarre au lundi suivant, aucune chip week-end ;
+  - liste vide un jour de semaine → un seul jour fermé (aujourd'hui) ;
+  - liste vide un week-end → `[]` ;
+  - menu réel tombant un week-end → conservé (jamais masqué) ;
   - semaine pleine sans trou → liste inchangée (pas d'ajout) ;
   - pas de jour fermé ajouté **après** le dernier jour ouvert.
 - Flutter : aucun test configuré dans le projet (non couvert).

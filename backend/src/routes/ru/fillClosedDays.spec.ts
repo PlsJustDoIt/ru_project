@@ -19,42 +19,59 @@ function isClosed(m: MenuResponse): boolean {
 }
 
 describe('fillClosedDays', () => {
-    it('comble un week-end intercalé entre deux semaines', () => {
-        // ven 2026-06-05 ouvert, lun 2026-06-08 ouvert ; sam 06 / dim 07 absents
+    it('n\'insère PAS le week-end intercalé entre deux semaines', () => {
+        // ven 2026-06-05 ouvert, lun 2026-06-08 ouvert ; sam 06 / dim 07 ignorés
         const result = fillClosedDays(
             [openDay('2026-06-05'), openDay('2026-06-08')],
             '2026-06-05',
         );
         expect(result.map((m) => m.date)).toEqual([
             '2026-06-05',
-            '2026-06-06',
-            '2026-06-07',
             '2026-06-08',
         ]);
-        expect(isClosed(result[0])).toBe(false);
-        expect(isClosed(result[1])).toBe(true);
-        expect(isClosed(result[2])).toBe(true);
-        expect(isClosed(result[3])).toBe(false);
+        expect(result.every((m) => !isClosed(m))).toBe(true);
     });
 
-    it('insère aujourd\'hui en tête quand il est absent du flux', () => {
-        // aujourd'hui = samedi 2026-05-30, 1er jour ouvert = lundi 2026-06-01
+    it('insère un jour férié EN SEMAINE absent comme fermé', () => {
+        // aujourd'hui = jeudi 2026-06-04 (férié/grève, absent), 1er ouvert = vendredi 2026-06-05
+        const result = fillClosedDays(
+            [openDay('2026-06-05')],
+            '2026-06-04',
+        );
+        expect(result.map((m) => m.date)).toEqual([
+            '2026-06-04',
+            '2026-06-05',
+        ]);
+        expect(isClosed(result[0])).toBe(true);
+        expect(isClosed(result[1])).toBe(false);
+    });
+
+    it('aujourd\'hui = samedi -> démarre au lundi, aucune chip week-end', () => {
+        // aujourd'hui = samedi 2026-05-30, 1er ouvert = lundi 2026-06-01
         const result = fillClosedDays(
             [openDay('2026-06-01')],
             '2026-05-30',
         );
-        expect(result.map((m) => m.date)).toEqual([
-            '2026-05-30',
-            '2026-05-31',
-            '2026-06-01',
-        ]);
-        expect(isClosed(result[0])).toBe(true);
-        expect(isClosed(result[2])).toBe(false);
+        expect(result.map((m) => m.date)).toEqual(['2026-06-01']);
+        expect(isClosed(result[0])).toBe(false);
     });
 
-    it('liste vide -> un seul jour fermé (aujourd\'hui)', () => {
-        const result = fillClosedDays([], '2026-05-30');
-        expect(result).toEqual([{ date: '2026-05-30', fermeture: 'Restaurant fermé' }]);
+    it('liste vide un jour de semaine -> un seul jour fermé (aujourd\'hui)', () => {
+        // aujourd'hui = lundi 2026-06-01
+        const result = fillClosedDays([], '2026-06-01');
+        expect(result).toEqual([{ date: '2026-06-01', fermeture: 'Restaurant fermé' }]);
+    });
+
+    it('liste vide un week-end -> aucun jour (rien à afficher)', () => {
+        const result = fillClosedDays([], '2026-05-30'); // samedi
+        expect(result).toEqual([]);
+    });
+
+    it('garde un menu réel tombant un week-end (jamais masqué)', () => {
+        // certains RU ouvrent le samedi : si le flux fournit un samedi, on le garde
+        const result = fillClosedDays([openDay('2026-05-30')], '2026-05-30');
+        expect(result.map((m) => m.date)).toEqual(['2026-05-30']);
+        expect(isClosed(result[0])).toBe(false);
     });
 
     it('semaine pleine sans trou -> liste inchangée', () => {
