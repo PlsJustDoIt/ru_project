@@ -47,21 +47,18 @@ const setupSocketEventHandlers = (socket: Socket) => {
         }
     });
 
-    // TODO : à finir
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    socket.on('join_room', async (data: any[]) => {
+    socket.on('join_room', async (data: { participants?: string[] }) => {
         logger.info('User %s joining room with data %o', socket.id, data);
-        logger.info(data);
         try {
             if (!data) {
                 throw new Error('data is required');
             }
 
-            if (data.length !== 2) {
+            const participants = data.participants;
+
+            if (!Array.isArray(participants) || participants.length !== 2) {
                 throw new Error('Exactly 2 participants are required, other cases are not supported');
             }
-
-            const participants = data as string[];
 
             const room = await getOrCreatePrivateRoom(participants[0], participants[1]);
 

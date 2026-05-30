@@ -55,16 +55,20 @@ void main() {
     expect(conn.isConnected, isTrue);
   });
 
-  test('joinPrivate émet un tableau de 2 ids (régression bug Map)', () async {
+  test(
+      'joinPrivate émet {participants:[...]} en arg unique '
+      '(régression : socket_io_client étale les List sur plusieurs args)',
+      () async {
     final fake = FakeChatSocket();
     final conn = makeConnection(fake);
     await conn.connect();
     conn.joinPrivate('b', 'a');
     final last = fake.emitted.last;
     expect(last.event, 'join_room');
-    expect(last.data, isA<List>());
-    expect((last.data as List).length, 2);
-    expect(last.data, ['b', 'a']);
+    // Une List nue serait étalée par le vrai client → le backend ne recevrait
+    // que le 1er id. Le payload doit être une Map (arg unique préservé).
+    expect(last.data, isA<Map>());
+    expect((last.data as Map)['participants'], ['b', 'a']);
   });
 
   test('joinGlobal puis receive_message émet MessageReceived taggé Global',

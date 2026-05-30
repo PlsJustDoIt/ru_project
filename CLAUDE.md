@@ -75,7 +75,7 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 
 ### Socket.IO events
 - Auth: JWT passed via `handshake.auth.token` (or query), verified against `JWT_ACCESS_SECRET`; `socket.data.userId` set on success.
-- Client → server: `join_global_room`, `join_room` (payload: `[userId, userId]`), `leave_room`.
+- Client → server: `join_global_room`, `join_room` (payload: `{ participants: [userId, userId] }` — exactement 2), `leave_room`.
 - Server → client: `room_joined`, `room_left`, `receive_message`, `receive_delete_message`, `receive_delete_all_messages`, `userOffline`, `error`.
 
 ### Data Flow

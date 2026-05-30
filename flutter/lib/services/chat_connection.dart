@@ -106,7 +106,11 @@ class ChatConnection extends ChangeNotifier {
 
   void joinPrivate(String myId, String friendId) {
     _currentRoom = privateRoomName(myId, friendId);
-    _socket?.emit('join_room', [myId, friendId]);
+    // Une List nue serait étalée par socket_io_client sur plusieurs arguments
+    // (le backend ne recevrait que le 1er id) ; on enveloppe dans une Map.
+    _socket?.emit('join_room', {
+      'participants': [myId, friendId]
+    });
   }
 
   void leave(String roomName) {
