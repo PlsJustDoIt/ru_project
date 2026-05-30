@@ -2,6 +2,7 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
+import 'package:ru_project/providers/notification_provider.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
@@ -44,6 +45,7 @@ void main() async {
   final socketService = SocketService(dio: apiClient.dio);
   final chatConnection =
       ChatConnection(tokenProvider: secureStorage.getAccessToken);
+  final notificationProvider = NotificationProvider(chatConnection);
   final ginkoService = GinkoService(dio: apiClient.dio);
   final feedbackService = FeedbackService(dio: apiClient.dio);
 
@@ -66,6 +68,8 @@ void main() async {
         Provider<RestaurantService>.value(value: restaurantService),
         Provider<SocketService>.value(value: socketService),
         ChangeNotifierProvider<ChatConnection>.value(value: chatConnection),
+        ChangeNotifierProvider<NotificationProvider>.value(
+            value: notificationProvider),
         Provider<GinkoService>.value(value: ginkoService),
         Provider<FeedbackService>.value(value: feedbackService),
         Provider<SecureStorage>.value(value: secureStorage),

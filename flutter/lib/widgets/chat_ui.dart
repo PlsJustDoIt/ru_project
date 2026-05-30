@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart' as ru_project;
 import 'package:ru_project/models/message.dart' as ru_project;
+import 'package:ru_project/providers/notification_provider.dart';
 import 'package:ru_project/services/chat_connection.dart';
 import 'package:ru_project/services/chat_event.dart';
 import 'package:ru_project/services/logger.dart';
@@ -39,6 +40,7 @@ class ChatUiState extends State<ChatUi> {
   List<types.Message> _messages = [];
   late final SocketService socketService;
   late final ChatConnection chatConnection;
+  late final NotificationProvider notifications;
   StreamSubscription<ChatEvent>? _sub;
   late final types.ChatController chatController;
 
@@ -47,6 +49,8 @@ class ChatUiState extends State<ChatUi> {
     super.initState();
     socketService = Provider.of<SocketService>(context, listen: false);
     chatConnection = Provider.of<ChatConnection>(context, listen: false);
+    notifications = Provider.of<NotificationProvider>(context, listen: false);
+    notifications.setCurrentRoom(widget.roomName);
     chatController = types.InMemoryChatController();
 
     if (widget.roomName == 'Global') {
@@ -90,6 +94,10 @@ class ChatUiState extends State<ChatUi> {
         setState(() {
           _messages.clear();
         });
+      case MessageNotified():
+        // Géré par NotificationProvider ; la room ouverte affiche déjà le
+        // message via MessageReceived.
+        break;
     }
   }
 
@@ -132,6 +140,7 @@ class ChatUiState extends State<ChatUi> {
   @override
   void dispose() {
     _sub?.cancel();
+    notifications.setCurrentRoom(null);
     chatConnection.leave(widget.roomName);
     chatController.dispose();
     super.dispose();

@@ -19,3 +19,10 @@ class MessageDeleted extends ChatEvent {
 class AllMessagesDeleted extends ChatEvent {
   const AllMessagesDeleted(super.roomName);
 }
+
+/// Notif cross-room : un message est arrivé dans [roomName], que l'utilisateur
+/// la regarde ou non. Sert aux non-lus et au bandeau in-app.
+class MessageNotified extends ChatEvent {
+  const MessageNotified(super.roomName, this.message);
+  final Message message;
+}

@@ -95,6 +95,7 @@ class ChatConnection extends ChangeNotifier {
     socket.on('receive_message', _onReceiveMessage);
     socket.on('receive_delete_message', _onDeleteMessage);
     socket.on('receive_delete_all_messages', _onDeleteAll);
+    socket.on('notify_message', _onNotifyMessage);
     socket.on('error', (data) => logger.e('Socket error: $data'));
     socket.connect();
   }
@@ -124,6 +125,7 @@ class ChatConnection extends ChangeNotifier {
     socket.off('receive_message');
     socket.off('receive_delete_message');
     socket.off('receive_delete_all_messages');
+    socket.off('notify_message');
     socket.off('error');
     socket.disconnect();
     _socket = null;
@@ -141,6 +143,19 @@ class ChatConnection extends ChangeNotifier {
       _events.add(MessageReceived(room, message));
     } catch (e) {
       logger.e('ChatConnection: parse receive_message: $e');
+    }
+  }
+
+  // notify_message porte sa propre roomName (cross-room) ; on ne filtre pas
+  // sur _currentRoom contrairement à receive_message.
+  void _onNotifyMessage(dynamic data) {
+    try {
+      final Map<String, dynamic> payload = (data as List).first;
+      final room = payload['roomName'] as String;
+      final message = Message.fromJson(payload['message']);
+      _events.add(MessageNotified(room, message));
+    } catch (e) {
+      logger.e('ChatConnection: parse notify_message: $e');
     }
   }
 

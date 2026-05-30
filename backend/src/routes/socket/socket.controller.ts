@@ -43,6 +43,7 @@ const sendMessage = async (req: Request, res: Response) => {
         };
 
         socketService.sendMessageToRoom(userId, room.name, response);
+        socketService.notifyNewMessage(userId, room, response);
         return res.status(201).json({ message: response });
     } catch (err) {
         logger.error('Error in /send:', err);
