@@ -27,6 +27,10 @@ const api = Router()
     .use('/sectors', sectorRoutes)
     .use('/uploads', static_(uploadsPath, {
         setHeaders: (res, filePath) => {
+            // Helmet pose CORP: same-origin, ce qui empêche les éléments
+            // <audio>/<img> d'une autre origine (app web sur un autre port)
+            // de charger ces fichiers. On autorise le cross-origin.
+            res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
             const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
             const type = audioContentTypes[ext];
             if (type) res.setHeader('Content-Type', type);
