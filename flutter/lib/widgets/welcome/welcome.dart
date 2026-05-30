@@ -108,10 +108,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => Scaffold(
-                                    appBar: AppBar(title: const Text('Inscription')),
-                                    body: RegisterWidget(),
-                                  ),
+                                  builder: (context) => const RegisterWidget(),
                                 ),
                               );
                             },

@@ -7,6 +7,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/chat_connection.dart';
 import 'package:ru_project/services/friend_service.dart';
+import 'package:ru_project/services/secure_storage.dart';
 import 'package:ru_project/widgets/main_scaffold.dart';
 import 'package:ru_project/widgets/welcome/auth_form.dart';
 
@@ -27,6 +28,8 @@ class LoginWidget extends StatelessWidget {
             Provider.of<RestaurantProvider>(context, listen: false);
         final User user = response['user'];
         userProvider.setUser(user);
+        final secureStorage = Provider.of<SecureStorage>(context, listen: false);
+        await secureStorage.clearGuestRestaurantId();
         await restaurantProvider.tryLoadRestaurant(user.restaurantId);
         List<Friend> fetchedFriends = await friendService.getFriends();
         userProvider.setFriends(fetchedFriends);
