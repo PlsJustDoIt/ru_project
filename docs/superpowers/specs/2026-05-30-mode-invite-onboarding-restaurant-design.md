@@ -90,18 +90,54 @@ Aujourd'hui l'`onRequest` attache `Authorization: Bearer null` quand il n'y a pa
 token. On **n'attache pas** l'en-tête `Authorization` si le token est nul (sans risque
 sur les routes publiques, plus propre, évite tout effet de bord côté backend).
 
-## 5. Flutter — `RestaurantPicker` réutilisable
+## 5. Flutter — `RestaurantPicker` + onboarding
 
+### 5.1 Widget `RestaurantPicker` réutilisable
 Nouveau widget de sélection de restaurant :
 - source : `RestaurantService.getRestaurants()` → `List<RestaurantPartial>` (`restaurantId`, `name`) — **existe déjà**.
-- UI : reprend le pattern dropdown de `settings_widget.dart`.
-- callback `onSelected(restaurantId)`.
+- UI : reprend le pattern dropdown de `settings_widget.dart` (états loading / erreur / liste).
+- API : `RestaurantPicker({ String? initialRestaurantId, required ValueChanged<String> onSelected })`.
 
-**Réutilisé dans 2 flux** :
-- **Invité** : `WelcomeWidget` → bouton « Continuer sans compte » → picker → stocke
-  `guestRestaurantId` → entre dans l'app (affiché une seule fois).
-- **Inscription** : étape « restaurant » ajoutée au flux register → `restaurantId`
-  envoyé dans `POST /register`.
+### 5.2 Onboarding invité (lancement)
+`WelcomeWidget` → bouton « Continuer sans compte » → écran picker → au choix :
+stocke `guestRestaurantId` dans `SecureStorage` + passe `UserProvider` en mode invité
+→ entre dans l'app. Affiché **une seule fois** (mémorisé) ; re-déclenchable via
+« Changer de RU » (§6).
+
+### 5.3 Onboarding inscription (détaillé)
+
+**Contrainte** : `AuthFormWidget` est partagé login/register, signature figée
+`AuthApiCall = Future<Map> Function(String username, String password)` ; à la
+soumission il appelle `apiCall(...)` puis `onSuccess(...)`. On ne change pas cette
+signature.
+
+**Approche — register en 2 étapes (`Stepper`/`PageView`)**, `RegisterWidget` devient
+`StatefulWidget` qui détient `String? _selectedRestaurantId` :
+
+1. **Étape 1 — Restaurant** : `RestaurantPicker` (pré-sélectionné sur
+   `guestRestaurantId` si l'utilisateur vient du mode invité). Bouton « Suivant »
+   actif uniquement si un resto est choisi → mémorise `_selectedRestaurantId`,
+   passe à l'étape 2.
+2. **Étape 2 — Identifiants** : `AuthFormWidget` réutilisé tel quel, avec une
+   **closure** comme `apiCall` :
+   ```dart
+   apiCall: (username, password) =>
+       authService.register(username, password,
+                            restaurantId: _selectedRestaurantId),
+   ```
+   Le `restaurantId` est ainsi capturé sans toucher à la signature partagée.
+
+**Changement de service** : `AuthService.register` gagne un paramètre optionnel
+`{ String? restaurantId }` ; ajouté au body POST `/auth/register` seulement si non nul.
+
+**`onSuccess` inchangé** : après register, `tryLoadRestaurant(user.restaurantId)`
+charge désormais le resto choisi (le backend l'aura écrit, cf. §3.2). On quitte le
+mode invité et on efface `guestRestaurantId`.
+
+> **Choix retenu** : restaurant **requis** à l'inscription (comble le trou « user
+> sans resto »). Si l'utilisateur vient du mode invité, l'étape 1 est pré-remplie →
+> un simple « Suivant ». Alternative écartée : un seul écran combinant picker +
+> champs (mélange les responsabilités du form partagé).
 
 ## 6. Flutter — navigation invité
 
@@ -159,7 +195,9 @@ Pas d'infra de test active (cf. `AUDIT.md`) → **vérification manuelle** :
 3. Menu et Bus accessibles en invité.
 4. « Se connecter » depuis l'invité → login → bascule vers app complète.
 5. Relancement invité → arrive directement (resto mémorisé), pas de ré-onboarding.
-6. Connecté : changer de RU dans les réglages → persiste après relance.
+6. Inscription : étape 1 (choix resto) → étape 2 (identifiants) → compte créé avec
+   le bon `restaurant` ; depuis le mode invité, l'étape 1 est pré-remplie.
+7. Connecté : changer de RU dans les réglages → persiste après relance.
 
 ## 10. Risques & points d'attention
 
