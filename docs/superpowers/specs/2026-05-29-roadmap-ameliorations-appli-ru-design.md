@@ -30,7 +30,7 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 |------|----------|--------|------|--------|
 | 0 | Bug refresh web | S–M | Bloquant de lancement | ✅ fait |
 | 1 | Identité visuelle (thème direction A) | M | Socle transversal | ✅ fait |
-| 2 | Chat (refonte + vocal) | L | Cœur de la demande | 🟡 2a fait — 2b/2c/2d à venir |
+| 2 | Chat (refonte + vocal) | L | Cœur de la demande | ✅ fait (2a/2b/2c/2d) |
 | 3 | Menu (refonte + social) | M | « Mieux exploité » | ⬜ à faire |
 | 4 | Polish & dette | M | Finition | ⬜ à faire |
 
@@ -74,9 +74,9 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 
 **Sous-chantiers (ordre recommandé) :**
 - **2a — Socle :** ✅ **FAIT** (branche `feat/phase2a-socle-socket`, fusionnée dans `dev`). Socket **unique persistante** extraite de `ChatUi` vers le service dédié `ChatConnection` (ouverte au login, fermée au logout, survit aux changements d'écran) + **un seul composant `ChatUi`** paramétré par room ; `ChatWidget` supprimé. Bugs corrigés : jointure de room privée (Map → tableau de 2), « John Doe », fallback *lorem* ; hack vocal retiré (revient en 2d) ; dépendances mortes retirées. Spec : `specs/2026-05-29-phase2a-socle-socket-design.md` ; plan : `plans/2026-05-29-phase2a-socle-socket.md`. *Reste à valider : test manuel temps-réel à 2 comptes (Task 7 du plan).*
-- **2b — Boîte de réception unifiée :** nouvel écran liste de conversations (Global + amis, aperçus/horodatage). Backend : endpoint « résumé des conversations ».
-- **2c — Notifs in-app** *(appli ouverte, débloqué par la socket persistante, coût faible)* : pastille sur l'onglet Messages, compteur de non-lus par conversation, bandeau « X t'a écrit », son/vibration légère.
-- **2d — Vocal complet :** bouton micro propre (appui-maintien) + **upload** + **stockage backend** + lecture pour tous les participants. Remplace le hack actuel (délai fixe 8 s, pas d'upload).
+- **2b — Boîte de réception unifiée :** ✅ **FAIT** (branche `feat/phase2b-inbox`, fusionnée dans `dev`). Onglet Messages = `InboxWidget` (Global épinglé + une ligne par ami, aperçu + horodatage), tap → conversation plein écran. Backend : `GET /api/socket/conversations`.
+- **2c — Notifs in-app :** ✅ **FAIT** (branche `feat/phase2c-notifs`, fusionnée dans `dev`). Backend émet `notify_message` ciblé (privé) / diffusé (Global) à chaque message. Flutter : événement `MessageNotified`, `NotificationProvider` (non-lus par conversation, ignore room ouverte + ses propres messages), badge sur l'onglet + par conversation, bandeau « X t'a écrit » + vibration.
+- **2d — Vocal complet :** ✅ **FAIT** (branche `feat/phase2d-vocal`, fusionnée dans `dev`). `record` réintroduit, `VoiceRecorderSheet`, upload multipart `POST /api/socket/send-audio` (stockage `uploads/audio`), `Message.audioUrl/duration`, lecture via `AudioPlayerWidget` (URL réseau). Permissions micro Android/iOS.
 
 **Plus tard / optionnel (ne bloque pas le lancement) :**
 - Non-lus persistés (`lastReadAt` par room côté backend) — la pastille de la liste sans persistance est faisable en MVP.
