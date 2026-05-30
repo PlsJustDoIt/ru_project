@@ -75,17 +75,9 @@ describe('Ginko controller Tests', () => {
     //     jest.resetModules(); // 🔥 Réinitialise les modules après chaque test
     // });
 
-    it('should return the schedules from JSON in dev', async () => {
-        req.query = { lieu: 'Crous Université' };
-        const cache = new NodeCache();
-        cache.get = jest.fn();
-        await (getSchedules(req as Request, res as Response, false));
-        expect(jsonMock).toHaveBeenCalledWith(apiResponse);
-    });
-
     it('should return 400 if lieu is empty', async () => {
         req.query = { lieu: '' };
-        await (getSchedules(req as Request, res as Response, true));
+        await (getSchedules(req as Request, res as Response));
         expect(statusMock).toHaveBeenCalledWith(400);
         expect(jsonMock).toHaveBeenCalledWith({ error: 'Le lieu est vide' });
     });
@@ -96,7 +88,7 @@ describe('Ginko controller Tests', () => {
         cache.get = jest.fn();
         cache.set = jest.fn();
         (ginkoService.getTempsLieu as jest.Mock).mockResolvedValue(apiResponse);
-        await (getSchedules(req as Request, res as Response, true));
+        await (getSchedules(req as Request, res as Response));
         expect(jsonMock).toHaveBeenCalledWith(apiResponse);
     });
 
@@ -104,7 +96,7 @@ describe('Ginko controller Tests', () => {
         req.query = { lieu: 'Crous Université' };
         const cache = new NodeCache();
         (cache.get as jest.Mock).mockReturnValue(apiResponse);
-        await (getSchedules(req as Request, res as Response, true));
+        await (getSchedules(req as Request, res as Response));
         expect(jsonMock).toHaveBeenCalledWith(apiResponse);
     });
 
@@ -114,8 +106,8 @@ describe('Ginko controller Tests', () => {
         cache.get = jest.fn();
         cache.set = jest.fn();
         (ginkoService.getTempsLieu as jest.Mock).mockRejectedValue(new Error('API error'));
-        await (getSchedules(req as Request, res as Response, true));
+        await (getSchedules(req as Request, res as Response));
         expect(statusMock).toHaveBeenCalledWith(500);
-        expect(jsonMock).toHaveBeenCalledWith({ error: new Error('API error') });
+        expect(jsonMock).toHaveBeenCalledWith({ error: 'Impossible de récupérer les horaires' });
     });
 });

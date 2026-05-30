@@ -121,7 +121,7 @@ describe('auth controller tests', () => {
             testContext = setupTest();
             (User.findOne as jest.Mock).mockReset();
             (authService.authenticate as jest.Mock).mockReset();
-            jest.spyOn(authService, 'validateCredentials').mockReset();
+            jest.spyOn(authService, 'validateLoginFields').mockReset();
             jest.spyOn(authService, 'generateTokens').mockReset();
         });
 
@@ -134,7 +134,7 @@ describe('auth controller tests', () => {
             };
             req.body.username = 'testuser';
             req.body.password = 'password123';
-            jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: true });
 
             (User.findOne as jest.Mock).mockResolvedValue(mockUser);
             (authService.authenticate as jest.Mock).mockResolvedValue(mockUser);
@@ -163,7 +163,7 @@ describe('auth controller tests', () => {
             const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
-            jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: false, error: 'Invalid credentials' });
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: false, error: 'Invalid credentials' });
 
             await loginUser(req as Request, res as Response);
             expect(statusMock).toHaveBeenCalledWith(400);
@@ -174,8 +174,8 @@ describe('auth controller tests', () => {
             const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';
             req.body.password = 'test';
-            jest.spyOn(authService, 'validateCredentials').mockReturnValue({ valid: true });
-            (User.findOne as jest.Mock).mockRejectedValue(new Error('Database error'));
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: true });
+            (authService.authenticate as jest.Mock).mockRejectedValue(new Error('Database error'));
 
             await loginUser(req as Request, res as Response);
             expect(statusMock).toHaveBeenCalledWith(500);
@@ -386,22 +386,6 @@ describe('auth controller tests', () => {
 
             expect(statusMock).toHaveBeenCalledWith(403);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid refresh token' });
-        });
-
-        it('should return 403 if refresh token is expired', async () => {
-            const { req, res, statusMock, jsonMock } = testCtx;
-            (RefreshToken.findOne as jest.Mock).mockResolvedValue({
-                token: 'testRefreshToken',
-                userId: 'userId',
-                expires: new Date(Date.now() - 3600000), // Expired 1 hour ago
-            });
-
-            await refreshUserToken(req as Request, res as Response);
-
-            expect(RefreshToken.findOne).toHaveBeenCalledWith({ token: 'testRefreshToken' });
-            expect(RefreshToken.findOneAndDelete).toHaveBeenCalledWith({ refreshToken: 'testRefreshToken' });
-            expect(statusMock).toHaveBeenCalledWith(403);
-            expect(jsonMock).toHaveBeenCalledWith({ error: 'Refresh token expired' });
         });
 
         it('should return 403 if refresh token does not belong to the user', async () => {

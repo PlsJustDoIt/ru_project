@@ -109,10 +109,9 @@ async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise
         const restaurants = result.root.resto;
         const resto = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_id);
         const menus = decodeJsonValues(resto.menu);
-        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-        const filteredMenus = menus.filter((menu: MenuXml) => menu.$.date >= today);
-
-        const transformedMenus: MenuResponse[] = filteredMenus.map((menu: MenuXml) => transformToMenu(menu));
+        // On renvoie tous les jours du flux ; le filtrage par date et le comblement
+        // des jours fermés sont faits par requête dans le controller (dépendent de `today`).
+        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
         return transformedMenus;
     } catch (error) {
         console.error('Erreur lors de la récupération des menus:', error);
@@ -229,4 +228,43 @@ const getSectorsFromRestaurant = async (restaurantId: Types.ObjectId) => {
     }));
 };
 
-export { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, createRestaurant, setupRestaurant, getSectorsFromRestaurant };
+// Avance d'un jour calendaire (en UTC, pour coller au `today` calculé via toISOString).
+function nextDay(date: string): string {
+    const d = new Date(date + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().split('T')[0];
+}
+
+// Samedi (6) ou dimanche (0) — en UTC pour rester cohérent avec `nextDay`.
+function isWeekend(date: string): boolean {
+    const day = new Date(date + 'T00:00:00Z').getUTCDay();
+    return day === 0 || day === 6;
+}
+
+/**
+ * Comble les jours fermés EN SEMAINE : à partir des jours ouverts (déjà filtrés
+ * `>= today`), renvoie une plage de `today` jusqu'au dernier jour reçu, en insérant
+ * chaque jour de semaine manquant comme `{ date, fermeture: 'Restaurant fermé' }`.
+ * Les week-ends ne sont jamais comblés (toujours fermés, inutile de les afficher),
+ * mais un menu réel tombant un week-end (RU ouvert le samedi) est conservé.
+ * Liste vide un jour de semaine -> un seul jour fermé (aujourd'hui) ; un week-end -> [].
+ */
+function fillClosedDays(menus: MenuResponse[], today: string): MenuResponse[] {
+    const sorted = [...menus].sort((a, b) => a.date.localeCompare(b.date));
+    const lastDate = sorted.length > 0 ? sorted[sorted.length - 1].date : today;
+    const end = today > lastDate ? today : lastDate;
+    const byDate = new Map(sorted.map((m) => [m.date, m]));
+
+    const result: MenuResponse[] = [];
+    for (let d = today; d <= end; d = nextDay(d)) {
+        const existing = byDate.get(d);
+        if (existing) {
+            result.push(existing); // menu réel : toujours conservé, week-end inclus
+        } else if (!isWeekend(d)) {
+            result.push({ date: d, fermeture: 'Restaurant fermé' });
+        }
+    }
+    return result;
+}
+
+export { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, createRestaurant, setupRestaurant, getSectorsFromRestaurant, fillClosedDays };

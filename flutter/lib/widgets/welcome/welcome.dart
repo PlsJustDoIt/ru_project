@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:ru_project/models/color.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
+import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/widgets/main_scaffold.dart';
+import 'package:ru_project/widgets/navigation/main_destinations.dart';
 import 'package:ru_project/widgets/welcome/login.dart';
 import 'package:ru_project/widgets/welcome/register.dart';
+import 'package:ru_project/widgets/welcome/restaurant_picker.dart';
 
 class WelcomeWidget extends StatefulWidget {
   const WelcomeWidget({super.key});
@@ -48,7 +55,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: 'Projet RU'.split('').asMap().entries.map((entry) {
+                      children:
+                          'Mon Campus'.split('').asMap().entries.map((entry) {
                         final index = entry.key;
                         final letter = entry.value;
                         return Text(
@@ -68,7 +76,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     const Text(
                       'Bienvenue !',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 32),
                     Row(
@@ -82,7 +91,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => Scaffold(
-                                    appBar: AppBar(title: const Text('Connexion')),
+                                    appBar:
+                                        AppBar(title: const Text('Connexion')),
                                     body: LoginWidget(),
                                   ),
                                 ),
@@ -101,10 +111,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => Scaffold(
-                                    appBar: AppBar(title: const Text('Inscription')),
-                                    body: RegisterWidget(),
-                                  ),
+                                  builder: (context) => const RegisterWidget(),
                                 ),
                               );
                             },
@@ -116,11 +123,46 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => _continueAsGuest(context),
+                      child: const Text('Continuer sans compte'),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _continueAsGuest(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RestaurantPicker(
+          title: 'Bienvenue',
+          confirmLabel: 'Continuer',
+          onSelected: (pickerContext, restaurantId) async {
+            final secureStorage =
+                Provider.of<SecureStorage>(pickerContext, listen: false);
+            final userProvider =
+                Provider.of<UserProvider>(pickerContext, listen: false);
+            final restaurantProvider =
+                Provider.of<RestaurantProvider>(pickerContext, listen: false);
+            await secureStorage.storeGuestRestaurantId(restaurantId);
+            await restaurantProvider.tryLoadRestaurant(restaurantId);
+            userProvider.enterGuestMode();
+            if (!pickerContext.mounted) return;
+            Navigator.pushReplacement(
+              pickerContext,
+              MaterialPageRoute(
+                builder: (_) => MainScaffold(destinations: kGuestDestinations),
+              ),
+            );
+          },
         ),
       ),
     );

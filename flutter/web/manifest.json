@@ -1,6 +1,6 @@
 {
-    "name": "ru_project",
-    "short_name": "ru_project",
+    "name": "MonCampus",
+    "short_name": "MonCampus",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,4 +1,3 @@
-import 'package:ru_project/services/logger.dart';
 
 String? validateUsername(String? value) {
   if (value == null || value.isEmpty) {

@@ -40,7 +40,7 @@ socket.handshake.auth.token || socket.handshake.query.token
   ```
 - `join_room` - Join a private room with participants
   ```typescript
-  socket.on('join_room', participants: string[])
+  socket.on('join_room', { participants: string[] }) // exactement 2 ids
   ```
 - `leave_room` - Leave a specific room
   ```typescript

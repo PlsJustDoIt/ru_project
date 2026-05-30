@@ -7,6 +7,6 @@ export const setupUploadDirectories = async () => {
         await mkdir(bugReportPath, { recursive: true });
         await mkdir(avatarPath, { recursive: true });
     } catch (error) {
-        throw new Error(`Error creating upload directories: ${error}`);
+        throw new Error('Error creating upload directories', { cause: error });
     }
 };

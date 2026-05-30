@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/services/logger.dart';
 
@@ -67,6 +69,27 @@ class SocketService {
     }
   }
 
+  /// Résumé des conversations : roomName -> dernier message (ou null si vide).
+  Future<Map<String, Message?>> getConversations() async {
+    try {
+      final Response response = await _dio.get('/socket/conversations');
+      if (response.statusCode == 200 && response.data != null) {
+        final Map<String, Message?> result = {};
+        for (final conv in (response.data['conversations'] as List)) {
+          final last = conv['lastMessage'];
+          result[conv['roomName']] =
+              last == null ? null : Message.fromJson(last);
+        }
+        return result;
+      }
+      logger.e('Invalid response from server: ${response.statusCode}');
+      return {};
+    } catch (e) {
+      logger.e('Failed to get conversations: $e');
+      return {};
+    }
+  }
+
   Future<Message?> sendMessageToRoom(String roomName, String content) async {
     try {
       final Response response = await _dio.post('/socket/send-message', data: {
@@ -82,6 +105,40 @@ class SocketService {
       return null;
     } catch (e) {
       logger.e('Failed to send message: $e');
+      return null;
+    }
+  }
+
+  /// Upload d'un message vocal (multipart). [durationSeconds] estimé côté client.
+  /// Sur web, [filePath] est une URL blob: ; on en récupère les octets.
+  Future<Message?> sendAudioMessage(
+      String roomName, String filePath, int durationSeconds) async {
+    try {
+      final MultipartFile audio;
+      if (kIsWeb) {
+        final bytes = await http.readBytes(Uri.parse(filePath));
+        audio = MultipartFile.fromBytes(
+          bytes,
+          filename: 'vocal.webm',
+          contentType: DioMediaType('audio', 'webm'),
+        );
+      } else {
+        audio = await MultipartFile.fromFile(filePath);
+      }
+      final formData = FormData.fromMap({
+        'roomName': roomName,
+        'duration': durationSeconds,
+        'audio': audio,
+      });
+      final Response response =
+          await _dio.post('/socket/send-audio', data: formData);
+      if (response.statusCode == 201) {
+        return Message.fromJson(response.data['message']);
+      }
+      logger.e('Invalid response from server: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      logger.e('Failed to send audio: $e');
       return null;
     }
   }

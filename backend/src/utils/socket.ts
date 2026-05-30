@@ -4,6 +4,7 @@ import { Server as HTTPServer } from 'http';
 import logger from './logger.js';
 import jwt from 'jsonwebtoken';
 import { instrument } from '@socket.io/admin-ui';
+import { jwtAccessSecret } from '../config.js';
 
 export class SocketHandler {
     private io: SocketIOServer | null = null;
@@ -11,10 +12,14 @@ export class SocketHandler {
 
     initialize(server: HTTPServer, isProduction: boolean): void {
         try {
+            const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean);
             this.io = new SocketIOServer(server, {
                 connectionStateRecovery: {},
                 cors: {
-                    origin: process.env.CLIENT_URL || '*',
+                    // En production, restreindre aux origines autorisées si fournies.
+                    origin: isProduction && allowedOrigins && allowedOrigins.length > 0
+                        ? allowedOrigins
+                        : (process.env.CLIENT_URL || '*'),
                     methods: ['GET', 'POST'],
                     credentials: true,
                 },
@@ -40,12 +45,12 @@ export class SocketHandler {
                     return next(new Error('Authentication error'));
                 }
 
-                const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET as jwt.Secret) as { id: string };
+                const decoded = jwt.verify(token, jwtAccessSecret) as { id: string };
                 socket.data.userId = decoded.id;
                 next();
             } catch (error) {
                 logger.error('Socket.IO Auth Error:', error);
-                next(new Error(error as string));
+                next(new Error('Authentication error'));
             }
         });
 
@@ -86,25 +91,6 @@ export class SocketHandler {
             });
         }
     }
-
-    // public emitToUser(event: string, userId: string, data: unknown) {
-    //     const socketId = this.connectedUsers.get(userId);
-    //     if (socketId) {
-    //         console.log(`🚀 [SERVER] Envoi de ${event} à ${socketId} avec data:`, data);
-
-    //         this.io?.to(socketId).emit(event, data, (response: any) => {
-    //             console.log('🔥 [SERVER] Callback reçu du client :', response);
-
-    //             if (response && response.status) {
-    //                 console.log('✅ [SERVER] ACK validé avec status:', response.status);
-    //             } else {
-    //                 console.log('❌ [SERVER] Erreur : ACK reçu mais status est undefined');
-    //             }
-    //         });
-    //     } else {
-    //         console.log('⚠️ [SERVER] Aucun socket trouvé pour userId:', userId);
-    //     }
-    // }
 
     public removeUserFromConnectedUsers(userId: string): void {
         if (this.connectedUsers.has(userId)) {

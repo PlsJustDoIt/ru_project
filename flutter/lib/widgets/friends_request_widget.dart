@@ -95,11 +95,12 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                                       username: request.sender["username"],
                                       status: 'absent',
                                       avatarUrl: request.sender["avatarUrl"]));
-                                  if (_friendsRequests!.isEmpty && mounted) {
+                                  if (_friendsRequests!.isEmpty &&
+                                      context.mounted) {
                                     Navigator.pop(context);
                                   }
                                 } else {
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
@@ -118,7 +119,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                                 if (res) {
                                   _removeFriendRequest(index);
                                 } else {
-                                  if (!mounted) {
+                                  if (!context.mounted) {
                                     return;
                                   }
                                   ScaffoldMessenger.of(context).showSnackBar(

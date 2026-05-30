@@ -1,12 +1,14 @@
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import User from '../../models/user.js';
+import Restaurant from '../../models/restaurant.js';
 import logger from '../../utils/logger.js';
-import { validateCredentials, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
+import { validateCredentials, validateLoginFields, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
 import jwt from 'jsonwebtoken';
 import RefreshToken from '../../models/refreshToken.js';
 import { join } from 'path';
 import { unlink } from 'fs/promises';
-import { avatarPath } from '../../config.js';
+import { avatarPath, jwtRefreshSecret } from '../../config.js';
 
 const registerUser = async (req: Request, res: Response) => {
     try {
@@ -27,6 +29,20 @@ const registerUser = async (req: Request, res: Response) => {
 
         // Create new user
         const user = new User({ username, password });
+
+        // Restaurant optionnel (onboarding)
+        const { restaurantId } = req.body;
+        if (restaurantId) {
+            if (!Types.ObjectId.isValid(restaurantId)) {
+                return res.status(400).json({ error: { message: 'Invalid restaurant ID', field: 'restaurantId' } });
+            }
+            const restaurant = await Restaurant.findById(restaurantId);
+            if (!restaurant) {
+                return res.status(400).json({ error: { message: 'Restaurant not found', field: 'restaurantId' } });
+            }
+            user.restaurant = restaurant._id;
+        }
+
         await user.save();
 
         // Generate tokens
@@ -49,8 +65,9 @@ const loginUser = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'User is already connected' });
         }
 
-        // Valider les identifiants
-        const validation = validateCredentials(username, password);
+        // Valider la présence des champs (sans appliquer la politique de longueur,
+        // pour ne pas verrouiller les comptes plus anciens)
+        const validation = validateLoginFields(username, password);
         if (!validation.valid) {
             return res.status(400).json({ error: validation.error });
         }
@@ -72,34 +89,29 @@ const refreshUserToken = async (req: Request, res: Response) => {
     const refreshToken = req.body.refreshToken;
     try {
         const existingToken = await RefreshToken.findOne({ token: refreshToken });
-        logger.info('existingToken found : ' + existingToken?.token);
         if (!existingToken) {
             logger.error('Invalid refresh token');
             return res.status(403).json({ error: 'Invalid refresh token' });
         }
 
         // Vérifier si le refresh token est valide
-        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as jwt.Secret) as jwt.JwtPayload;
-        logger.info(decoded);
+        const decoded = jwt.verify(refreshToken, jwtRefreshSecret) as jwt.JwtPayload;
 
         const userIdFromToken = decoded.id;
 
-        // 5. Vérifier si l'ID utilisateur du token correspond à l'ID enregistré avec le refresh token
+        // Vérifier si l'ID utilisateur du token correspond à l'ID enregistré avec le refresh token
         if (existingToken.userId.toString() !== userIdFromToken) {
             logger.error('Refresh token does not belong to the user');
             return res.status(403).json({ error: 'Refresh token does not belong to the user' });
         }
 
         // Générer un nouveau access token
-        const accessToken = generateAccessToken(userIdFromToken); // Tu peux utiliser la fonction définie plus tôt
+        const accessToken = generateAccessToken(userIdFromToken);
 
         const userUsername = await User.findById(userIdFromToken).select('username');
-
-        logger.info(`Nouveau token créé pour l'utilisateur ${userUsername?.username} :\n accessToken: ${accessToken}`);
+        logger.info(`Nouveau access token créé pour l'utilisateur ${userUsername?.username}`);
 
         return res.json({ accessToken });
-
-        // });
     } catch (err) {
         logger.error(err);
         if (err instanceof jwt.TokenExpiredError) {

@@ -11,32 +11,6 @@ let mongoServer: MongoMemoryServer;
 let accessToken: string;
 
 describe('Ginko Router Tests', () => {
-    const mockApiResponse = {
-        nomExact: 'Crous Université',
-        lignes: {
-            7: {
-                'Palente Espace Industriel': [
-                    '18 min',
-                    '42 min',
-                ],
-                'Hauts du Chazal': [
-                    '11 min',
-                    '37 min',
-                ],
-            },
-            L3: {
-                'Centre-ville - 8 Septembre': [
-                    '1 min',
-                    '13 min',
-                ],
-                'Pôle Temis': [
-                    '5 min',
-                    '21 min',
-                ],
-            },
-        },
-    };
-
     beforeAll(async () => {
         process.env.GINKO_API_KEY = 'test-api-key';
         logger.info = jest.fn(); // pour mute les logs
@@ -59,15 +33,25 @@ describe('Ginko Router Tests', () => {
         await mongoServer.stop();
     });
 
-    it('should return cached data if available', async () => {
+    it('should return schedules for a valid lieu', async () => {
         const testLieu = 'TestStop';
-        (axios.post as jest.Mock).mockResolvedValueOnce(mockApiResponse);
-        // First call to populate cache
-        const response = await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`); // Ajouter le token dans l'en-tête;
+        (axios.post as jest.Mock).mockResolvedValueOnce({
+            status: 200,
+            data: {
+                objets: {
+                    nomExact: 'Crous Université',
+                    listeTemps: [
+                        { temps: '5 min', numLignePublic: 'L3', destination: 'Pôle Temis' },
+                    ],
+                },
+            },
+        });
+
+        const response = await request(app).get(`/api/ginko/info?lieu=${testLieu}`).set('authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
         expect(response.body.nomExact).toBe('Crous Université');
-        expect(axios.post).toHaveBeenCalledTimes(0); // car on est pas en prod
+        expect(axios.post).toHaveBeenCalledTimes(1);
     });
 
     // it('should return 400 if lieu is empty', async () => {

@@ -19,7 +19,7 @@ const initGlobalRoom = async () => {
         }
     } catch (error) {
         logger.error('Failed to initialize global room:', error);
-        throw new Error('Failed to initialize global room');
+        throw new Error('Failed to initialize global room', { cause: error });
     }
 };
 
@@ -47,21 +47,18 @@ const setupSocketEventHandlers = (socket: Socket) => {
         }
     });
 
-    // TODO : à finir
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    socket.on('join_room', async (data: any[]) => {
+    socket.on('join_room', async (data: { participants?: string[] }) => {
         logger.info('User %s joining room with data %o', socket.id, data);
-        logger.info(data);
         try {
             if (!data) {
                 throw new Error('data is required');
             }
 
-            if (data.length !== 2) {
+            const participants = data.participants;
+
+            if (!Array.isArray(participants) || participants.length !== 2) {
                 throw new Error('Exactly 2 participants are required, other cases are not supported');
             }
-
-            const participants = data as string[];
 
             const room = await getOrCreatePrivateRoom(participants[0], participants[1]);
 
@@ -106,7 +103,28 @@ const sendMessageToRoom = (userId: string, roomName: string, message: messageCha
         return true;
     } catch (error) {
         logger.error('Error sending message to room:', error);
-        throw new Error('Failed to send message to room');
+        throw new Error('Failed to send message to room', { cause: error });
+    }
+};
+
+// Notif in-app : prévient les participants d'un nouveau message, qu'ils aient
+// rejoint la room socket ou non (la socket persistante les rend conscients
+// partout). Privé -> ciblé sur l'autre participant ; Global -> tous.
+const notifyNewMessage = (
+    senderId: string,
+    room: { name: string; participants?: { toString(): string }[] },
+    message: messageChat,
+) => {
+    const payload = { roomName: room.name, message };
+    if (room.name === 'Global') {
+        socketHandler.broadcastToEveryone('notify_message', payload);
+        return;
+    }
+    for (const participant of room.participants ?? []) {
+        const participantId = participant.toString();
+        if (participantId !== senderId) {
+            socketHandler.emitToUser('notify_message', participantId, payload);
+        }
     }
 };
 
@@ -122,8 +140,36 @@ const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> =
             createdAt: message.createdAt,
             username: message.user.username,
             id: message._id.toString(),
+            audioUrl: message.audioUrl,
+            duration: message.duration,
         };
     });
+};
+
+// Résumé des conversations de l'utilisateur : Global + ses rooms privées,
+// chacune avec son dernier message (ou null si vide).
+const getConversationsSummary = async (userId: string) => {
+    const rooms = await Room.find({ $or: [{ name: 'Global' }, { participants: userId }] });
+
+    return Promise.all(
+        rooms.map(async (room) => {
+            const last = await Message.findOne({ room: room._id })
+                .populate<{ user: { username: string } }>('user', 'username')
+                .sort({ createdAt: -1 });
+
+            return {
+                roomName: room.name,
+                lastMessage: last
+                    ? {
+                            content: last.audioUrl ? '🎤 Message vocal' : last.content,
+                            createdAt: last.createdAt,
+                            username: last.user.username,
+                            id: last._id.toString(),
+                        }
+                    : null,
+            };
+        }),
+    );
 };
 
 const deleteMessageFromRoom = async (userId: string, roomName: string, messageId: string) => {
@@ -134,7 +180,7 @@ const deleteMessageFromRoom = async (userId: string, roomName: string, messageId
         return true;
     } catch (error) {
         logger.error('Error deleting message:', error);
-        throw new Error('Failed to delete message');
+        throw new Error('Failed to delete message', { cause: error });
     }
 };
 
@@ -149,7 +195,7 @@ const deleteAllMessagesFromRoom = async (userId: string, roomId: string, roomNam
         return true;
     } catch (error) {
         logger.error('Error deleting all messages:', error);
-        throw new Error('Failed to delete all messages');
+        throw new Error('Failed to delete all messages', { cause: error });
     }
 };
 
@@ -195,4 +241,4 @@ async function getUserRooms(userId: Types.ObjectId) {
 // emitToUser
 // initGlobalRoom
 
-export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };
+export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, getConversationsSummary, notifyNewMessage, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };

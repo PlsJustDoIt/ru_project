@@ -1,11 +1,15 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { getSchedules } from './ginko.controller.js';
-import auth from '../../middleware/auth.js';
-import { isProduction } from '../../config.js';
-import { Request, Response } from 'express';
 
 const router = Router();
+const publicGinkoLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+});
 
-router.get('/info', auth, (req: Request, res: Response) => getSchedules(req, res, isProduction));
+router.get('/info', publicGinkoLimiter, getSchedules);
 
 export default router;

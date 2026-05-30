@@ -54,11 +54,12 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> register(
-      String username, String password) async {
+      String username, String password, {String? restaurantId}) async {
     try {
       final Response response = await _dio.post('/auth/register', data: {
         'username': username,
         'password': password,
+        if (restaurantId != null) 'restaurantId': restaurantId,
       });
 
       if (response.statusCode == 201 && response.data != null) {

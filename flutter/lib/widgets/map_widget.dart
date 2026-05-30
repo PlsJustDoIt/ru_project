@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ru_project/models/friendsInSector.dart';
+import 'package:ru_project/models/friend_in_sector.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
@@ -28,8 +28,9 @@ class FloorPlan extends StatefulWidget {
 class _FloorPlanState extends State<FloorPlan> {
   Sector? selectedSector;
   late final UserProvider userProvider;
+  late final bool isGuest;
   late final RestaurantTmp restaurant;
-  late FriendsInSectors? sectorSessions;
+  FriendsInSectors? sectorSessions; // null tant que non chargé (ex: mode invité)
   late Future<void> getRestaurantData;
   late final RestaurantService restaurantService;
   late final RestaurantProvider restaurantProvider;
@@ -40,20 +41,22 @@ class _FloorPlanState extends State<FloorPlan> {
     super.initState();
     restaurantService = Provider.of<RestaurantService>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
+    isGuest = userProvider.isGuest;
     restaurantProvider =
         Provider.of<RestaurantProvider>(context, listen: false);
 
     restaurant = restaurantProvider.restaurant!; // ca bouge pas
-    logger.d('Restaurant: ${restaurant}');
+    logger.d('Restaurant: $restaurant');
 
-    getRestaurantData = machin();
+    // En invité, on ne charge pas les sessions (route protégée).
+    getRestaurantData = isGuest ? Future<void>.value() : machin();
   }
 
   // truc() async {
   //   await setRestaurantSectors();
   // }
 
-  machin() async {
+  Future<void> machin() async {
     return await setSectorSessions();
   }
 
@@ -160,24 +163,25 @@ class _FloorPlanState extends State<FloorPlan> {
                       ),
                     ),
                   );
-                }).toList(),
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: FloatingActionButton.extended(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SectorsSessionsWidget(
-                            restaurantId: restaurant.restaurantId,
+                }),
+                if (!isGuest)
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: FloatingActionButton.extended(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SectorsSessionsWidget(
+                              restaurantId: restaurant.restaurantId,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.groups),
-                    label: const Text('Sessions'),
+                        );
+                      },
+                      icon: const Icon(Icons.groups),
+                      label: const Text('Sessions'),
+                    ),
                   ),
-                ),
               ],
             );
           },
@@ -254,7 +258,7 @@ class SectorInfoWidget extends StatefulWidget {
   });
 
   @override
-  _SectorInfoWidgetState createState() => _SectorInfoWidgetState();
+  State<SectorInfoWidget> createState() => _SectorInfoWidgetState();
 }
 
 class _SectorInfoWidgetState extends State<SectorInfoWidget> {
@@ -358,8 +362,8 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
             ),
             const SizedBox(height: 16),
 
-            // Bouton d'action: se lever si je suis assis, sinon s'asseoir
-            if (widget.sector.occupiedByMe)
+            // Bouton d'action (masqué pour les invités): se lever / s'asseoir
+            if (!widget.userProvider.isGuest && widget.sector.occupiedByMe)
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () async {
@@ -406,7 +410,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                   ),
                 ),
               )
-            else
+            else if (!widget.userProvider.isGuest)
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () {
@@ -422,7 +426,9 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
             const SizedBox(height: 16),
 
             // Friends in Area Section
-            if (isLoading)
+            if (widget.userProvider.isGuest)
+              const SizedBox.shrink()
+            else if (isLoading)
               const Center(child: CircularProgressIndicator())
             else if (widget.sessionsForSector != null &&
                 widget.sessionsForSector!.isNotEmpty)
@@ -454,8 +460,9 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                           final parts = <String>[];
                           if (h != 0) parts.add('$h heure${h > 1 ? 's' : ''}');
                           if (m != 0) parts.add('$m minute${m > 1 ? 's' : ''}');
-                          if (sec != 0)
+                          if (sec != 0) {
                             parts.add('$sec seconde${sec > 1 ? 's' : ''}');
+                          }
                           remainingLabel = 'Restant: ${parts.join(', ')}';
                         }
 

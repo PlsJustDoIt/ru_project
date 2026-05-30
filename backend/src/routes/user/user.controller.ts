@@ -1,5 +1,7 @@
 import User, { IUser } from '../../models/user.js';
+import Restaurant from '../../models/restaurant.js';
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import logger from '../../utils/logger.js';
 import { compare } from 'bcrypt';
 import { getUserByUsername, levenshteinDistance, TEXT_MAX_LENGTH, TEXT_MIN_LENGTH } from './user.service.js';
@@ -7,6 +9,10 @@ import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
 import { bugReportPath } from '../../config.js';
 import { join } from 'path';
+
+// Échappe les caractères spéciaux d'une regex pour neutraliser l'injection / le ReDoS
+// lorsqu'on construit un RegExp à partir d'une entrée utilisateur.
+const escapeRegExp = (input: string): string => input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getUserInformation = async (req: Request, res: Response) => {
     try {
@@ -200,7 +206,7 @@ const searchUsers = async (req: Request, res: Response) => { // TODO : factorise
         }
 
         const searchTerm = query.toLowerCase().trim();
-        const searchItem = new RegExp(query, 'i');
+        const searchItem = new RegExp(escapeRegExp(searchTerm), 'i');
 
         let foundUsers = await User.find({ username: searchItem })
             .select('id username avatarUrl status')
@@ -223,7 +229,7 @@ const searchUsers = async (req: Request, res: Response) => { // TODO : factorise
 
         const searchResults = foundUsers.map((user) => {
             const username = user.username.toLowerCase();
-            let relevanceScore = 0;
+            let relevanceScore: number;
 
             // Exact match gets highest score
             if (username === searchTerm) {
@@ -471,4 +477,27 @@ const sendBugReport = async (req: Request, res: Response) => {
     }
 };
 
-export { getUserInformation, updateUsername, updatePassword, updateStatus, updateProfilePicture, getUserFriends, searchUsers, removeFriend, getFriendRequests, sendFriendRequest, acceptFriendRequest, declineFriendRequest, sendBugReport };
+const updateRestaurant = async (req: Request, res: Response) => {
+    try {
+        const { restaurantId } = req.body;
+        if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
+            return res.status(400).json({ error: 'Invalid restaurant ID' });
+        }
+        const restaurant = await Restaurant.findById(restaurantId);
+        if (!restaurant) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+        const user = await User.findById(req.user.id);
+        if (user === null) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        user.restaurant = restaurant._id;
+        await user.save();
+        return res.json({ restaurantId: user.restaurant.toString() });
+    } catch (err: unknown) {
+        logger.error(`Could not update restaurant : ${err}`);
+        return res.status(500).json({ error: 'An error has occured' });
+    }
+};
+
+export { getUserInformation, updateUsername, updatePassword, updateStatus, updateRestaurant, updateProfilePicture, getUserFriends, searchUsers, removeFriend, getFriendRequests, sendFriendRequest, acceptFriendRequest, declineFriendRequest, sendBugReport };

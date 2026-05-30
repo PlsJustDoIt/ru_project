@@ -35,6 +35,18 @@ class SecureStorage {
     return await _secureStorage.read(key: 'refreshToken');
   }
 
+  Future<void> storeGuestRestaurantId(String restaurantId) async {
+    await _secureStorage.write(key: 'guestRestaurantId', value: restaurantId);
+  }
+
+  Future<String?> getGuestRestaurantId() async {
+    return await _secureStorage.read(key: 'guestRestaurantId');
+  }
+
+  Future<void> clearGuestRestaurantId() async {
+    await _secureStorage.delete(key: 'guestRestaurantId');
+  }
+
   Future<void> clearTokens() async {
     await _secureStorage.delete(key: 'accessToken');
     await _secureStorage.delete(key: 'refreshToken');

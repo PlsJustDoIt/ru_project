@@ -43,9 +43,68 @@ const sendMessage = async (req: Request, res: Response) => {
         };
 
         socketService.sendMessageToRoom(userId, room.name, response);
+        socketService.notifyNewMessage(userId, room, response);
         return res.status(201).json({ message: response });
     } catch (err) {
         logger.error('Error in /send:', err);
+        return res.status(500).json({
+            error: 'Internal server error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+        });
+    }
+};
+
+const sendAudioMessage = async (req: Request, res: Response) => {
+    try {
+        const { roomName, duration } = req.body as { roomName: string; duration?: string };
+        const userId = req.user.id;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'Audio file is required' });
+        }
+        if (!roomName) {
+            return res.status(400).json({ error: 'Room name is required' });
+        }
+
+        const user = await User.findById(userId).select('username');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const room = await Room.findOne({ name: roomName });
+        if (!room) {
+            logger.error('Room not found : ' + roomName);
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        const audioUrl = `uploads/audio/${req.file.filename}`;
+        const parsedDuration = duration !== undefined ? Number(duration) : undefined;
+        if (parsedDuration !== undefined && (!Number.isFinite(parsedDuration) || parsedDuration < 0)) {
+            return res.status(400).json({ error: 'Invalid duration' });
+        }
+        const message = new Message({
+            content: '',
+            audioUrl,
+            duration: parsedDuration,
+            user: user,
+            room: room,
+        });
+        await message.save();
+
+        const response: messageChat = {
+            content: '',
+            createdAt: message.createdAt,
+            username: user.username,
+            id: message._id.toString(),
+            audioUrl,
+            duration: message.duration,
+        };
+
+        socketService.sendMessageToRoom(userId, room.name, response);
+        socketService.notifyNewMessage(userId, room, response);
+        return res.status(201).json({ message: response });
+    } catch (err) {
+        logger.error('Error in /send-audio:', err);
         return res.status(500).json({
             error: 'Internal server error',
             message: err instanceof Error ? err.message : 'Unknown error',
@@ -145,4 +204,14 @@ const deleteAllMessagesFromRoom = async (req: Request, res: Response) => {
     }
 };
 
-export { sendMessage, getMessages, deleteMessageFromRoom, deleteAllMessagesFromRoom };
+const getConversations = async (req: Request, res: Response) => {
+    try {
+        const conversations = await socketService.getConversationsSummary(req.user.id);
+        return res.json({ conversations });
+    } catch (err) {
+        logger.error('Error in /conversations:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export { sendMessage, sendAudioMessage, getMessages, getConversations, deleteMessageFromRoom, deleteAllMessagesFromRoom };

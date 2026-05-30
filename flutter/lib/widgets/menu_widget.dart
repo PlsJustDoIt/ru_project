@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:ru_project/models/color.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:intl/intl.dart';
+import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/restaurant_service.dart';
+import 'package:ru_project/services/socket_service.dart';
+import 'package:ru_project/services/user_service.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -12,40 +15,54 @@ class MenuWidget extends StatefulWidget {
   State<MenuWidget> createState() => _MenuWidgetState();
 }
 
-/*
-// Fonction pour convertir la date
-const formatDate = (dateString: string): string => {
-    // Parsing de la date au format 'YYYY-MM-DD'
-    const date = parse(dateString, 'yyyy-MM-dd', new Date());
-    // Formatage de la date au format 'dddd d MMMM yyyy'
-    return format(date, 'eeee d MMMM yyyy', { locale: fr });
-};
- */
+/// Icône associée à une catégorie de plats (flux CROUS).
+IconData _categoryIcon(String category) {
+  switch (category) {
+    case 'Entrées':
+      return Icons.egg_alt_outlined;
+    case 'Cuisine traditionnelle':
+      return Icons.restaurant;
+    case 'Menu végétalien':
+      return Icons.eco_outlined;
+    case 'Pizza':
+      return Icons.local_pizza_outlined;
+    case 'Cuisine italienne':
+      return Icons.local_dining_outlined;
+    case 'Grill':
+      return Icons.outdoor_grill_outlined;
+    default:
+      return Icons.restaurant_menu;
+  }
+}
 
-String formatDate(String dateString) {
-  DateTime date = DateTime.parse(dateString);
-  String formattedDate = DateFormat('EEEE d MMMM y', 'fr_FR').format(date);
-  return formattedDate;
+String _formatFullDate(String dateString) {
+  final date = DateTime.parse(dateString);
+  return DateFormat('EEEE d MMMM y', 'fr_FR').format(date);
+}
+
+String _formatChip(String dateString) {
+  final date = DateTime.parse(dateString);
+  final label = DateFormat('EEE d', 'fr_FR').format(date);
+  return label[0].toUpperCase() + label.substring(1);
 }
 
 class _MenuWidgetState extends State<MenuWidget>
     with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
-  //system de page menu
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
   int _currentPage = 0;
-  var screenSize = 0.0;
+  bool _joining = false;
   late final RestaurantService restaurantService;
+  late final UserService userService;
+  late final SocketService socketService;
 
   @override
   void initState() {
     super.initState();
-    // if (_menus.isEmpty) {
-    //   _checkLoginStatus();
-    // }
     restaurantService = Provider.of<RestaurantService>(context, listen: false);
-
-    setMenus(context);
+    userService = Provider.of<UserService>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    _loadMenus();
   }
 
   @override
@@ -54,215 +71,249 @@ class _MenuWidgetState extends State<MenuWidget>
     super.dispose();
   }
 
-  //set the menus
-  void setMenus(BuildContext context) async {
-    if (_menus.isNotEmpty) {
-      logger.i('Les menus ne sont pas vides');
-    }
-    List<Menu> menus = await restaurantService.getMenus(); // OK
+  Future<void> _loadMenus() async {
+    final menus = await restaurantService.getMenus();
     if (menus.isEmpty) {
       logger.i('Les menus sont vides');
       return;
     }
-    setState(() {
-      _menus = menus;
-      _pageController = PageController(initialPage: _currentPage);
-    });
+    if (mounted) setState(() => _menus = menus);
+  }
+
+  void _selectDay(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
-  //build the widget
   Widget build(BuildContext context) {
-    screenSize = MediaQuery.of(context).size.width;
     super.build(context);
-    return Scaffold(
-      body: Center(
-          child: ((_menus.isEmpty)
-              ? const Text('Chargement...')
-              : Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundColor,
-                  ),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      menuNavRow(context),
-                      const SizedBox(height: 16.0),
-                      menuList(context),
-                    ],
-                  )))),
+    if (_menus.isEmpty) {
+      return _noMenuView();
+    }
+    return Column(
+      children: [
+        _dayStrip(),
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: _menus.length,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            itemBuilder: (context, index) => _dayView(_menus[index]),
+          ),
+        ),
+        _eatHereBar(),
+      ],
     );
   }
 
-  //build the widget for the menu navigation row
-  Widget menuNavRow(BuildContext context) {
-    const buttonSize = 50.0; //temp
-    return Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          //TODO : la decoration est a revoir
-          border: Border.all(
-            color: AppColors.primaryColor,
-            width: 3.0,
+  /// Accroche sociale : relie le menu au statut « au ru » et au chat Global.
+  Widget _eatHereBar() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            icon: _joining
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.restaurant),
+            label: const Text('On y mange ?'),
+            onPressed: _joining ? null : _onEatHere,
           ),
-          borderRadius: BorderRadius.circular(8.0),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+      ),
+    );
+  }
+
+  Future<void> _onEatHere() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user;
+    if (user == null) return;
+
+    setState(() => _joining = true);
+    try {
+      final result = await userService.updateStatus('au ru');
+      if (result['success'] == true) {
+        user.status = 'au ru';
+        userProvider.setUser(user);
+        await socketService.sendMessageToRoom(
+            'Global', '${user.username} mange au RU aujourd\'hui 🍽️');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Statut « au ru » — Global prévenu')),
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Échec de la mise à jour du statut')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _joining = false);
+    }
+  }
+
+  /// Aucun menu disponible (RU fermé / pas de données) — pas de spinner.
+  Widget _noMenuView() {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              //left button
-              icon: const Icon(Icons.arrow_back),
-              iconSize: buttonSize,
-              onPressed: () {
-                if (_currentPage > 0) {
-                  _pageController.previousPage(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Menu du ${formatDate(_menus[_currentPage].date)}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: (screenSize * 0.02).clamp(16.0, 25.0),
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ),
-            IconButton(
-              //right button
-              icon: const Icon(Icons.arrow_forward),
-              iconSize: buttonSize,
-              onPressed: () {
-                if (_currentPage < _menus.length - 1) {
-                  _pageController.nextPage(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
+            Icon(Icons.no_meals,
+                size: 64, color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text('Pas de menu',
+                style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Le RU est probablement fermé. Reviens un autre jour !',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
             ),
           ],
-        ));
-  }
-
-  //build the widget for the menu list
-  Widget menuList(BuildContext context) {
-    return Expanded(
-        child: Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        //TODO : la decoration est a revoir
-        border: Border.all(
-          color: AppColors.primaryColor,
-          width: 3.0,
         ),
-        borderRadius: BorderRadius.circular(8.0),
       ),
-      child: Column(
-        children: [
-          Text(
-            'Déjeuner',
-            style: TextStyle(
-              fontSize: (screenSize * 0.018).clamp(16.0, 25.0),
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 16.0),
-          _menus[_currentPage].fermeture != null
-              ? Expanded(
-                  child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: _menus.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        return Text(
-                          'Fermeture\n- ${_menus[_currentPage].fermeture}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: (screenSize * 0.015).clamp(15.0, 20.0),
-                            color: Colors.black,
-                          ),
-                        );
-                      }))
-              : Expanded(
-                  child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: _menus.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: 1,
-                            itemBuilder: (context, i) {
-                              return menuPlat(context, _menus[index].plats);
-                            });
-                      })),
-        ],
-      ),
-    ));
+    );
   }
 
-  //build the widget for the menu plats (map key = String, value = List of dynamic or string)
-  Column? menuPlat(BuildContext context, Map<String, dynamic>? plats) {
-    if (plats == null) {
-      return null;
-    }
-    final fontSize = (screenSize * 0.015).clamp(15.0, 20.0);
-    Column res = Column(
-      children: [],
+  /// Bandeau de jours cliquables, jour sélectionné mis en avant.
+  Widget _dayStrip() {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        itemCount: _menus.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final selected = index == _currentPage;
+          return ChoiceChip(
+            label: Text(_formatChip(_menus[index].date)),
+            selected: selected,
+            onSelected: (_) => _selectDay(index),
+            labelStyle: TextStyle(
+              color: selected ? Colors.white : theme.colorScheme.onSurface,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            ),
+            selectedColor: theme.colorScheme.primary,
+            showCheckmark: false,
+          );
+        },
+      ),
     );
-    plats.forEach((key, value) {
-      //continue if the value is null, not a list or if key is "Entrées"
-      //(en gros si le menu est pas communiqué et si c'est une entrée sa dégage)
-      if (value == null || value == "menu non communiqué" || key == "Entrées") {
-        return;
-      }
+  }
 
-      //center the text
-      res.children.add(Center(
-        child: Text(key,
-            style: TextStyle(
-              fontSize: fontSize,
-              color: Colors.black,
-            )),
-      ));
+  /// Vue détaillée d'un jour : grande vue « Pas de menu » si fermé,
+  /// sinon toutes les catégories en cartes, lisibles d'un coup.
+  Widget _dayView(Menu menu) {
+    final theme = Theme.of(context);
+    if (menu.isClosed()) {
+      return _noMenuView();
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            'Déjeuner — ${_formatFullDate(menu.date)}',
+            style: theme.textTheme.titleMedium,
+          ),
+        ),
+        ..._categoryCards(menu.plats),
+      ],
+    );
+  }
 
-      if (value is String) {
-        //case string
-        res.children.add(Center(
-          child: Text("- $value",
-              style: TextStyle(
-                fontSize: fontSize,
-                color: Colors.black,
-              )),
-        ));
-      } else {
-        //case list dynamic
-        String joinedValue = value.map((item) => item.toString()).join('\n- ');
-        res.children.add(Center(
-          child: Text("- $joinedValue"),
-        ));
-      }
+  Widget _closedCard(String message) {
+    final theme = Theme.of(context);
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.no_meals, color: theme.colorScheme.primary),
+        title: const Text('Fermé'),
+        subtitle: Text(message),
+      ),
+    );
+  }
 
-      res.children.add(const SizedBox(height: 16.0));
+  List<Widget> _categoryCards(Map<String, dynamic>? plats) {
+    if (plats == null) {
+      return [_closedCard('Menu non communiqué')];
+    }
+
+    final cards = <Widget>[];
+    plats.forEach((category, value) {
+      final items = _plats(value);
+      if (items.isEmpty) return; // catégorie vide / non communiquée
+      cards.add(_categoryCard(category, items));
     });
 
-    return res;
+    if (cards.isEmpty) {
+      return [_closedCard('Menu non communiqué')];
+    }
+    return cards;
+  }
+
+  /// Normalise la valeur d'une catégorie (String ou List) en liste de plats,
+  /// en écartant les « menu non communiqué ».
+  List<String> _plats(dynamic value) {
+    if (value == null || value == 'menu non communiqué') return [];
+    if (value is String) return [value];
+    if (value is List) {
+      return value
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty && e != 'menu non communiqué')
+          .toList();
+    }
+    return [];
+  }
+
+  Widget _categoryCard(String category, List<String> items) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(_categoryIcon(category),
+                    color: theme.colorScheme.primary, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(category,
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final plat in items)
+              Padding(
+                padding: const EdgeInsets.only(left: 32, top: 2),
+                child: Text('• $plat', style: theme.textTheme.bodyMedium),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

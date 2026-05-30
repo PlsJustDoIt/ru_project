@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import auth from '../../middleware/auth.js';
-import { acceptFriendRequest, declineFriendRequest, getFriendRequests, getUserFriends, getUserInformation, removeFriend, searchUsers, sendBugReport, sendFriendRequest, updatePassword, updateProfilePicture, updateStatus, updateUsername } from './user.controller.js';
+import { acceptFriendRequest, declineFriendRequest, getFriendRequests, getUserFriends, getUserInformation, removeFriend, searchUsers, sendBugReport, sendFriendRequest, updatePassword, updateProfilePicture, updateRestaurant, updateStatus, updateUsername } from './user.controller.js';
 import { convertAndCompress, uploadAvatar, uploadBugReport } from '../../utils/multer.js';
 const router = Router();
 
@@ -11,6 +11,9 @@ router.put('/update-username', auth, updateUsername);
 
 // update only password, we need password
 router.put('/update-password', auth, updatePassword);
+
+// update only restaurant, we need restaurantId
+router.put('/update-restaurant', auth, updateRestaurant);
 
 // update only status, we need status
 router.put('/update-status', auth, updateStatus);

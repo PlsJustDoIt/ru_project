@@ -5,19 +5,15 @@ import { setupSocketApplicationEvents } from './routes/socket/socket.service.js'
 import { socketHandler } from './utils/socket.js';
 import swaggerSetup from './modules/swagger.js';
 import adminJsSetup from './modules/admin.js';
-import { exit } from 'process';
-import { isProduction, rootDir } from './config.js';
-import { createWriteStream } from 'fs';
+import { isProduction, mongoUri, rootDir } from './config.js';
+import { createWriteStream, readFileSync } from 'fs';
+import { createServer as createHttpServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
 import { join } from 'path';
 import morgan from 'morgan';
 import { setupUploadDirectories } from './utils/fileSystem.js';
 
 console.log('isProduction: ' + isProduction);
-// Database Connection
-if (process.env.MONGO_URI == null) {
-    logger.error('MONGO_URI is not defined');
-    exit(1);
-}
 
 // Logging
 if (isProduction) {
@@ -32,9 +28,7 @@ if (isProduction) {
 await setupUploadDirectories();
 setupRoutes(app);
 
-logger.info('MONGO_URI: ' + process.env.MONGO_URI);
-logger.info('API Key : ' + process.env.GINKO_API_KEY);
-connect(process.env.MONGO_URI)
+connect(mongoUri)
     .then(() => logger.info('MongoDB Connected'))
     .catch(err => logger.error('MongoDB connection error:', err));
 
@@ -43,20 +37,28 @@ adminJsSetup(app);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
-});
+// En production, on sert en HTTPS : les certificats sont fournis via les
+// variables d'environnement SSL_KEY_PATH / SSL_CERT_PATH. En développement,
+// on reste en HTTP simple sur localhost.
+const createServer = () => {
+    if (isProduction) {
+        const keyPath = process.env.SSL_KEY_PATH;
+        const certPath = process.env.SSL_CERT_PATH;
+        if (!keyPath || !certPath) {
+            throw new Error('SSL_KEY_PATH and SSL_CERT_PATH must be set in production (HTTPS)');
+        }
+        return createHttpsServer({
+            key: readFileSync(keyPath),
+            cert: readFileSync(certPath),
+        }, app);
+    }
+    return createHttpServer(app);
+};
 
-// if (!isProduction) {
-//   app.listen(PORT, () => logger.info(`Server http running on port ${PORT}`));
-// } else {
-//   const options = {
-//     key: fs.readFileSync('/etc/ssl/private/server.key'),
-//     cert: fs.readFileSync('/etc/ssl/certs/server.crt')
-//   };
-//   const server = https.createServer(options,app);
-//   server.listen(PORT, () => logger.info(`Server https running on port ${PORT}`));
-// }
+const server = createServer();
+server.listen(PORT, () => {
+    logger.info(`Server running on port ${PORT} (${isProduction ? 'HTTPS' : 'HTTP'})`);
+});
 
 // Attach Socket.IO to the existing server
 socketHandler.initialize(server, isProduction);

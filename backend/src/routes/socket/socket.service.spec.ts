@@ -118,7 +118,7 @@ describe('socketApplicationService', () => {
 
         (Room.findOne as jest.Mock).mockResolvedValue(mockRoom);
 
-        socket.emit('join_room', [user1._id, user2._id]);
+        socket.emit('join_room', { participants: [user1._id, user2._id] });
     });
 
     it('server socket should handle join_room event when the room doesnt exists', (done) => {
@@ -131,13 +131,13 @@ describe('socketApplicationService', () => {
 
         (Room.findOne as jest.Mock).mockResolvedValue(null);
         (Room.create as jest.Mock).mockResolvedValue(mockRoom);
-        socket.emit('join_room', [user1._id, user2._id]);
+        socket.emit('join_room', { participants: [user1._id, user2._id] });
     });
 
     it('server socket should handle leave_room event', (done) => {
         const mockRoom = { name: [user1._id, user2._id].sort().join('_') };
         (Room.findOne as jest.Mock).mockResolvedValue(mockRoom);
-        socket.emit('join_room', [user1._id, user2._id]);
+        socket.emit('join_room', { participants: [user1._id, user2._id] });
 
         socket.on('room_joined', (data) => {
             expect(data.roomName).toBeDefined();
@@ -156,14 +156,14 @@ describe('socketApplicationService', () => {
             expect(error).toBe('Failed to join room');
             done();
         });
-        socket.emit('join_room', []);
+        socket.emit('join_room', {});
     });
     it('should throw an error if the data length is not 2', (done) => {
         socket.on('error', (error) => {
             expect(error).toBe('Failed to join room');
             done();
         });
-        socket.emit('join_room', [user1._id]);
+        socket.emit('join_room', { participants: [user1._id] });
     });
 
     it('should throw an error if the room is null', (done) => {
@@ -174,7 +174,7 @@ describe('socketApplicationService', () => {
 
         (Room.findOne as jest.Mock).mockResolvedValue(null);
         (Room.create as jest.Mock).mockResolvedValue(null);
-        socket.emit('join_room', [user1._id, user2._id]);
+        socket.emit('join_room', { participants: [user1._id, user2._id] });
     });
 
     it('should send a message to a room', async () => {
@@ -271,7 +271,7 @@ describe('socketApplicationService', () => {
 //     });
 
 //     it('should handle join_room event', (done) => {
-//         socket.emit('join_room', [user1._id, user2._id]);
+//         socket.emit('join_room', { participants: [user1._id, user2._id] });
 //         socket.on('room_joined', (data) => {
 //             expect(data.roomName).toBeDefined();
 //             done();

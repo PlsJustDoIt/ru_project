@@ -4,20 +4,27 @@ import RefreshToken from '../../models/refreshToken.js';
 import { Types } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import logger from '../../utils/logger.js';
+import { jwtAccessSecret, jwtRefreshSecret } from '../../config.js';
 
-const TEXT_MIN_LENGTH = 3;
-const TEXT_MAX_LENGTH = 32;
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MAX_LENGTH = 32;
+const PASSWORD_MIN_LENGTH = 8;
+// bcrypt ne prend en compte que les 72 premiers octets ; au-delà la limite n'a pas de sens.
+const PASSWORD_MAX_LENGTH = 72;
 
 const generateRefreshToken = (id: Types.ObjectId) => {
-    return jwt.sign({ id: id }, process.env.JWT_REFRESH_SECRET as jwt.Secret, { expiresIn: '7d' });
+    return jwt.sign({ id: id }, jwtRefreshSecret, { expiresIn: '7d' });
 };
 
 const generateAccessToken = (id: Types.ObjectId) => {
-    return jwt.sign({ id: id }, process.env.JWT_ACCESS_SECRET as jwt.Secret, { expiresIn: '1h' });
+    return jwt.sign({ id: id }, jwtAccessSecret, { expiresIn: '1h' });
 };
 
 /**
- * Valide les champs username et password
+ * Valide les champs username et password à l'inscription / au changement de mot de passe.
+ * Applique la politique de mot de passe (longueur). Ne pas utiliser à la connexion :
+ * on ne doit pas verrouiller les comptes existants dont le mot de passe est plus court
+ * que la politique actuelle (cf. validateLoginFields).
  */
 const validateCredentials = (username: string, password: string): { valid: boolean; error?: string } => {
     if (!username || !password) {
@@ -27,20 +34,35 @@ const validateCredentials = (username: string, password: string): { valid: boole
     username = username.trim();
     password = password.trim();
 
-    if (username.length < TEXT_MIN_LENGTH || username.length > TEXT_MAX_LENGTH) {
+    if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH) {
         return {
             valid: false,
-            error: `Invalid length for username (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`,
+            error: `Invalid length for username (length must be between ${USERNAME_MIN_LENGTH} and ${USERNAME_MAX_LENGTH} characters)`,
         };
     }
 
-    if (password.length < TEXT_MIN_LENGTH || password.length > TEXT_MAX_LENGTH) {
+    if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
         return {
             valid: false,
-            error: `Invalid length for password (length must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters)`,
+            error: `Invalid length for password (length must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters)`,
         };
     }
 
+    return { valid: true };
+};
+
+/**
+ * Validation légère pour la connexion : on vérifie seulement la présence des champs
+ * (et une borne max raisonnable pour éviter un hash coûteux sur une entrée énorme).
+ * La validité réelle est décidée par bcrypt.compare.
+ */
+const validateLoginFields = (username: string, password: string): { valid: boolean; error?: string } => {
+    if (!username || !password) {
+        return { valid: false, error: 'Username or password field is missing' };
+    }
+    if (password.length > PASSWORD_MAX_LENGTH) {
+        return { valid: false, error: 'Invalid credentials' };
+    }
     return { valid: true };
 };
 
@@ -94,4 +116,4 @@ const generateTokens = async (userId: Types.ObjectId) => {
     return { accessToken, refreshToken };
 };
 
-export { validateCredentials, authenticate, generateTokens, generateAccessToken, generateAndSaveRefreshToken };
+export { validateCredentials, validateLoginFields, authenticate, generateTokens, generateAccessToken, generateAndSaveRefreshToken };

@@ -2,15 +2,16 @@ import multer from 'multer';
 import { dirname, join, extname, basename } from 'path';
 import logger from './logger.js';
 import sharp from 'sharp';
-import { unlink,mkdir } from 'fs/promises';
+import { unlink, mkdir } from 'fs/promises';
 
 import { NextFunction, Request, Response } from 'express';
-import { bugReportPath, avatarPath } from '../config.js';
+import { bugReportPath, avatarPath, audioPath } from '../config.js';
 
 (async () => {
     try {
         await mkdir(avatarPath, { recursive: true });
         await mkdir(bugReportPath, { recursive: true });
+        await mkdir(audioPath, { recursive: true });
     } catch (error) {
         logger.error('Error creating upload directory:', error);
     }
@@ -33,28 +34,23 @@ const storageScreenshotBugReport = multer.diskStorage({
         cb(null, bugReportPath); // Répertoire où les fichiers seront stockés
     },
     filename: (req, file, cb) => {
-        logger.info(file);
-        logger.info(req.body);
-        cb(null, `${file.originalname}`);
+        // Ne jamais utiliser file.originalname tel quel (traversée de chemin).
+        // On génère un nom sûr à partir de l'id utilisateur + timestamp.
+        // Seul le PNG est accepté (cf. fileFilter) ; convertAndCompress le passera en .jpg.
+        cb(null, `${req.user.id}-${Date.now()}.png`);
     },
 });
 
-// Middleware multer
+// Middleware multer.
+// La limite de taille est appliquée par l'option `limits` ; `file.size` n'est pas
+// disponible dans `fileFilter`, on n'y vérifie donc que le type MIME.
 const uploadAvatar = multer({
     storage: storageAvatar,
     limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (file.size > 4 * 1024 * 1024) {
-            cb(null, false);
-        }
-        if (allowedMimeTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(null, false);
-        }
+        cb(null, allowedMimeTypes.includes(file.mimetype));
     },
-
 });
 
 const uploadBugReport = multer({
@@ -62,14 +58,28 @@ const uploadBugReport = multer({
     limits: { fileSize: 4 * 1024 * 1024 }, // Limite de taille : 4MB
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = ['image/png'];
-        if (file.size > 4 * 1024 * 1024) {
-            cb(null, false);
-        }
-        if (allowedMimeTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(null, false);
-        }
+        cb(null, allowedMimeTypes.includes(file.mimetype));
+    },
+});
+
+const storageAudio = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, audioPath);
+    },
+    filename: (req, file, cb) => {
+        // Nom sûr : id utilisateur + timestamp ; on garde l'extension d'origine si saine.
+        const ext = extname(file.originalname).toLowerCase().match(/^\.(m4a|aac|mp3|ogg|wav|webm)$/)
+            ? extname(file.originalname).toLowerCase()
+            : '.m4a';
+        cb(null, `${req.user.id}-${Date.now()}${ext}`);
+    },
+});
+
+const uploadAudio = multer({
+    storage: storageAudio,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+        cb(null, file.mimetype.startsWith('audio/'));
     },
 });
 
@@ -114,4 +124,4 @@ const convertAndCompress = async (req: Request, res: Response, next: NextFunctio
     }
 };
 
-export { uploadAvatar, convertAndCompress, uploadBugReport };
+export { uploadAvatar, convertAndCompress, uploadBugReport, uploadAudio };

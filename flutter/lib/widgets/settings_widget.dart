@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
+import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/restaurant_service.dart';
+import 'package:ru_project/services/user_service.dart';
 
 class SettingsWidget extends StatefulWidget {
   const SettingsWidget({super.key});
@@ -13,61 +16,59 @@ class SettingsWidget extends StatefulWidget {
 class _SettingsWidgetState extends State<SettingsWidget> {
   List<RestaurantPartial> _restaurants = [];
   String? _selectedRestaurantId;
-  bool _isLoading = true;
+  bool _saving = false;
   late final RestaurantService _restaurantService;
+  late final UserService _userService;
 
   @override
   void initState() {
     super.initState();
     _restaurantService = Provider.of<RestaurantService>(context, listen: false);
-
+    _userService = Provider.of<UserService>(context, listen: false);
+    // Initialise sur le restaurant réel de l'utilisateur (_id Mongo).
+    _selectedRestaurantId =
+        Provider.of<UserProvider>(context, listen: false).user?.restaurantId;
     _loadRestaurants();
   }
 
   void _loadRestaurants() async {
     try {
       final restaurants = await _restaurantService.getRestaurants();
+      if (!mounted) return;
       setState(() {
         _restaurants = restaurants;
-        _isLoading = false;
-        // Sélectionner le premier restaurant par défaut s'il existe
-        if (restaurants.isNotEmpty) {
+        // Si l'utilisateur n'a pas de resto, défaut = premier de la liste.
+        if (_selectedRestaurantId == null && restaurants.isNotEmpty) {
           _selectedRestaurantId = restaurants.first.restaurantId;
         }
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // En cas d'erreur, la liste reste vide
     }
   }
 
-  Widget _buildRestaurantDropdown() {
-    if (_isLoading) {
-      return const CircularProgressIndicator();
+  Future<void> _onChanged(String? value) async {
+    if (value == null) return;
+    setState(() {
+      _selectedRestaurantId = value;
+      _saving = true;
+    });
+    bool ok = false;
+    try {
+      ok = await _userService.updateRestaurant(value);
+      if (ok && mounted) {
+        await Provider.of<RestaurantProvider>(context, listen: false)
+            .tryLoadRestaurant(value);
+      }
+    } finally {
+      if (!mounted) return;
+      setState(() => _saving = false);
     }
-
-    if (_restaurants.isEmpty) {
-      return const Text('Aucun restaurant disponible');
-    }
-
-    return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        labelText: 'Restaurant universitaire',
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'Restaurant mis à jour' : 'Échec de la mise à jour'),
       ),
-      value: _selectedRestaurantId,
-      items: _restaurants.map((restaurant) {
-        return DropdownMenuItem<String>(
-          value: restaurant.restaurantId,
-          child: Text(restaurant.name),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          _selectedRestaurantId = value;
-        });
-      },
     );
   }
 
@@ -77,9 +78,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Paramètres'),
       ),
@@ -93,27 +92,23 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             ),
             const SizedBox(height: 20),
             Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Restaurant universitaire',
-                  ),
-                  value: _selectedRestaurantId,
-                  items: _restaurants.map((restaurant) {
-                    return DropdownMenuItem<String>(
-                      value: restaurant.restaurantId,
-                      child: Text(restaurant.name),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedRestaurantId = value;
-                    });
-                    // Vous pouvez ajouter ici la logique pour sauvegarder le choix de l'utilisateur
-                    // Par exemple, l'enregistrer dans SharedPreferences
-                  },
-                )),
+              padding: const EdgeInsets.all(16.0),
+              child: DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Restaurant universitaire',
+                ),
+                initialValue: _selectedRestaurantId,
+                items: _restaurants.map((restaurant) {
+                  return DropdownMenuItem<String>(
+                    value: restaurant.restaurantId,
+                    child: Text(restaurant.name),
+                  );
+                }).toList(),
+                onChanged: _saving ? null : _onChanged,
+              ),
+            ),
+            if (_saving) const CircularProgressIndicator(),
           ],
         ),
       ),

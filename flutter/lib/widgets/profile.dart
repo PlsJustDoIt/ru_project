@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/api_client.dart';
@@ -319,12 +320,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedStatus,
+            initialValue: _selectedStatus,
             decoration: const InputDecoration(
               labelText: 'Status',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.emoji_emotions),
-              focusColor: Colors.blue,
+              focusColor: AppColors.accent,
             ),
             items: widget.statusList.map((String status) {
               return DropdownMenuItem<String>(

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ru_project/models/searchResult.dart';
+import 'package:ru_project/models/search_result.dart';
 import 'package:ru_project/models/user.dart';
 import 'package:ru_project/services/logger.dart';
 
@@ -96,6 +96,25 @@ class UserService {
     }
   }
 
+  //update user restaurant (persist le choix de RU)
+  Future<bool> updateRestaurant(String restaurantId) async {
+    try {
+      final Response response = await _dio.put('/users/update-restaurant', data: {
+        'restaurantId': restaurantId,
+      });
+      if (response.statusCode == 200) {
+        logger.i('Restaurant updated: $restaurantId');
+        return true;
+      }
+      logger.e(
+          'Invalid response: ${response.statusCode} ${response.data['error']}');
+      return false;
+    } catch (e) {
+      logger.e('Failed to update restaurant: $e');
+      return false;
+    }
+  }
+
   //update user username
   Future<Map<String, dynamic>> updateUsername(String username) async {
     try {
@@ -118,7 +137,7 @@ class UserService {
   //update user profile picture
   Future<String?> updateProfilePicture(XFile pickedFile) async {
     try {
-      var file;
+      MultipartFile file;
 
       if (kIsWeb) {
         // For web

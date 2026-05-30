@@ -15,6 +15,9 @@ jest.mock('sharp', () => {
 
 jest.mock('fs/promises', () => ({
     unlink: jest.fn().mockResolvedValue(undefined),
+    // multer.ts crée les dossiers d'upload au chargement du module (IIFE) ;
+    // sans ce mock, mkdir est undefined et l'IIFE log une erreur parasite.
+    mkdir: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('convertAndCompress', () => {

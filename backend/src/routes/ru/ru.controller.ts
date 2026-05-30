@@ -1,15 +1,69 @@
 import { Request, Response } from 'express';
 import { MenuResponse } from '../../interfaces/menu.js';
 import logger from '../../utils/logger.js';
-import { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, getSectorsFromRestaurant } from './ru.service.js';
+import { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, getSectorsFromRestaurant, fillClosedDays } from './ru.service.js';
 import NodeCache from 'node-cache';
 import Restaurant from '../../models/restaurant.js';
 import { getUserById } from '../user/user.service.js';
 import SectorSession from '../../models/sectorSession.js';
 import { Types } from 'mongoose';
 import friendsInSector from '../../interfaces/friendsInSector.js';
+import { isProduction } from '../../config.js';
 
 const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
+
+/**
+ * Construit le pipeline d'agrégation des sessions de secteur, groupées par sectorId.
+ * Si `userIds` est fourni, on ne renvoie que les sessions de ces utilisateurs
+ * (ex. les amis) ; sinon, toutes les sessions des secteurs du restaurant.
+ */
+const buildSectorSessionsPipeline = (sectors: Types.ObjectId[], userIds?: Types.ObjectId[]) => [
+    {
+        $match: {
+            sector: { $in: sectors },
+            ...(userIds ? { user: { $in: userIds } } : {}),
+        },
+    },
+    {
+        $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: 'userDetails',
+        },
+    },
+    {
+        $lookup: {
+            from: 'sectors',
+            localField: 'sector',
+            foreignField: '_id',
+            as: 'sectorDetails',
+        },
+    },
+    { $unwind: '$userDetails' },
+    { $unwind: '$sectorDetails' },
+    {
+        $project: {
+            _id: 0,
+            sectorId: '$sectorDetails.sectorId',
+            sessions: {
+                friend: {
+                    _id: '$userDetails._id',
+                    username: '$userDetails.username',
+                    avatarUrl: '$userDetails.avatarUrl',
+                    status: '$userDetails.status',
+                },
+                expiresAt: '$expiresAt',
+            },
+        },
+    },
+    {
+        $group: {
+            _id: '$sectorId',
+            sessions: { $push: '$sessions' },
+        },
+    },
+];
 
 const apiDoc = {
     message: 'API pour récupérer les prochains repas du ru lumière',
@@ -32,29 +86,35 @@ const apiDoc = {
 
 const getMenus = async (req: Request, res: Response) => {
     try {
-        // On vérifie si les menus sont en cache
-        const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
-        if (cachedMenus) {
+        let menus: MenuResponse[] | undefined = cache.get('menus');
+        if (menus) {
             logger.info('Les menus sont en cache');
-            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-            const filteredMenus = cachedMenus.filter((menu: MenuResponse) => menu.date >= today);
-            return res.json({ menus: filteredMenus });
+        } else {
+            // Si les menus ne sont pas en cache, on les récupère de l'API externe
+            menus = await fetchMenusFromExternalAPI();
+            cache.set('menus', menus); // On met les menus en cache pour une semaine
         }
 
-        // Si les menus ne sont pas en cache, on les récupère de l'API externe
-        const menus = await fetchMenusFromExternalAPI();
+        // En prod : on ancre sur la vraie date du jour (filtre `>= today`).
+        // En dev : on ancre sur le 1er jour du fixture pour toujours afficher une
+        // semaine exemple (le fixture est statique, sinon tout serait filtré).
+        const realToday = new Date().toISOString().split('T')[0];
+        const fixtureStart = menus.length > 0
+            ? menus.map((m) => m.date).sort((a, b) => a.localeCompare(b))[0]
+            : realToday;
+        const today = isProduction ? realToday : fixtureStart;
 
-        // On met les menus en cache pour une semaine
-        cache.set('menus', menus);
-        return res.json({ menus: menus });
+        // Filtre + comblement appliqués par requête (dépendent de `today`, donc non cachés)
+        const filtered = menus.filter((menu: MenuResponse) => menu.date >= today);
+        return res.json({ menus: fillClosedDays(filtered, today) });
     } catch (error) {
-        console.error('Erreur lors de la récupération des menus:', error);
+        logger.error('Erreur lors de la récupération des menus:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des menus' });
     }
 };
 
 const getSectors = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
 
     try {
         if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
@@ -72,11 +132,13 @@ const getSectors = async (req: Request, res: Response) => {
 
 const getRestaurants = async (req: Request, res: Response) => {
     try {
-        const restaurants = await Restaurant.find().select('name restaurantId -_id').limit(10);
+        const restaurants = await Restaurant.find().select('name').limit(10);
         if (!restaurants || restaurants.length === 0) {
             return res.status(404).json({ error: 'No restaurants found' });
         }
-        return res.json({ restaurants });
+        return res.json({
+            restaurants: restaurants.map((r) => ({ restaurantId: r._id, name: r.name })),
+        });
     } catch (error) {
         logger.error('Erreur lors de la récupération des restaurants:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des restaurants' });
@@ -84,7 +146,7 @@ const getRestaurants = async (req: Request, res: Response) => {
 };
 
 const getSectorsSessions = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
@@ -104,57 +166,9 @@ const getSectorsSessions = async (req: Request, res: Response) => {
         // Conversion correcte des IDs d'amis en ObjectId
         const friendObjectIds = user.friends.map(id => new Types.ObjectId(id));
 
-        const tmp_sectorsSessions = await SectorSession.find({}).populate('user', 'username avatarUrl status -_id');
-
-        const friendsInSectors = await SectorSession.aggregate([
-            {
-                $match: {
-                    user: { $in: friendObjectIds },
-                    sector: { $in: restaurant.sectors },
-                },
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'user',
-                    foreignField: '_id',
-                    as: 'userDetails',
-                },
-            },
-            {
-                $lookup: {
-                    from: 'sectors',
-                    localField: 'sector',
-                    foreignField: '_id',
-                    as: 'sectorDetails',
-                },
-            },
-            { $unwind: '$userDetails' },
-            { $unwind: '$sectorDetails' },
-            {
-                $project: {
-                    _id: 0,
-                    sectorId: '$sectorDetails.sectorId',
-                    sessions: {
-                        friend: {
-                            _id: '$userDetails._id',
-                            username: '$userDetails.username',
-                            avatarUrl: '$userDetails.avatarUrl',
-                            status: '$userDetails.status',
-                        },
-                        expiresAt: '$expiresAt',
-                    },
-
-                },
-            },
-            {
-                $group: {
-                    _id: '$sectorId',
-                    sessions: { $push: '$sessions' },
-                    // sector: { $first: '$sectorDetails' }, // Facultatif si tu veux encore les infos du secteur
-                },
-            },
-        ]);
+        const friendsInSectors = await SectorSession.aggregate(
+            buildSectorSessionsPipeline(restaurant.sectors, friendObjectIds),
+        );
 
         if (!friendsInSectors || friendsInSectors.length === 0) {
             logger.info('No friends found in sectors');
@@ -181,9 +195,11 @@ const getSectorsSessions = async (req: Request, res: Response) => {
     }
 };
 
-// Return ALL sessions in restaurant sectors, not only friends
+// Renvoie TOUTES les sessions des secteurs du restaurant (pas seulement les amis).
+// Comportement volontairement public à tout utilisateur authentifié : il sert à
+// visualiser l'affluence globale du RU (cf. AUDIT.md, décision conservée).
 const getAllSectorsSessions = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
@@ -194,52 +210,9 @@ const getAllSectorsSessions = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
 
-        const allSessions = await SectorSession.aggregate([
-            {
-                $match: {
-                    sector: { $in: restaurant.sectors },
-                },
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'user',
-                    foreignField: '_id',
-                    as: 'userDetails',
-                },
-            },
-            {
-                $lookup: {
-                    from: 'sectors',
-                    localField: 'sector',
-                    foreignField: '_id',
-                    as: 'sectorDetails',
-                },
-            },
-            { $unwind: '$userDetails' },
-            { $unwind: '$sectorDetails' },
-            {
-                $project: {
-                    _id: 0,
-                    sectorId: '$sectorDetails.sectorId',
-                    sessions: {
-                        friend: {
-                            _id: '$userDetails._id',
-                            username: '$userDetails.username',
-                            avatarUrl: '$userDetails.avatarUrl',
-                            status: '$userDetails.status',
-                        },
-                        expiresAt: '$expiresAt',
-                    },
-                },
-            },
-            {
-                $group: {
-                    _id: '$sectorId',
-                    sessions: { $push: '$sessions' },
-                },
-            },
-        ]);
+        const allSessions = await SectorSession.aggregate(
+            buildSectorSessionsPipeline(restaurant.sectors),
+        );
 
         if (!allSessions || allSessions.length === 0) {
             logger.info('No sessions found in sectors');
@@ -263,12 +236,12 @@ const getAllSectorsSessions = async (req: Request, res: Response) => {
     }
 };
 
-const getApiDoc = (res: Response) => {
+const getApiDoc = (_req: Request, res: Response) => {
     return res.json(apiDoc);
 };
 
 const getRestaurantInfo = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
@@ -285,7 +258,7 @@ const getRestaurantInfo = async (req: Request, res: Response) => {
 };
 
 const getRestaurantByOwnId = async (req: Request, res: Response) => {
-    const restaurantId = req.params.restaurantId;
+    const restaurantId = req.params.restaurantId as string;
     if (!Types.ObjectId.isValid(restaurantId)) {
         return res.status(400).json({ error: 'Invalid restaurant ID format' });
     }

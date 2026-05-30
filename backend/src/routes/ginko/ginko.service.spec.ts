@@ -81,12 +81,14 @@ describe('Ginko service Tests', () => {
     it('should handle errors correctly', async () => {
         (axios.post as jest.Mock).mockRejectedValue(new Error('API error'));
 
-        await expect(getTempsLieu('Crous')).rejects.toThrow('API error');
+        await expect(getTempsLieu('Crous')).rejects.toThrow('Erreur lors de la récupération des horaires pour Crous');
+        await expect(getTempsLieu('Crous')).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'API error' }) });
     });
     it('should handle empty response', async () => {
         (axios.post as jest.Mock).mockResolvedValue({ data: { ok: false, msg: 'No data' } });
 
-        await expect(getTempsLieu('Crous')).rejects.toThrow('No data');
+        await expect(getTempsLieu('Crous')).rejects.toThrow('Erreur lors de la récupération des horaires pour Crous');
+        await expect(getTempsLieu('Crous')).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'No data' }) });
     },
     );
     it('should handle empty location', async () => {
@@ -108,7 +110,8 @@ describe('Ginko service Tests', () => {
     it('should handle API error', async () => {
         (axios.post as jest.Mock).mockResolvedValue({ data: { ok: false, msg: 'API error' } });
 
-        await expect(getTempsLieu('Crous')).rejects.toThrow('API error');
+        await expect(getTempsLieu('Crous')).rejects.toThrow('Erreur lors de la récupération des horaires pour Crous');
+        await expect(getTempsLieu('Crous')).rejects.toMatchObject({ cause: expect.objectContaining({ message: 'API error' }) });
     },
     );
 
