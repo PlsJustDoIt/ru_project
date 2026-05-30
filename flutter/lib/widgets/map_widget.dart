@@ -28,6 +28,7 @@ class FloorPlan extends StatefulWidget {
 class _FloorPlanState extends State<FloorPlan> {
   Sector? selectedSector;
   late final UserProvider userProvider;
+  late final bool isGuest;
   late final RestaurantTmp restaurant;
   late FriendsInSectors? sectorSessions;
   late Future<void> getRestaurantData;
@@ -40,13 +41,15 @@ class _FloorPlanState extends State<FloorPlan> {
     super.initState();
     restaurantService = Provider.of<RestaurantService>(context, listen: false);
     userProvider = Provider.of<UserProvider>(context, listen: false);
+    isGuest = userProvider.isGuest;
     restaurantProvider =
         Provider.of<RestaurantProvider>(context, listen: false);
 
     restaurant = restaurantProvider.restaurant!; // ca bouge pas
     logger.d('Restaurant: $restaurant');
 
-    getRestaurantData = machin();
+    // En invité, on ne charge pas les sessions (route protégée).
+    getRestaurantData = isGuest ? Future<void>.value() : machin();
   }
 
   // truc() async {
@@ -161,23 +164,24 @@ class _FloorPlanState extends State<FloorPlan> {
                     ),
                   );
                 }),
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: FloatingActionButton.extended(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SectorsSessionsWidget(
-                            restaurantId: restaurant.restaurantId,
+                if (!isGuest)
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: FloatingActionButton.extended(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SectorsSessionsWidget(
+                              restaurantId: restaurant.restaurantId,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.groups),
-                    label: const Text('Sessions'),
+                        );
+                      },
+                      icon: const Icon(Icons.groups),
+                      label: const Text('Sessions'),
+                    ),
                   ),
-                ),
               ],
             );
           },
@@ -358,8 +362,8 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
             ),
             const SizedBox(height: 16),
 
-            // Bouton d'action: se lever si je suis assis, sinon s'asseoir
-            if (widget.sector.occupiedByMe)
+            // Bouton d'action (masqué pour les invités): se lever / s'asseoir
+            if (!widget.userProvider.isGuest && widget.sector.occupiedByMe)
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () async {
@@ -406,7 +410,7 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
                   ),
                 ),
               )
-            else
+            else if (!widget.userProvider.isGuest)
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () {
@@ -422,7 +426,9 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
             const SizedBox(height: 16),
 
             // Friends in Area Section
-            if (isLoading)
+            if (widget.userProvider.isGuest)
+              const SizedBox.shrink()
+            else if (isLoading)
               const Center(child: CircularProgressIndicator())
             else if (widget.sessionsForSector != null &&
                 widget.sessionsForSector!.isNotEmpty)
