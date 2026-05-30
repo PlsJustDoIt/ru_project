@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { MenuResponse } from '../../interfaces/menu.js';
 import logger from '../../utils/logger.js';
-import { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, getSectorsFromRestaurant } from './ru.service.js';
+import { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, getSectorsFromRestaurant, fillClosedDays } from './ru.service.js';
 import NodeCache from 'node-cache';
 import Restaurant from '../../models/restaurant.js';
 import { getUserById } from '../user/user.service.js';
@@ -85,21 +85,19 @@ const apiDoc = {
 
 const getMenus = async (req: Request, res: Response) => {
     try {
-        // On vérifie si les menus sont en cache
-        const cachedMenus: MenuResponse[] | undefined = cache.get('menus');
-        if (cachedMenus) {
+        let menus: MenuResponse[] | undefined = cache.get('menus');
+        if (menus) {
             logger.info('Les menus sont en cache');
-            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-            const filteredMenus = cachedMenus.filter((menu: MenuResponse) => menu.date >= today);
-            return res.json({ menus: filteredMenus });
+        } else {
+            // Si les menus ne sont pas en cache, on les récupère de l'API externe
+            menus = await fetchMenusFromExternalAPI();
+            cache.set('menus', menus); // On met les menus en cache pour une semaine
         }
 
-        // Si les menus ne sont pas en cache, on les récupère de l'API externe
-        const menus = await fetchMenusFromExternalAPI();
-
-        // On met les menus en cache pour une semaine
-        cache.set('menus', menus);
-        return res.json({ menus: menus });
+        // Filtre + comblement appliqués par requête (dépendent de `today`, donc non cachés)
+        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+        const filtered = menus.filter((menu: MenuResponse) => menu.date >= today);
+        return res.json({ menus: fillClosedDays(filtered, today) });
     } catch (error) {
         logger.error('Erreur lors de la récupération des menus:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des menus' });
