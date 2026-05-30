@@ -17,6 +17,7 @@ import 'package:ru_project/services/socket_service.dart';
 import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/theme/app_theme.dart';
 import 'package:ru_project/widgets/main_scaffold.dart';
+import 'package:ru_project/widgets/navigation/main_destinations.dart';
 import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -124,7 +125,9 @@ class MyApp extends StatelessWidget {
       theme: buildAppTheme(),
       home: userProvider.isConnected
           ? const MainScaffold()
-          : const WelcomeWidget(),
+          : userProvider.isGuest
+              ? MainScaffold(destinations: kGuestDestinations)
+              : const WelcomeWidget(),
     );
   }
 }
