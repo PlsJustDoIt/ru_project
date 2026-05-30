@@ -12,8 +12,10 @@ class UserProvider with ChangeNotifier {
   User? _user;
   List<Friend> _friends = [];
   bool _isConnected = false;
+  bool _isGuest = false;
 
   bool get isConnected => _isConnected;
+  bool get isGuest => _isGuest;
   User? get user => _user;
   List<Friend> get friends => _friends;
 
@@ -23,6 +25,11 @@ class UserProvider with ChangeNotifier {
       RestaurantProvider restaurantProvider) async {
     final accessToken = await secureStorage.getAccessToken();
     if (accessToken == null) {
+      final guestRestaurantId = await secureStorage.getGuestRestaurantId();
+      if (guestRestaurantId != null && guestRestaurantId.isNotEmpty) {
+        _isGuest = true;
+        await restaurantProvider.tryLoadRestaurant(guestRestaurantId);
+      }
       notifyListeners();
       return;
     }
@@ -55,8 +62,17 @@ class UserProvider with ChangeNotifier {
     } else {
       _user = user;
       _isConnected = true;
+      _isGuest = false;
       notifyListeners();
     }
+  }
+
+  /// Active le mode invité (pas de compte). Le restaurant est déjà chargé
+  /// par l'appelant via RestaurantProvider.
+  void enterGuestMode() {
+    _isGuest = true;
+    _isConnected = false;
+    notifyListeners();
   }
 
   void setFriends(List<Friend> friends) {
@@ -68,6 +84,7 @@ class UserProvider with ChangeNotifier {
     _user = null;
     _friends = [];
     _isConnected = false;
+    _isGuest = false;
     notifyListeners();
   }
 }
