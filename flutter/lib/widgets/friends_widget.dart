@@ -9,7 +9,7 @@ import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/widgets/friends_request_widget.dart';
 import 'package:ru_project/widgets/search_user_widget.dart';
-import 'package:ru_project/widgets/chat_widget.dart';
+import 'package:ru_project/widgets/chat_ui.dart';
 
 class FriendsListButton extends StatelessWidget {
   const FriendsListButton({super.key});
@@ -279,12 +279,17 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => ChatWidget(
-                                            roomname: generatePrivateRoomName(
-                                                userProvider.user!.id,
-                                                friend.id),
-                                            actualUser: userProvider.user!,
-                                            friends: [friend],
+                                          builder: (context) => Scaffold(
+                                            appBar: AppBar(
+                                              title: Text(friend.username),
+                                            ),
+                                            body: ChatUi(
+                                              roomName: generatePrivateRoomName(
+                                                  userProvider.user!.id,
+                                                  friend.id),
+                                              actualUser: userProvider.user!,
+                                              friends: [friend],
+                                            ),
                                           ),
                                         ),
                                       );
