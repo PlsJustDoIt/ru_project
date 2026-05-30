@@ -55,7 +55,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: 'Projet RU'.split('').asMap().entries.map((entry) {
+                      children:
+                          'Mon Campus'.split('').asMap().entries.map((entry) {
                         final index = entry.key;
                         final letter = entry.value;
                         return Text(
@@ -75,7 +76,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                     const Text(
                       'Bienvenue !',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 32),
                     Row(
@@ -89,7 +91,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => Scaffold(
-                                    appBar: AppBar(title: const Text('Connexion')),
+                                    appBar:
+                                        AppBar(title: const Text('Connexion')),
                                     body: LoginWidget(),
                                   ),
                                 ),
