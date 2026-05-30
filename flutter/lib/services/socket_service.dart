@@ -67,6 +67,27 @@ class SocketService {
     }
   }
 
+  /// Résumé des conversations : roomName -> dernier message (ou null si vide).
+  Future<Map<String, Message?>> getConversations() async {
+    try {
+      final Response response = await _dio.get('/socket/conversations');
+      if (response.statusCode == 200 && response.data != null) {
+        final Map<String, Message?> result = {};
+        for (final conv in (response.data['conversations'] as List)) {
+          final last = conv['lastMessage'];
+          result[conv['roomName']] =
+              last == null ? null : Message.fromJson(last);
+        }
+        return result;
+      }
+      logger.e('Invalid response from server: ${response.statusCode}');
+      return {};
+    } catch (e) {
+      logger.e('Failed to get conversations: $e');
+      return {};
+    }
+  }
+
   Future<Message?> sendMessageToRoom(String roomName, String content) async {
     try {
       final Response response = await _dio.post('/socket/send-message', data: {

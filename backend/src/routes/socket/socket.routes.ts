@@ -2,13 +2,15 @@
 import { Router } from 'express';
 import auth from '../../middleware/auth.js';
 
-import { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessages, sendMessage } from './socket.controller.js';
+import { deleteAllMessagesFromRoom, deleteMessageFromRoom, getConversations, getMessages, sendMessage } from './socket.controller.js';
 
 const router = Router();
 
 router.post('/send-message', auth, sendMessage);
 
 router.get('/messages', auth, getMessages);
+
+router.get('/conversations', auth, getConversations);
 
 router.delete('/delete-all-messages', auth, deleteAllMessagesFromRoom);
 

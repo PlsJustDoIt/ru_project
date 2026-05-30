@@ -145,4 +145,14 @@ const deleteAllMessagesFromRoom = async (req: Request, res: Response) => {
     }
 };
 
-export { sendMessage, getMessages, deleteMessageFromRoom, deleteAllMessagesFromRoom };
+const getConversations = async (req: Request, res: Response) => {
+    try {
+        const conversations = await socketService.getConversationsSummary(req.user.id);
+        return res.json({ conversations });
+    } catch (err) {
+        logger.error('Error in /conversations:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export { sendMessage, getMessages, getConversations, deleteMessageFromRoom, deleteAllMessagesFromRoom };
