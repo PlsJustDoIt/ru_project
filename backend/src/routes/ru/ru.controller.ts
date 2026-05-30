@@ -125,11 +125,13 @@ const getSectors = async (req: Request, res: Response) => {
 
 const getRestaurants = async (req: Request, res: Response) => {
     try {
-        const restaurants = await Restaurant.find().select('name restaurantId -_id').limit(10);
+        const restaurants = await Restaurant.find().select('name').limit(10);
         if (!restaurants || restaurants.length === 0) {
             return res.status(404).json({ error: 'No restaurants found' });
         }
-        return res.json({ restaurants });
+        return res.json({
+            restaurants: restaurants.map((r) => ({ restaurantId: r._id, name: r.name })),
+        });
     } catch (error) {
         logger.error('Erreur lors de la récupération des restaurants:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des restaurants' });
