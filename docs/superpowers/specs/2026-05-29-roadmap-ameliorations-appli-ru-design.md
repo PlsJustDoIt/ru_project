@@ -32,7 +32,7 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 | 1 | Identité visuelle (thème direction A) | M | Socle transversal | ✅ fait |
 | 2 | Chat (refonte + vocal) | L | Cœur de la demande | ✅ fait (2a/2b/2c/2d) |
 | 3 | Menu (refonte + social) | M | « Mieux exploité » | ✅ fait (3a/3b) |
-| 4 | Polish & dette | M | Finition | ⬜ à faire |
+| 4 | Polish & dette | M | Finition | ✅ fait (4a/4b/4c) |
 
 ---
 
@@ -102,10 +102,12 @@ L'ordre suit les dépendances : le bug bloquant d'abord, puis le thème (socle t
 
 ## Phase 4 — Polish & dette *(finition)*
 
-- **Carte / secteurs :** supprimer les widgets carte morts (`old_map_widget_2`, `chatgpt_map_widget`, `old_map_widget`, etc.), clarifier l'UX du check-in.
-- **Amis :** corriger les `use_build_context_synchronously` (risque de crash réel : `auth_form.dart`, `friends_request_widget.dart`, `friends_widget.dart`), icône d'onglet cohérente (aujourd'hui `Icons.fiber_new`).
-- **Nettoyage :** supprimer le code mort (`web_socket_service.dart`, `cache_service.dart`, vieux maps, `menu_provider.dart` non câblé) ; `dart fix --apply` (≈55 warnings `flutter analyze`) ; résoudre les erreurs ESLint backend.
-- **Profil & Bus :** polish visuel hérité du thème (pas de manque fonctionnel).
+État (branches `feat/phase4a-dead-code`, `feat/phase4b-eslint`, `feat/phase4c-polish`, fusionnées dans `dev`) :
+
+- **Carte / secteurs :** ✅ vieux widgets carte morts déjà supprimés (vérifié : `old_map_widget*`, `chatgpt_map_widget` absents). *Clarification UX du check-in : non traitée — design subjectif, pas de la dette ; à rouvrir si besoin.*
+- **Amis :** ✅ `use_build_context_synchronously` : `flutter analyze` est **clean** (0 issue) — déjà réglés ; icône d'onglet déjà cohérente (`Icons.people_outline` dans `main_destinations.dart`, l'ancien `tab_bar`/`fiber_new` a disparu en Phase 1).
+- **Nettoyage :** ✅ **4a** code mort restant supprimé (`tables.dart`, `home_widget.dart` ; les `web_socket_service`/`cache_service`/vieux maps/`menu_provider` étaient déjà partis). ✅ `flutter analyze` clean (les ~55 warnings n'existent plus). ✅ **4b** ESLint backend **200 → 0** (ignore global des bundles générés `.adminjs/`, `--fix` pour l'indentation).
+- **Profil & Bus :** ✅ **4c** accents bleus du Bus alignés sur l'accent rouge (direction A) ; `focusColor` du Profil idem.
 
 *Effort : M.*
 
