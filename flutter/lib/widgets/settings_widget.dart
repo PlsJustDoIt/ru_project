@@ -53,13 +53,18 @@ class _SettingsWidgetState extends State<SettingsWidget> {
       _selectedRestaurantId = value;
       _saving = true;
     });
-    final ok = await _userService.updateRestaurant(value);
-    if (ok && mounted) {
-      await Provider.of<RestaurantProvider>(context, listen: false)
-          .loadRestaurant(value);
+    bool ok = false;
+    try {
+      ok = await _userService.updateRestaurant(value);
+      if (ok && mounted) {
+        await Provider.of<RestaurantProvider>(context, listen: false)
+            .tryLoadRestaurant(value);
+      }
+    } finally {
+      if (!mounted) return;
+      setState(() => _saving = false);
     }
     if (!mounted) return;
-    setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(ok ? 'Restaurant mis à jour' : 'Échec de la mise à jour'),
