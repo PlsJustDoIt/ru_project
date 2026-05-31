@@ -30,8 +30,8 @@ class _FloorPlanState extends State<FloorPlan> {
   late final UserProvider userProvider;
   late final bool isGuest;
   late final RestaurantTmp restaurant;
-  FriendsInSectors? sectorSessions; // null tant que non chargé (ex: mode invité)
-  late Future<void> getRestaurantData;
+  FriendsInSectors?
+      sectorSessions; // null tant que non chargé (ex: mode invité)
   late final RestaurantService restaurantService;
   late final RestaurantProvider restaurantProvider;
 
@@ -48,16 +48,12 @@ class _FloorPlanState extends State<FloorPlan> {
     restaurant = restaurantProvider.restaurant!; // ca bouge pas
     logger.d('Restaurant: $restaurant');
 
-    // En invité, on ne charge pas les sessions (route protégée).
-    getRestaurantData = isGuest ? Future<void>.value() : machin();
-  }
-
-  // truc() async {
-  //   await setRestaurantSectors();
-  // }
-
-  Future<void> machin() async {
-    return await setSectorSessions();
+    // Les secteurs sont déjà chargés : on dessine la carte immédiatement.
+    // Les sessions d'amis (coloration rouge) arrivent en arrière-plan et
+    // recolorent la carte. En invité : route protégée, on ne charge pas.
+    if (!isGuest) {
+      _loadSectorSessions();
+    }
   }
 
   @override
@@ -66,9 +62,11 @@ class _FloorPlanState extends State<FloorPlan> {
     super.dispose();
   }
 
-  Future<void> setSectorSessions() async {
-    sectorSessions =
+  Future<void> _loadSectorSessions() async {
+    final sessions =
         await restaurantService.getFriendsSessions(restaurant.restaurantId);
+    if (!mounted) return;
+    setState(() => sectorSessions = sessions);
   }
 
   // Future<void> setRestaurantSectors() async {
@@ -79,112 +77,83 @@ class _FloorPlanState extends State<FloorPlan> {
   Widget build(BuildContext context) {
     logger.d('FloorPlan build');
 
-    return FutureBuilder(
-      future: getRestaurantData, // Fetch sectors dynamically
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator()); // Show loading indicator
-        } else if (snapshot.hasError) {
-          return Center(
-              child: Text('Erreur: ${snapshot.error}')); // Show error message
-        } else if (restaurant.sectors == null || restaurant.sectors!.isEmpty) {
-          return const Center(child: Text('Aucun secteur disponible.'));
-        }
+    if (restaurant.sectors == null || restaurant.sectors!.isEmpty) {
+      return const Center(child: Text('Aucun secteur disponible.'));
+    }
 
-        logger.d('Sectors Sessions: ${sectorSessions?.data}');
+    logger.d('Sectors Sessions: ${sectorSessions?.data}');
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final containerWidth = constraints.maxWidth;
-            final containerHeight = constraints.maxHeight;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final containerWidth = constraints.maxWidth;
+        final containerHeight = constraints.maxHeight;
 
-            return Stack(
-              children: [
-                Container(
-                  width: containerWidth,
-                  height: containerHeight,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    color: Colors.grey[200],
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/map_r135.jpg'),
-                      fit: BoxFit.fill,
+        return Stack(
+          children: [
+            Container(
+              width: containerWidth,
+              height: containerHeight,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black),
+                color: Colors.grey[200],
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/map_r135.jpg'),
+                  fit: BoxFit.fill,
+                ),
+              ),
+            ),
+            ...restaurant.sectors!.map((sector) {
+              final sectorWidth = sector.width * containerWidth / 100;
+              final sectorHeight = sector.height * containerHeight / 100;
+              final sectorLeft = sector.x * containerWidth / 100;
+              final sectorTop = sector.y * containerHeight / 100;
+
+              return Positioned(
+                left: sectorLeft,
+                top: sectorTop,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedSector = sector;
+                    });
+                    showSectorDetails(
+                      context,
+                      sector,
+                      restaurantService,
+                      userProvider,
+                      (sectorSessions?.data ?? const {})[sector.sectorId],
+                    );
+                  },
+                  child: Container(
+                    width: sectorWidth,
+                    height: sectorHeight,
+                    decoration: BoxDecoration(
+                      color: sector.occupiedByMe
+                          ? Colors.orange
+                          : ((sectorSessions?.data ??
+                                      const {})[sector.sectorId] !=
+                                  null
+                              ? Colors.red
+                              : sector.getColor()),
+                      border: Border.all(
+                        color: selectedSector?.id == sector.id
+                            ? Colors.blue
+                            : Colors.black,
+                        width: selectedSector?.id == sector.id ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: Text(
+                        sector.sectorId,
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ),
-                ...restaurant.sectors!.map((sector) {
-                  final sectorWidth = sector.width * containerWidth / 100;
-                  final sectorHeight = sector.height * containerHeight / 100;
-                  final sectorLeft = sector.x * containerWidth / 100;
-                  final sectorTop = sector.y * containerHeight / 100;
-
-                  return Positioned(
-                    left: sectorLeft,
-                    top: sectorTop,
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedSector = sector;
-                        });
-                        showSectorDetails(
-                          context,
-                          sector,
-                          restaurantService,
-                          userProvider,
-                          (sectorSessions?.data ?? const {})[sector.sectorId],
-                        );
-                      },
-                      child: Container(
-                        width: sectorWidth,
-                        height: sectorHeight,
-                        decoration: BoxDecoration(
-                          color: sector.occupiedByMe
-                              ? Colors.orange
-                              : ((sectorSessions?.data ??
-                                          const {})[sector.sectorId] !=
-                                      null
-                                  ? Colors.red
-                                  : sector.getColor()),
-                          border: Border.all(
-                            color: selectedSector?.id == sector.id
-                                ? Colors.blue
-                                : Colors.black,
-                            width: selectedSector?.id == sector.id ? 2 : 1,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Center(
-                          child: Text(
-                            sector.sectorId,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-                if (!isGuest)
-                  Positioned(
-                    right: 16,
-                    bottom: 16,
-                    child: FloatingActionButton.extended(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SectorsSessionsWidget(
-                              restaurantId: restaurant.restaurantId,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.groups),
-                      label: const Text('Sessions'),
-                    ),
-                  ),
-              ],
-            );
-          },
+              );
+            }),
+          ],
         );
       },
     );
@@ -224,19 +193,72 @@ class SimpleMapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
+    final restaurant = context.watch<RestaurantProvider>().restaurant;
+    final isGuest = context.watch<UserProvider>().isGuest;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: AspectRatio(
-          aspectRatio: 1, // Maintain a square aspect ratio
-          child: FloorPlan(
-            width: screenSize.width * 0.8, // 80% of screen width
-            height: screenSize.height * 0.8, // 80% of screen height
+    // Pas de RU rattaché : on dégrade proprement au lieu de planter (la Carte
+    // lisait restaurant! → écran blanc si restaurantId vide/non chargé).
+    if (restaurant == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.storefront_outlined, size: 64),
+              SizedBox(height: 16),
+              Text(
+                'Aucun restaurant sélectionné',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Choisis ton RU dans « Plus › Paramètres ».',
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
-      ),
+      );
+    }
+
+    final screenSize = MediaQuery.of(context).size;
+
+    return Stack(
+      children: [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: AspectRatio(
+              aspectRatio: 1, // Maintain a square aspect ratio
+              child: FloorPlan(
+                width: screenSize.width * 0.8, // 80% of screen width
+                height: screenSize.height * 0.8, // 80% of screen height
+              ),
+            ),
+          ),
+        ),
+        // Bouton au niveau de la page (avant: Positioned dans le carré de la
+        // carte, d'où son affichage « dans » la map).
+        if (!isGuest)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SectorsSessionsWidget(
+                      restaurantId: restaurant.restaurantId,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.groups),
+              label: const Text('Sessions'),
+            ),
+          ),
+      ],
     );
   }
 }

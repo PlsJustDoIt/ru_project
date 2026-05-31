@@ -17,6 +17,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   List<RestaurantPartial> _restaurants = [];
   String? _selectedRestaurantId;
   bool _saving = false;
+  bool _loadingRestaurants = true;
   late final RestaurantService _restaurantService;
   late final UserService _userService;
 
@@ -41,9 +42,11 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         if (_selectedRestaurantId == null && restaurants.isNotEmpty) {
           _selectedRestaurantId = restaurants.first.restaurantId;
         }
+        _loadingRestaurants = false;
       });
     } catch (e) {
       // En cas d'erreur, la liste reste vide
+      if (mounted) setState(() => _loadingRestaurants = false);
     }
   }
 
@@ -88,24 +91,32 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           children: [
             const Text(
               'Choix de votre restaurant universitaire',
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 24),
             ),
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Restaurant universitaire',
-                ),
-                initialValue: _selectedRestaurantId,
-                items: _restaurants.map((restaurant) {
-                  return DropdownMenuItem<String>(
-                    value: restaurant.restaurantId,
-                    child: Text(restaurant.name),
-                  );
-                }).toList(),
-                onChanged: _saving ? null : _onChanged,
+              child: SizedBox(
+                // Hauteur réservée = hauteur du dropdown, pour que le titre ne
+                // saute pas pendant le chargement (spinner plus petit).
+                height: 64,
+                child: _loadingRestaurants
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Restaurant universitaire',
+                      ),
+                      initialValue: _selectedRestaurantId,
+                      items: _restaurants.map((restaurant) {
+                        return DropdownMenuItem<String>(
+                          value: restaurant.restaurantId,
+                          child: Text(restaurant.name),
+                        );
+                      }).toList(),
+                      onChanged: _saving ? null : _onChanged,
+                    ),
               ),
             ),
             if (_saving) const CircularProgressIndicator(),

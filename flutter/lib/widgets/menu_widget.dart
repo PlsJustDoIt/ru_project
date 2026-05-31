@@ -4,7 +4,6 @@ import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:intl/intl.dart';
 import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/socket_service.dart';
 import 'package:ru_project/services/user_service.dart';
@@ -52,6 +51,7 @@ class _MenuWidgetState extends State<MenuWidget>
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _joining = false;
+  bool _loading = true;
   late final RestaurantService restaurantService;
   late final UserService userService;
   late final SocketService socketService;
@@ -73,11 +73,11 @@ class _MenuWidgetState extends State<MenuWidget>
 
   Future<void> _loadMenus() async {
     final menus = await restaurantService.getMenus();
-    if (menus.isEmpty) {
-      logger.i('Les menus sont vides');
-      return;
-    }
-    if (mounted) setState(() => _menus = menus);
+    if (!mounted) return;
+    setState(() {
+      _menus = menus;
+      _loading = false;
+    });
   }
 
   void _selectDay(int index) {
@@ -91,6 +91,9 @@ class _MenuWidgetState extends State<MenuWidget>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (_menus.isEmpty) {
       return _noMenuView();
     }

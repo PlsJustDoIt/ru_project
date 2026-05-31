@@ -146,43 +146,42 @@ Widget _buildDestinationRow(String destination, List<dynamic> times) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4.0),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          flex: 2,
           child: Text(
             destination,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
           ),
         ),
-        Expanded(
-          flex: 1,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: times
-                .map((time) => Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[100],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          time,
-                          style: TextStyle(
-                            color: Colors.blue[800],
-                            fontWeight: FontWeight.w600,
-                          ),
+        const SizedBox(width: 8),
+        // Horaires de cette direction : toujours sur UNE ligne.
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: times
+              .map((time) => Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[100],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        time,
+                        style: TextStyle(
+                          color: Colors.blue[800],
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ))
-                .toList(),
-          ),
+                    ),
+                  ))
+              .toList(),
         ),
       ],
     ),
