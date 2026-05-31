@@ -37,27 +37,29 @@ adminJsSetup(app);
 
 const PORT = process.env.PORT || 5000;
 
-// En production, on sert en HTTPS : les certificats sont fournis via les
-// variables d'environnement SSL_KEY_PATH / SSL_CERT_PATH. En développement,
-// on reste en HTTP simple sur localhost.
+// HTTPS direct UNIQUEMENT si les certificats sont fournis via SSL_KEY_PATH /
+// SSL_CERT_PATH. Sinon on sert en HTTP : c'est le cas normal derrière un
+// reverse-proxy (nginx) qui termine déjà le TLS. En développement aussi.
 const createServer = () => {
-    if (isProduction) {
-        const keyPath = process.env.SSL_KEY_PATH;
-        const certPath = process.env.SSL_CERT_PATH;
-        if (!keyPath || !certPath) {
-            throw new Error('SSL_KEY_PATH and SSL_CERT_PATH must be set in production (HTTPS)');
-        }
+    const keyPath = process.env.SSL_KEY_PATH;
+    const certPath = process.env.SSL_CERT_PATH;
+    if (keyPath && certPath) {
         return createHttpsServer({
             key: readFileSync(keyPath),
             cert: readFileSync(certPath),
         }, app);
     }
+    if (isProduction) {
+        logger.info('SSL_KEY_PATH/SSL_CERT_PATH absents : HTTP (TLS attendu via reverse-proxy)');
+    }
     return createHttpServer(app);
 };
 
+const useHttps = Boolean(process.env.SSL_KEY_PATH && process.env.SSL_CERT_PATH);
+
 const server = createServer();
 server.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT} (${isProduction ? 'HTTPS' : 'HTTP'})`);
+    logger.info(`Server running on port ${PORT} (${useHttps ? 'HTTPS' : 'HTTP'})`);
 });
 
 // Attach Socket.IO to the existing server
