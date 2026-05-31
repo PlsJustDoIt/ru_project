@@ -130,7 +130,7 @@ const notifyNewMessage = (
 
 const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> => {
     const messages = await Message.find({ room: roomId })
-        .populate<{ user: { username: string } }>('user', 'username')
+        .populate<{ user: { username: string } | null }>('user', 'username')
         .sort({ createdAt: 1 })
         .limit(50);
 
@@ -138,7 +138,8 @@ const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> =
         return {
             content: message.content,
             createdAt: message.createdAt,
-            username: message.user.username,
+            // L'expéditeur peut avoir été supprimé : populate renvoie alors null.
+            username: message.user?.username ?? 'Utilisateur supprimé',
             id: message._id.toString(),
             audioUrl: message.audioUrl,
             duration: message.duration,
@@ -154,7 +155,7 @@ const getConversationsSummary = async (userId: string) => {
     return Promise.all(
         rooms.map(async (room) => {
             const last = await Message.findOne({ room: room._id })
-                .populate<{ user: { username: string } }>('user', 'username')
+                .populate<{ user: { username: string } | null }>('user', 'username')
                 .sort({ createdAt: -1 });
 
             return {
@@ -163,7 +164,7 @@ const getConversationsSummary = async (userId: string) => {
                     ? {
                             content: last.audioUrl ? '🎤 Message vocal' : last.content,
                             createdAt: last.createdAt,
-                            username: last.user.username,
+                            username: last.user?.username ?? 'Utilisateur supprimé',
                             id: last._id.toString(),
                         }
                     : null,
