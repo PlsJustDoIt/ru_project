@@ -1,0 +1,40 @@
+# Exemple de config nginx pour api.ru.leomaugeri.fr — à adapter et poser
+# manuellement sur le serveur (ex. /etc/nginx/sites-available/), puis
+# `ln -s` dans sites-enabled et `nginx -t && systemctl reload nginx`.
+# Certificats TLS à obtenir via certbot :
+#   certbot --nginx -d api.ru.leomaugeri.fr
+
+server {
+    listen 80;
+    server_name api.ru.leomaugeri.fr;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.ru.leomaugeri.fr;
+
+    ssl_certificate     /etc/letsencrypt/live/api.ru.leomaugeri.fr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.ru.leomaugeri.fr/privkey.pem;
+
+    # Connexion Socket.IO : nécessite la propagation des en-têtes d'upgrade
+    # websocket, sinon le client retombe en long-polling (ou échoue).
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
