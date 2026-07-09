@@ -3,12 +3,11 @@ import * as AdminJSMongoose from '@adminjs/mongoose';
 import { ComponentLoader } from 'adminjs';
 import AdminJSExpress from '@adminjs/express';
 import { join } from 'path';
-import { componentsPath, isProduction, jwtAccessSecret, mongoUri, rootDir } from '../config.js';
+import { componentsPath, isProduction, jwtAccessSecret, mongoUri } from '../config.js';
 import BugReport from '../models/bugReport.js';
 import User from '../models/user.js';
 import { authenticate } from '../routes/auth/auth.service.js';
 import Sector from '../models/sector.js';
-import express from 'express';
 import logger from '../utils/logger.js';
 import { Express } from 'express';
 import Restaurant from '../models/restaurant.js';
@@ -165,8 +164,11 @@ const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
 const adminJsSetup = async (app: Express) => {
     app.use(admin.options.rootPath, adminRouter);
     if (isProduction) {
+        // AdminJS sert lui-même /frontend/assets/components.bundle.js
+        // (route interne enregistrée par buildAuthenticatedRouter, lisant
+        // directement ADMIN_JS_TMP_DIR/bundle.js via res.sendFile) — pas
+        // besoin d'un express.static ici.
         await admin.initialize();
-        app.use(express.static(join(rootDir, '.adminjs')));
     } else {
         admin.watch();
     }

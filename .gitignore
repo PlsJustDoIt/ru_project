@@ -50,6 +50,7 @@ uploads
 env.sh
 /backend/.adminjs/**
 backend/menus.xml
+backend/tsconfig.tsbuildinfo
 
 # Maquettes de brainstorming (visual companion)
 .superpowers/

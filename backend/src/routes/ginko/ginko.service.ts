@@ -1,13 +1,10 @@
 import axios, { AxiosResponse } from 'axios';
 import logger from '../../utils/logger.js';
 import { TempsInfo } from '../../interfaces/tempsInfo.js';
-import { ginkoApiKey } from '../../config.js';
+import { requireEnv } from '../../config.js';
 
 const apiUrl = 'https://api.ginko.voyage';
-const apiKey = ginkoApiKey;
-if (!apiKey) {
-    throw new Error('Ginko API Key not found');
-}
+const apiKey = requireEnv('GINKO_API_KEY');
 
 const getTempsLieu = async (lieu: string) => {
     try {

@@ -17,7 +17,6 @@ const requireEnv = (name: string): string => {
     return value;
 };
 
-const ginkoApiKey = requireEnv('GINKO_API_KEY');
 const mongoUri = requireEnv('MONGO_URI');
 const jwtAccessSecret = requireEnv('JWT_ACCESS_SECRET');
 const jwtRefreshSecret = requireEnv('JWT_REFRESH_SECRET');
@@ -54,9 +53,9 @@ export {
     bugReportPath,
     audioPath,
     componentsPath,
-    ginkoApiKey,
     mongoUri,
     jwtAccessSecret,
     jwtRefreshSecret,
     apiPublicUrl,
+    requireEnv,
 };

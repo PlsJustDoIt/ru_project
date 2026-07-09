@@ -4,6 +4,10 @@ export default {
     // L'activer par défaut instrumentait tout `src/` à chaque run (~25x plus lent).
     collectCoverageFrom: ['src/**/*.ts'],
     testEnvironment: 'node',
+    // `npm run build` compile aussi les *.spec.ts dans dist/ — sans ça, Jest
+    // les ramasse en plus des sources et casse (dist/ est du JS déjà compilé,
+    // pas transformé par ts-jest).
+    testPathIgnorePatterns: ['/node_modules/', '/dist/'],
     transform: {
         '^.+\\.tsx?$': ['ts-jest', {
             useESM: true,
