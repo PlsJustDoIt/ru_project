@@ -199,7 +199,13 @@ separately would leave AdminJS double-mounted or unreachable.
 
 In `backend/src/modules/admin.ts`:
 
-1. Change `rootPath: '/admin',` to `rootPath: '/',` (inside the `new AdminJS({...})` call).
+1. Change `rootPath: '/admin',` to `rootPath: '/',` and also add
+   `loginPath: '/login',`/`logoutPath: '/logout',` (inside the
+   `new AdminJS({...})` call) — **discovered during Step 7's smoke test**:
+   AdminJS's `loginPath`/`logoutPath` default to the hardcoded constants
+   `/admin/login`/`/admin/logout` (`adminjs/lib/constants.js`), they do
+   **not** derive from `rootPath` automatically. Without this, `GET /login`
+   302-redirects to `/admin/login`, which 404s once `rootPath` is `/`.
 2. Delete these two lines (the dead `customRouter` — declared but never
    mounted anywhere):
 
