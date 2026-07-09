@@ -40,6 +40,11 @@ if (!isProduction) {
 }
 // componentsPath = join(rootDir, 'src/components');
 
+// URL publique de l'API (celle que les navigateurs voient), utilisée pour
+// construire des redirections absolues depuis le process admin (autre
+// domaine). En prod, poser API_PUBLIC_URL=https://api.ru.leomaugeri.fr.
+const apiPublicUrl = process.env.API_PUBLIC_URL || 'http://localhost:5000';
+
 export {
     isProduction,
     rootDir,
@@ -53,4 +58,5 @@ export {
     mongoUri,
     jwtAccessSecret,
     jwtRefreshSecret,
+    apiPublicUrl,
 };
