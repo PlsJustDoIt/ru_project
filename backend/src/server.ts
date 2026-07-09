@@ -4,7 +4,6 @@ import logger from './utils/logger.js';
 import { setupSocketApplicationEvents } from './routes/socket/socket.service.js';
 import { socketHandler } from './utils/socket.js';
 import swaggerSetup from './modules/swagger.js';
-import adminJsSetup from './modules/admin.js';
 import { isProduction, mongoUri, rootDir } from './config.js';
 import { createWriteStream, readFileSync } from 'fs';
 import { createServer as createHttpServer } from 'http';
@@ -33,7 +32,6 @@ connect(mongoUri)
     .catch(err => logger.error('MongoDB connection error:', err));
 
 swaggerSetup(app);
-adminJsSetup(app);
 
 const PORT = process.env.PORT || 5000;
 

@@ -116,11 +116,11 @@ const admin = new AdminJS({
             },
         },
     ],
-    rootPath: '/admin',
+    rootPath: '/',
+    loginPath: '/login',
+    logoutPath: '/logout',
     componentLoader,
 });
-
-const customRouter = express.Router();
 
 const authenticateAdmin = (payload: DefaultAuthenticatePayload): Promise<CurrentAdmin | null> => {
     return new Promise((resolve) => {
@@ -162,15 +162,11 @@ const adminRouter = AdminJSExpress.buildAuthenticatedRouter(admin, {
     store: sessionStore,
 });
 
-customRouter.use(admin.options.rootPath, adminRouter);
-
-logger.info(`admin JS running on http://localhost:${5000}${admin.options.rootPath}`);
-
 const adminJsSetup = async (app: Express) => {
     app.use(admin.options.rootPath, adminRouter);
     if (isProduction) {
         await admin.initialize();
-        app.use('/admin', express.static(join(rootDir, '.adminjs')));
+        app.use(express.static(join(rootDir, '.adminjs')));
     } else {
         admin.watch();
     }

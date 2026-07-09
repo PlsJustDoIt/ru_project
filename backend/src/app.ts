@@ -8,8 +8,6 @@ import logger from './utils/logger.js';
 import rateLimit from 'express-rate-limit';
 import routes from './routes/routes.js';
 
-import { handleImageRequest } from './middleware/imageHandler.js';
-
 const app = express();
 
 // CORS : en production, restreindre aux origines explicitement autorisées
@@ -36,11 +34,6 @@ const limiter = rateLimit({
         logger.error('Too many requests, please try again later.');
         return res.status(429).json({ error: 'Too many requests, please try again later.' });
     },
-    skip: (req) => {
-        // Le dashboard AdminJS charge beaucoup d'assets : on l'exclut du limiteur
-        // global, mais la route de login admin garde un limiteur dédié (cf. authLimiter).
-        return req.path.startsWith('/admin');
-    },
 });
 
 // Limiteur strict anti-brute-force pour les routes sensibles d'authentification.
@@ -57,19 +50,8 @@ const authLimiter = rateLimit({
 
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
-app.use('/admin/login', authLimiter);
 
 app.use(limiter);
-
-// Image handling routes
-app.use('/admin/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
-app.use('/admin/api/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
-app.use('/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
-app.use('/api/resources/:model/records/:recordId/uploads/*path', handleImageRequest);
-app.use('/admin/resources/uploads/*path', handleImageRequest);
-app.use('/admin/api/resources/uploads/*path', handleImageRequest);
-app.use('/resources/uploads/*path', handleImageRequest);
-app.use('/api/resources/uploads/*path', handleImageRequest);
 
 app.get('/test-socket', (req, res) => {
     return res.sendFile(join(rootDir, 'public', 'socket-test.html'));
