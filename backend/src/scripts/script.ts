@@ -112,8 +112,8 @@ async function main() {
         .toArray();
     console.log('\nVérification:');
     console.log(`  resto _id INCHANGÉ: ${resto._id} (users toujours rattachés)`);
-    console.log(`  secteurs sectorId: ${check.map((s) => s.sectorId).join(', ')}`);
-    if (check.some((s) => s.sectorId == null)) {
+    console.log(`  secteurs sectorId: ${check.map(s => s.sectorId).join(', ')}`);
+    if (check.some(s => s.sectorId == null)) {
         throw new Error('Au moins un sectorId est null après recréation.');
     }
 

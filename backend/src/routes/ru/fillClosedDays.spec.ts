@@ -25,11 +25,11 @@ describe('fillClosedDays', () => {
             [openDay('2026-06-05'), openDay('2026-06-08')],
             '2026-06-05',
         );
-        expect(result.map((m) => m.date)).toEqual([
+        expect(result.map(m => m.date)).toEqual([
             '2026-06-05',
             '2026-06-08',
         ]);
-        expect(result.every((m) => !isClosed(m))).toBe(true);
+        expect(result.every(m => !isClosed(m))).toBe(true);
     });
 
     it('insère un jour férié EN SEMAINE absent comme fermé', () => {
@@ -38,7 +38,7 @@ describe('fillClosedDays', () => {
             [openDay('2026-06-05')],
             '2026-06-04',
         );
-        expect(result.map((m) => m.date)).toEqual([
+        expect(result.map(m => m.date)).toEqual([
             '2026-06-04',
             '2026-06-05',
         ]);
@@ -52,7 +52,7 @@ describe('fillClosedDays', () => {
             [openDay('2026-06-01')],
             '2026-05-30',
         );
-        expect(result.map((m) => m.date)).toEqual(['2026-06-01']);
+        expect(result.map(m => m.date)).toEqual(['2026-06-01']);
         expect(isClosed(result[0])).toBe(false);
     });
 
@@ -70,7 +70,7 @@ describe('fillClosedDays', () => {
     it('garde un menu réel tombant un week-end (jamais masqué)', () => {
         // certains RU ouvrent le samedi : si le flux fournit un samedi, on le garde
         const result = fillClosedDays([openDay('2026-05-30')], '2026-05-30');
-        expect(result.map((m) => m.date)).toEqual(['2026-05-30']);
+        expect(result.map(m => m.date)).toEqual(['2026-05-30']);
         expect(isClosed(result[0])).toBe(false);
     });
 
@@ -81,16 +81,16 @@ describe('fillClosedDays', () => {
             openDay('2026-06-03'),
         ];
         const result = fillClosedDays(input, '2026-06-01');
-        expect(result.map((m) => m.date)).toEqual([
+        expect(result.map(m => m.date)).toEqual([
             '2026-06-01',
             '2026-06-02',
             '2026-06-03',
         ]);
-        expect(result.every((m) => !isClosed(m))).toBe(true);
+        expect(result.every(m => !isClosed(m))).toBe(true);
     });
 
     it('n\'ajoute aucun jour fermé après le dernier jour ouvert', () => {
         const result = fillClosedDays([openDay('2026-06-01')], '2026-06-01');
-        expect(result.map((m) => m.date)).toEqual(['2026-06-01']);
+        expect(result.map(m => m.date)).toEqual(['2026-06-01']);
     });
 });
