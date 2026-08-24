@@ -1,0 +1,225 @@
+# CI/CD — builds dans la pipeline, déploiement par artefacts sur push main.
+#
+# Principe : RIEN ne se compile sur le serveur, il n'y a plus de dépôt git là-bas.
+# La CI produit :
+#   - backend/dist/ (JS compilé prêt à interpréter) + manifests npm + fichiers
+#     runtime (swagger.yaml, public/, menus.xml)
+#   - le bundle statique Flutter web
+# puis pousse le tout via rsync. Le serveur se contente de :
+#   npm ci --omit=dev   (repart d'un node_modules propre, SANS devDependencies,
+#                        ce qui supprime les installs corrompues historiques)
+#   pm2 restart ...
+#
+# Constantes serveur (accordées une fois pour toutes — plus de variables GH) :
+#   - destination SSH        : leo@leomaugeri.fr
+#   - backend                : /home/leo/DOCS/ru_project/backend
+#                              (contient .env, uploads/, logs/ — jamais écrasés ;
+#                               cwd pm2 = dist/)
+#   - front web              : /var/www/ru_project (racine nginx ru.leomaugeri.fr)
+#   - process pm2            : ru_project (API) + ru_project_admin
+#   - node serveur           : nvm v24.18.0
+#
+# SECRET UNIQUE REQUIS (Settings → Secrets and variables → Actions) :
+#   SSH_PRIVATE_KEY : clé privée autorisée pour leo@leomaugeri.fr
+#
+# Si le repo devient public un jour : basculer SSH_DEST en secret.
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-main
+  cancel-in-progress: false # jamais deux déploiements simultanés
+
+permissions:
+  contents: read
+
+env:
+  SSH_DEST: leo@leomaugeri.fr
+  BACKEND_DIR: /home/leo/DOCS/ru_project/backend
+  WEB_DIR: /var/www/ru_project
+  PM2_APPS: ru_project ru_project_admin
+  # Node utilisé côté serveur (nvm) pour npm ci et pm2
+  SERVER_NODE_BIN: /home/leo/.nvm/versions/node/v24.18.0/bin
+
+jobs:
+  backend:
+    name: Backend — tests & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # Variables requises à l'import de config.ts (dotenv n'a pas de .env en CI).
+    # Valeurs factices : les tests utilisent mongodb-memory-server.
+    env:
+      NODE_ENV: test
+      MONGO_URI: mongodb://localhost:27017/ci-dummy
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      GINKO_API_KEY: ci-ginko-key
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Installation des dépendances
+        run: npm ci
+
+      - name: Type-check (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Tests Jest
+        run: npm test -- --maxWorkers=2
+
+      - name: Build (dist/)
+        run: |
+          npm run build
+          test -f dist/server.js && test -f dist/adminServer.js
+
+      # Tout ce dont le serveur a besoin : JS compilé + manifests npm +
+      # fichiers runtime servis depuis backend/ (swagger.yaml, public/) ou
+      # lus depuis le cwd pm2 dist/ (menus.xml, repli si flux injoignable).
+      - uses: actions/upload-artifact@v4
+        name: Upload artefact backend
+        with:
+          name: backend-dist
+          path: |
+            backend/dist
+            backend/package.json
+            backend/package-lock.json
+            backend/swagger.yaml
+            backend/public
+            backend/menus.xml
+          retention-days: 7
+          if-no-files-found: error
+
+  flutter:
+    name: Flutter — analyse, APK & web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.35.6
+          channel: stable
+          cache: true
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Analyse statique
+        run: flutter analyze
+
+      - name: Build APK release
+        run: flutter build apk --release
+
+      - name: Build web release (ru.leomaugeri.fr)
+        run: flutter build web --release
+
+      - name: Upload artefact APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: flutter/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload artefact web
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: flutter/build/web
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    name: Déploiement serveur
+    needs: [backend, flutter]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération des artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: deploy
+
+      - name: Vérification des artefacts
+        run: |
+          test -f deploy/backend-dist/dist/server.js
+          test -f deploy/backend-dist/dist/adminServer.js
+          test -f deploy/backend-dist/swagger.yaml
+          test -f deploy/backend-dist/menus.xml
+          test -d deploy/backend-dist/public
+          test -f deploy/web-release/index.html
+
+      - name: Synchronisation vers le serveur (rsync)
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -m 600 /dev/null deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > deploy_key
+          SSH_CMD="ssh -i deploy_key -o StrictHostKeyChecking=accept-new"
+
+          # Backend : JS compilé (--delete purge les fichiers obsolètes).
+          # .env, uploads/, logs/ ne sont PAS dans l'artefact => jamais touchés.
+          rsync -az --delete -e "$SSH_CMD" \
+            deploy/backend-dist/dist/ "$SSH_DEST:$BACKEND_DIR/dist/"
+          rsync -az -e "$SSH_CMD" \
+            deploy/backend-dist/package.json \
+            deploy/backend-dist/package-lock.json \
+            deploy/backend-dist/swagger.yaml \
+            "$SSH_DEST:$BACKEND_DIR/"
+          rsync -az --delete -e "$SSH_CMD" \
+            deploy/backend-dist/public/ "$SSH_DEST:$BACKEND_DIR/public/"
+          # Repli local des menus si le flux CROUS est injoignable (cwd pm2 = dist/)
+          rsync -az -e "$SSH_CMD" \
+            deploy/backend-dist/menus.xml "$SSH_DEST:$BACKEND_DIR/dist/menus.xml"
+
+          # Front web : bundle statique complet servi par nginx.
+          rsync -az --delete -e "$SSH_CMD" \
+            deploy/web-release/ "$SSH_DEST:$WEB_DIR/"
+
+      - name: Installation deps prod + redémarrage pm2
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -m 600 /dev/null deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > deploy_key
+          # Heredoc quoté : script exécuté tel quel sur le serveur.
+          # Si BACKEND_DIR/PM2_APPS/SERVER_NODE_BIN changent, mettre à jour ici.
+          ssh -i deploy_key -o StrictHostKeyChecking=accept-new \
+              "$SSH_DEST" bash -s <<'REMOTE'
+          set -euo pipefail
+          export PATH=/home/leo/.nvm/versions/node/v24.18.0/bin:$PATH
+          npm --prefix /home/leo/DOCS/ru_project/backend ci --omit=dev
+          pm2 restart ru_project ru_project_admin --update-env
+          REMOTE
+
+      - name: Health checks (API + web)
+        run: |
+          ok=0
+          for i in $(seq 1 10); do
+            if curl -fsS --max-time 5 https://api.ru.leomaugeri.fr/api/health >/dev/null; then
+              echo "API opérationnelle"; ok=1; break
+            fi
+            echo "API tentative $i/10 KO"; sleep 3
+          done
+          [ "$ok" = "1" ] || { echo "Health check API échoué"; exit 1; }
+          curl -fsS --max-time 5 https://ru.leomaugeri.fr/ >/dev/null \
+            && echo "Front web opérationnel"

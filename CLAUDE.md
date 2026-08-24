@@ -87,7 +87,7 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 ## Testing
 - Backend tests: Jest + ts-jest, 15 `.spec.ts` files (colocated with routes + `src/tests/`). ESM module support configured in `jest.config.js`. As of 2026-05-29: **158 tests pass across 15 suites**, and `tsc --noEmit` is clean. Tests use `mongodb-memory-server` + `supertest`.
 - No Flutter tests currently configured.
-- No CI/CD pipeline — manual deployment.
+- CI/CD : `.github/workflows/ci-cd.yml` — à chaque push `main` : tests Jest + build backend, analyse Flutter + builds APK/web, puis déploiement par **artefacts** (rsync du JS compilé + bundle web vers le serveur ; aucun build ni git sur le serveur, `npm ci --omit=dev` + `pm2 restart` seulement). Web servi sur `ru.leomaugeri.fr`, API derrière `api.ru.leomaugeri.fr`. Secret unique requis : `SSH_PRIVATE_KEY` (constant serveur en dur dans le workflow).
 - Lint: backend `eslint` (flat config, TS + stylistic), Flutter `flutter analyze` (flutter_lints). Coverage and lint debt are tracked in `AUDIT.md`.
 
 ## Key Conventions
