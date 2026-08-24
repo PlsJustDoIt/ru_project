@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:intl/intl.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/socket_service.dart';
@@ -52,9 +53,12 @@ class _MenuWidgetState extends State<MenuWidget>
   int _currentPage = 0;
   bool _joining = false;
   bool _loading = true;
+  /// Id CROUS du restaurant pour lequel les menus affichés ont été chargés
+  String? _loadedForRestaurantId;
   late final RestaurantService restaurantService;
   late final UserService userService;
   late final SocketService socketService;
+  late final RestaurantProvider restaurantProvider;
 
   @override
   void initState() {
@@ -62,17 +66,32 @@ class _MenuWidgetState extends State<MenuWidget>
     restaurantService = Provider.of<RestaurantService>(context, listen: false);
     userService = Provider.of<UserService>(context, listen: false);
     socketService = Provider.of<SocketService>(context, listen: false);
+    restaurantProvider = Provider.of<RestaurantProvider>(context, listen: false);
+    // Recharge les menus si l'utilisateur change de RU (réglages, invité...)
+    restaurantProvider.addListener(_onRestaurantChanged);
     _loadMenus();
+  }
+
+  void _onRestaurantChanged() {
+    final currentId = restaurantProvider.restaurant?.restaurantId;
+    if (currentId != _loadedForRestaurantId) {
+      _loadMenus();
+    }
   }
 
   @override
   void dispose() {
+    restaurantProvider.removeListener(_onRestaurantChanged);
     _pageController.dispose();
     super.dispose();
   }
 
   Future<void> _loadMenus() async {
-    final menus = await restaurantService.getMenus();
+    // Le provider porte l'id officiel CROUS du RU sélectionné
+    final crousId = restaurantProvider.restaurant?.restaurantId;
+    _loadedForRestaurantId = crousId;
+    final menus =
+        await restaurantService.getMenus(restaurantId: crousId);
     if (!mounted) return;
     setState(() {
       _menus = menus;
@@ -99,6 +118,8 @@ class _MenuWidgetState extends State<MenuWidget>
     }
     return Column(
       children: [
+        if (restaurantProvider.restaurant?.name != null)
+          _restaurantHeader(restaurantProvider.restaurant!.name),
         _dayStrip(),
         Expanded(
           child: PageView.builder(
@@ -110,6 +131,29 @@ class _MenuWidgetState extends State<MenuWidget>
         ),
         _eatHereBar(),
       ],
+    );
+  }
+
+  /// Rappel du RU sélectionné : les menus suivent le choix fait dans
+  /// les réglages / à l'inscription.
+  Widget _restaurantHeader(String name) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.location_on_outlined,
+              size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(name,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
     );
   }
 

@@ -56,15 +56,25 @@ class RestaurantTmp extends RestaurantBase {
 
 // uniquement pour récuperer la liste des restaurants dispos
 class RestaurantPartial extends RestaurantBase {
+  final String? address;
+  final String? type;
+  final String? zone;
+
   RestaurantPartial({
     required super.restaurantId,
     required super.name,
+    this.address,
+    this.type,
+    this.zone,
   });
 
   factory RestaurantPartial.fromJson(Map<String, dynamic> json) {
     return RestaurantPartial(
       restaurantId: json['restaurantId'],
       name: json['name'],
+      address: json['address'],
+      type: json['type'],
+      zone: json['zone'],
     );
   }
 
@@ -72,11 +82,14 @@ class RestaurantPartial extends RestaurantBase {
     return {
       'restaurantId': restaurantId,
       'name': name,
+      if (address != null) 'address': address,
+      if (type != null) 'type': type,
+      if (zone != null) 'zone': zone,
     };
   }
 
   @override
   String toString() {
-    return 'RestaurantPartial{restaurantId: $restaurantId, name: $name}';
+    return 'RestaurantPartial{restaurantId: $restaurantId, name: $name, type: $type, zone: $zone}';
   }
 }

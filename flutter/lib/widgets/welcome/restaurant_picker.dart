@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/services/restaurant_service.dart';
+import 'package:ru_project/widgets/restaurant_selector_list.dart';
 
 /// Écran de sélection d'un restaurant. Réutilisé par l'onboarding invité,
 /// l'inscription et le changement de RU invité.
@@ -18,7 +19,7 @@ class RestaurantPicker extends StatefulWidget {
   final String confirmLabel;
   final String? initialRestaurantId;
 
-  /// Appelé avec l'_id Mongo du restaurant choisi.
+  /// Appelé avec l'id CROUS officiel du restaurant choisi ('r135').
   final Future<void> Function(BuildContext context, String restaurantId) onSelected;
 
   @override
@@ -27,7 +28,7 @@ class RestaurantPicker extends StatefulWidget {
 
 class _RestaurantPickerState extends State<RestaurantPicker> {
   List<RestaurantPartial> _restaurants = [];
-  String? _selectedId;
+  RestaurantPartial? _selected;
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -35,7 +36,6 @@ class _RestaurantPickerState extends State<RestaurantPicker> {
   @override
   void initState() {
     super.initState();
-    _selectedId = widget.initialRestaurantId;
     _load();
   }
 
@@ -47,10 +47,11 @@ class _RestaurantPickerState extends State<RestaurantPicker> {
       setState(() {
         _restaurants = restaurants;
         _loading = false;
-        final ids = restaurants.map((r) => r.restaurantId).toSet();
-        if ((_selectedId == null || !ids.contains(_selectedId)) &&
-            restaurants.isNotEmpty) {
-          _selectedId = restaurants.first.restaurantId;
+        if (restaurants.isNotEmpty) {
+          _selected = restaurants.firstWhere(
+            (r) => r.restaurantId == widget.initialRestaurantId,
+            orElse: () => restaurants.first,
+          );
         }
       });
     } catch (e) {
@@ -63,53 +64,51 @@ class _RestaurantPickerState extends State<RestaurantPicker> {
   }
 
   Future<void> _confirm() async {
-    final id = _selectedId;
-    if (id == null) return;
+    final selected = _selected;
+    if (selected == null) return;
     setState(() => _submitting = true);
-    await widget.onSelected(context, id);
+    await widget.onSelected(context, selected.restaurantId);
+    if (mounted) setState(() => _submitting = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Choisissez votre restaurant universitaire',
-                          style: TextStyle(fontSize: 20)),
-                      const SizedBox(height: 24),
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Restaurant universitaire',
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Center(child: Text(_error!))
+                  : Column(
+                      children: [
+                        const Text('Choisissez votre restaurant universitaire',
+                            style: TextStyle(fontSize: 18)),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: RestaurantSelectorList(
+                            restaurants: _restaurants,
+                            selectedId: _selected?.restaurantId,
+                            onSelect: (r) => setState(() => _selected = r),
+                          ),
                         ),
-                        initialValue: _selectedId,
-                        items: _restaurants
-                            .map((r) => DropdownMenuItem<String>(
-                                  value: r.restaurantId,
-                                  child: Text(r.name),
-                                ))
-                            .toList(),
-                        onChanged: (value) => setState(() => _selectedId = value),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: (_selectedId == null || _submitting) ? null : _confirm,
-                        child: _submitting
-                            ? const SizedBox(
-                                height: 20, width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(widget.confirmLabel),
-                      ),
-                    ],
-                  ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed:
+                                (_selected == null || _submitting) ? null : _confirm,
+                            child: _submitting
+                                ? const SizedBox(
+                                    height: 20, width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(widget.confirmLabel),
+                          ),
+                        ),
+                      ],
+                    ),
+        ),
       ),
     );
   }
