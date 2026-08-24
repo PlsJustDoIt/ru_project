@@ -32,6 +32,10 @@ async function fetchCrousXml(url: string): Promise<string> {
 function decodeHtmlEntities(text: string) {
     return text.replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#0*39;|&apos;/g, '\'')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
         .replace(/&amp;/g, '&');
 }
 
@@ -51,57 +55,93 @@ function decodeJsonValues(obj: any) {
     return res;
 }
 
-// Fonction pour extraire les plats du contenu HTML
-function extractPlats(html: string, title: string): string[] | 'menu non communiqué' {
-    // RegEx pour trouver la section avec le titre donné
-    const regexTitle = new RegExp(`<h4>${title}</h4>`, 'i');
-    const regexListItems = new RegExp(`<h4>${title}</h4>\\s*<ul[^>]*>(.*?)</ul>`, 'is');
+const MENU_NOT_PROVIDED = /^menu non communiqué$/i;
 
-    const titleMatch = html.match(regexTitle);
-    if (titleMatch) {
-        const listMatch = html.match(regexListItems);
-        if (listMatch && listMatch[1]) {
-            const items = listMatch[1].match(/<li>(.*?)<\/li>/gi);
-            if (items) {
-                const plats = items.map(item => item.replace(/<\/?li>/gi, '').trim()).filter(item => item !== '');
-                return plats.length === 1 && plats[0] === 'menu non communiqué' ? 'menu non communiqué' : plats;
-            }
-        }
-    }
-    return 'menu non communiqué';
+/** Nettoie un fragment HTML en texte lisible (tags retirés, entités décodées). */
+function htmlToText(fragment: string): string {
+    return decodeHtmlEntities(
+        fragment
+            .replace(/<br\s*\/?>/gi, ', ')
+            .replace(/<[^>]*>/g, ' '),
+    ).replace(/\s+/g, ' ').trim();
 }
 
-function extractFermeture(html: string): string | null {
-    const countH4 = (html.match(/<h4>/g) || []).length;
-    if (countH4 != 1) return null;
+/**
+ * Parse le contenu HTML d'un <menu>, QUEL QUE SOIT le format du resto :
+ *   - 0..n services <h2> (midi, soir...)
+ *   - 0..n catégories <h4> par service, chacune suivie d'une liste <ul><li>
+ *   - fermeture : aucun <ul> => le(s) <h4> portent un message
+ *     (ex. "Structure fermée du ...") — un menu à UNE catégorie avec liste
+ *     (cafétéria "Chauds du jour") n'est PAS une fermeture.
+ *
+ * Les titres de catégories sont conservés tels quels (Entrées, Plats du jour,
+ * Sandwichs, ARSENAL, 1er étage...) ; quand plusieurs services coexistent,
+ * ils sont préfixés ("Soir — Plats du soir").
+ */
+function parseMenuHtml(htmlContent: string): { fermeture?: string; plats: Record<string, string[]> } {
+    const plats: Record<string, string[]> = {};
 
-    const start = html.indexOf('<h4>');
-    const end = html.indexOf('</h4>', start);
-    return html.substring(start + 4, end);
+    // Aucune liste => message de fermeture / d'information
+    if (!/<ul[\s>]/i.test(htmlContent)) {
+        const firstH4 = htmlContent.match(/<h4>([\s\S]*?)<\/h4>/i);
+        const text = htmlToText(firstH4 ? firstH4[1] : htmlContent).replace(/,\s*$/, '');
+        return { fermeture: text || 'Restaurant fermé', plats };
+    }
+
+    // Découpe par services <h2> (le split avec groupe capturant renvoie
+    // [avant?, label1, segment1, label2, segment2...])
+    const chunks = htmlContent.split(/<h2>([\s\S]*?)<\/h2>/i);
+    const segments: Array<{ label: string; body: string }> = [];
+    if (chunks.length === 1) {
+        segments.push({ label: '', body: chunks[0] });
+    } else {
+        if (chunks[0].trim()) {
+            segments.push({ label: '', body: chunks[0] });
+        }
+        for (let i = 1; i < chunks.length - 1; i += 2) {
+            segments.push({ label: htmlToText(chunks[i]).toLowerCase(), body: chunks[i + 1] });
+        }
+    }
+    const multiService = segments.filter(s => s.label).length > 1;
+
+    for (const segment of segments) {
+        // Découpe le segment par catégories <h4>
+        const parts = segment.body.split(/<h4>/i);
+        for (const part of parts.slice(1)) {
+            const titleEnd = part.indexOf('</h4>');
+            if (titleEnd === -1) continue;
+            const title = htmlToText(part.slice(0, titleEnd));
+            const sectionBody = part.slice(titleEnd + '</h4>'.length);
+
+            const items = [...sectionBody.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
+                .map(li => htmlToText(li[1]))
+                .filter(item => item.length > 0 && !MENU_NOT_PROVIDED.test(item));
+
+            if (!title || items.length === 0) continue;
+            const key = multiService && segment.label
+                ? `${segment.label.charAt(0).toUpperCase() + segment.label.slice(1)} — ${title}`
+                : title;
+            plats[key] = [...(plats[key] ?? []), ...items];
+        }
+    }
+
+    return { plats };
 }
 
 // Fonction pour transformer un objet <menu> en objet Menu
 function transformToMenu(menu: MenuXml): MenuResponse {
-    const html = menu._;
     const date = menu.$.date;
-    const fermeture = extractFermeture(html);
+    const { fermeture, plats } = parseMenuHtml(menu._);
 
-    if (fermeture == null) {
-        return {
-            'Entrées': extractPlats(html, 'Entrées'),
-            'Cuisine traditionnelle': extractPlats(html, 'Cuisine traditionnelle'),
-            'Menu végétalien': extractPlats(html, 'Menu végétalien'),
-            'Pizza': extractPlats(html, 'Pizza'),
-            'Cuisine italienne': extractPlats(html, 'Cuisine italienne'),
-            'Grill': extractPlats(html, 'Grill'),
-            'date': date,
-        };
+    if (fermeture) {
+        return { fermeture, date };
     }
-
-    return {
-        fermeture: fermeture,
-        date: date,
-    };
+    if (Object.keys(plats).length === 0) {
+        // Du HTML sans structure exploitable : traité comme une fermeture
+        // générique plutôt que perdu.
+        return { fermeture: 'Restaurant fermé', date };
+    }
+    return { date, plats };
 }
 
 // Menus de tous les restos du flux, indexés par identifiant CROUS.

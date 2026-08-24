@@ -15,24 +15,36 @@ class MenuWidget extends StatefulWidget {
   State<MenuWidget> createState() => _MenuWidgetState();
 }
 
-/// Icône associée à une catégorie de plats (flux CROUS).
+/// Icône associée à une catégorie de plats. Les titres sont libres selon le
+/// resto (inventaire du flux CROUS : Entrées, Plats du jour, Garnitures,
+/// Sandwichs, Desserts, MENU CONSEIL, cafétéria, étages/salles...) : on
+/// raisonne par mots-clés insensibles à la casse.
 IconData _categoryIcon(String category) {
-  switch (category) {
-    case 'Entrées':
-      return Icons.egg_alt_outlined;
-    case 'Cuisine traditionnelle':
-      return Icons.restaurant;
-    case 'Menu végétalien':
-      return Icons.eco_outlined;
-    case 'Pizza':
-      return Icons.local_pizza_outlined;
-    case 'Cuisine italienne':
-      return Icons.local_dining_outlined;
-    case 'Grill':
-      return Icons.outdoor_grill_outlined;
-    default:
-      return Icons.restaurant_menu;
+  final c = category.toLowerCase();
+  if (c.contains('menu conseil')) return Icons.star_outline;
+  if (c.startsWith('soir')) return Icons.nights_stay_outlined;
+  if (c.contains('entrée')) return Icons.egg_alt_outlined;
+  if (c.contains('pizza')) return Icons.local_pizza_outlined;
+  if (c.contains('grill')) return Icons.outdoor_grill_outlined;
+  if (c.contains('végét')) return Icons.eco_outlined; // végétalien / végétarien
+  if (c.contains('sandwich')) return Icons.lunch_dining_outlined;
+  if (c.contains('dessert') || c.contains('laitage') || c.contains('fromage')) {
+    return Icons.icecream_outlined;
   }
+  if (c.contains('garniture') || c.contains('accompagnement')) {
+    return Icons.rice_bowl_outlined;
+  }
+  if (c.contains('emporter')) return Icons.shopping_bag_outlined;
+  if (c.contains('caf')) return Icons.local_cafe_outlined; // cafétéria / Caf*
+  if (c.contains('traditionnelle') || c.contains('chaîne') || c.contains('chaine')) {
+    return Icons.restaurant_menu;
+  }
+  if (c.contains('plat')) return Icons.restaurant; // plats du jour/principaux/du soir...
+  if (c.contains('italien')) return Icons.local_dining_outlined;
+  if (c.contains('étage') || c.contains('salle') || c.contains('self') || c.contains('arsenal')) {
+    return Icons.place_outlined;
+  }
+  return Icons.restaurant_menu;
 }
 
 String _formatFullDate(String dateString) {
