@@ -41,7 +41,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   video_player: ^2.9.2
   logger: ^2.4.0
-  flutter_dotenv: ^6.0.0
   shared_preferences: ^2.3.5
   flutter_secure_storage: ^9.2.2
   image_picker: ^1.1.2
@@ -96,7 +95,6 @@ flutter:
   assets:
     - assets/images/
     - assets/images/map_r135.jpg
-    - .env
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
