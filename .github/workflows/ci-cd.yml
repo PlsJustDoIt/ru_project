@@ -178,7 +178,9 @@ jobs:
 
           # Backend : JS compilé (--delete purge les fichiers obsolètes).
           # .env, uploads/, logs/ ne sont PAS dans l'artefact => jamais touchés.
-          rsync -az --delete -e "$SSH_CMD" \
+          # --exclude logs/.env : pm2 écrit ses journaux dans dist/logs et un
+          # dist/.env peut exister ; sans exclusion, --delete les supprimerait.
+          rsync -az --delete --exclude 'logs/' --exclude '.env' -e "$SSH_CMD" \
             deploy/backend-dist/dist/ "$SSH_DEST:$BACKEND_DIR/dist/"
           rsync -az -e "$SSH_CMD" \
             deploy/backend-dist/package.json \
