@@ -1,10 +1,9 @@
 import User, { IUser } from '../../models/user.js';
-import Restaurant from '../../models/restaurant.js';
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
 import logger from '../../utils/logger.js';
 import { compare } from 'bcrypt';
 import { getUserByUsername, levenshteinDistance, TEXT_MAX_LENGTH, TEXT_MIN_LENGTH } from './user.service.js';
+import { findRestaurantByAnyId, findRestaurantById } from '../ru/ru.service.js';
 import FriendRequest from '../../models/friendsRequest.js';
 import BugReport from '../../models/bugReport.js';
 import { bugReportPath } from '../../config.js';
@@ -21,18 +20,20 @@ const getUserInformation = async (req: Request, res: Response) => {
             logger.error('User not found');
             return res.status(404).json({ error: 'User not found' });
         }
-        // const userRestaurant = await findRestaurantById(user.restaurant, 'name restaurantId address description -_id');
-        // if (userRestaurant === null) {
-        //     logger.error('Restaurant not found');
-        //     return res.status(404).json({ error: 'Restaurant not found' });
-        // }
+        // On expose l'id officiel CROUS du restaurant de l'utilisateur
+        // (la ref interne stockée est un ObjectId Mongo).
+        let crousRestaurantId: string | undefined;
+        if (user.restaurant) {
+            const userRestaurant = await findRestaurantById(user.restaurant, 'restaurantId -_id');
+            crousRestaurantId = userRestaurant?.restaurantId;
+        }
         const userData = {
             username: user.username,
             status: user.status,
             avatarUrl: user.avatarUrl,
             friends: user.friends,
             id: user._id,
-            restaurantId: user.restaurant?.toString(),
+            restaurantId: crousRestaurantId,
         };
         return res.json({ user: userData });
     } catch (err: unknown) {
@@ -480,10 +481,11 @@ const sendBugReport = async (req: Request, res: Response) => {
 const updateRestaurant = async (req: Request, res: Response) => {
     try {
         const { restaurantId } = req.body;
-        if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
+        if (!restaurantId || typeof restaurantId !== 'string') {
             return res.status(400).json({ error: 'Invalid restaurant ID' });
         }
-        const restaurant = await Restaurant.findById(restaurantId);
+        // Accepte l'id CROUS ('r135') ou un ObjectId Mongo interne
+        const restaurant = await findRestaurantByAnyId(restaurantId);
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
@@ -493,7 +495,9 @@ const updateRestaurant = async (req: Request, res: Response) => {
         }
         user.restaurant = restaurant._id;
         await user.save();
-        return res.json({ restaurantId: user.restaurant.toString() });
+        // On renvoie l'id officiel CROUS : c'est l'identifiant exposé au client
+        // (menus, info...) et celui attendu par les listes de sélection.
+        return res.json({ restaurantId: restaurant.restaurantId });
     } catch (err: unknown) {
         logger.error(`Could not update restaurant : ${err}`);
         return res.status(500).json({ error: 'An error has occured' });

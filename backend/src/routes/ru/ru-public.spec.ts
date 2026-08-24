@@ -30,11 +30,12 @@ describe('RU public endpoints', () => {
         await mongoServer.stop();
     });
 
-    it('GET /api/ru/restaurants sans token -> 200 et expose _id comme restaurantId', async () => {
+    it('GET /api/ru/restaurants sans token -> 200 et expose l\'id CROUS + l\'ObjectId interne', async () => {
         const res = await request(app).get('/api/ru/restaurants');
         expect(res.statusCode).toBe(200);
         expect(Array.isArray(res.body.restaurants)).toBe(true);
-        expect(res.body.restaurants[0].restaurantId).toBe(restaurantObjectId);
+        expect(res.body.restaurants[0].restaurantId).toBe('r135');
+        expect(res.body.restaurants[0].id).toBe(restaurantObjectId);
         expect(res.body.restaurants[0].name).toBe('RU Test');
     });
 

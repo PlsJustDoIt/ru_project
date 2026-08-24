@@ -1,7 +1,14 @@
 import { Request, Response } from 'express';
 import { MenuResponse } from '../../interfaces/menu.js';
 import logger from '../../utils/logger.js';
-import { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, getSectorsFromRestaurant, fillClosedDays } from './ru.service.js';
+import {
+    fetchAllCrousMenus,
+    findRestaurantByAnyId,
+    getSectorsFromRestaurant,
+    fillClosedDays,
+    syncRestaurantsFromCrous,
+    ru_lumiere_id,
+} from './ru.service.js';
 import NodeCache from 'node-cache';
 import Restaurant from '../../models/restaurant.js';
 import { getUserById } from '../user/user.service.js';
@@ -10,7 +17,13 @@ import { Types } from 'mongoose';
 import friendsInSector from '../../interfaces/friendsInSector.js';
 import { isProduction } from '../../config.js';
 
-const cache = new NodeCache({ stdTTL: 604800 }); // 1 semaine
+// Menus CROUS : chaque restaurant est mis en cache 1 jour (les menus sont
+// publiés quotidiennement). Le flux brut est partagé entre restos avec une
+// fenêtre d'1 h max, pour ne jamais faire N appels réseau pour N restos.
+const MENU_CACHE_TTL = 86400;
+const RAW_FEED_TTL = 3600;
+const menuCache = new NodeCache({ stdTTL: MENU_CACHE_TTL });
+export { menuCache };
 
 /**
  * Construit le pipeline d'agrégation des sessions de secteur, groupées par sectorId.
@@ -66,7 +79,7 @@ const buildSectorSessionsPipeline = (sectors: Types.ObjectId[], userIds?: Types.
 ];
 
 const apiDoc = {
-    message: 'API pour récupérer les prochains repas du ru lumière',
+    message: 'API pour récupérer les menus et restaurants du CROUS BFC',
     author: {
         name: 'Léo Maugeri',
         email: 'leomaugeri25@gmail.com',
@@ -76,9 +89,22 @@ const apiDoc = {
         static: [
             {
                 name: 'Menus',
-                description: 'Récupère les menus du RU Lumière',
+                description: 'Récupère les prochains menus d\'un restaurant (par défaut : RU Lumière)',
                 method: 'GET',
-                endpoint: '/menus',
+                endpoint: '/menus?restaurantId=r135',
+            },
+            {
+                name: 'Restaurants',
+                description: 'Liste tous les restaurants CROUS synchronisés (id CROUS + nom + type...)',
+                method: 'GET',
+                endpoint: '/restaurants',
+            },
+            {
+                name: 'Sync restaurants',
+                description: 'Force la resynchronisation du catalogue depuis le flux CROUS (auto sinon, ~3 mois)',
+                method: 'POST',
+                endpoint: '/restaurants/sync',
+                auth: true,
             },
         ],
     },
@@ -86,26 +112,47 @@ const apiDoc = {
 
 const getMenus = async (req: Request, res: Response) => {
     try {
-        let menus: MenuResponse[] | undefined = cache.get('menus');
+        // Identifiant officiel CROUS ('r135'), optionnel : défaut = RU Lumière
+        const restaurantId = typeof req.query.restaurantId === 'string' && req.query.restaurantId.trim().length > 0
+            ? req.query.restaurantId.trim()
+            : ru_lumiere_id;
+        if (!/^r\d+$/i.test(restaurantId)) {
+            return res.status(400).json({ error: 'Invalid restaurant ID format (attendu : rXXX)' });
+        }
+
+        // Cache par restaurant (1 jour) ; au miss, on repart du flux brut
+        // partagé (rafraîchi au max toutes les heures) pour éviter de
+        // requêter le service CROUS pour chaque restaurant.
+        const cacheKey = `menus:${restaurantId}`;
+        let menus: MenuResponse[] | undefined = menuCache.get(cacheKey);
         if (menus) {
             logger.info('Les menus sont en cache');
         } else {
-            // Si les menus ne sont pas en cache, on les récupère de l'API externe
-            menus = await fetchMenusFromExternalAPI();
-            cache.set('menus', menus); // On met les menus en cache pour une semaine
+            let menusByResto: Map<string, MenuResponse[]> | undefined = menuCache.get('menufeed');
+            if (!menusByResto) {
+                menusByResto = await fetchAllCrousMenus();
+                menuCache.set('menufeed', menusByResto, RAW_FEED_TTL);
+            }
+            menus = menusByResto.get(restaurantId);
+            if (!menus) {
+                return res.status(404).json({ error: `Aucun menu trouvé pour le resto ${restaurantId}` });
+            }
+            menuCache.set(cacheKey, menus, MENU_CACHE_TTL);
         }
 
         // En prod : on ancre sur la vraie date du jour (filtre `>= today`).
-        // En dev : on ancre sur le 1er jour du fixture pour toujours afficher une
-        // semaine exemple (le fixture est statique, sinon tout serait filtré).
+        // En dev, si le flux ne contient aucune date future (fixture statique
+        // hors-ligne), on ancre sur sa 1ère date pour garder une semaine exemple.
         const realToday = new Date().toISOString().split('T')[0];
-        const fixtureStart = menus.length > 0
-            ? menus.map((m) => m.date).sort((a, b) => a.localeCompare(b))[0]
-            : realToday;
-        const today = isProduction ? realToday : fixtureStart;
+        let today = realToday;
+        let filtered = menus.filter((menu: MenuResponse) => menu.date >= today);
+        if (!isProduction && filtered.length === 0 && menus.length > 0) {
+            const fixtureStart = menus.map(m => m.date).sort((a, b) => a.localeCompare(b))[0];
+            today = fixtureStart;
+            filtered = menus.filter((menu: MenuResponse) => menu.date >= today);
+        }
 
         // Filtre + comblement appliqués par requête (dépendent de `today`, donc non cachés)
-        const filtered = menus.filter((menu: MenuResponse) => menu.date >= today);
         return res.json({ menus: fillClosedDays(filtered, today) });
     } catch (error) {
         logger.error('Erreur lors de la récupération des menus:', error);
@@ -117,11 +164,16 @@ const getSectors = async (req: Request, res: Response) => {
     const restaurantId = req.params.restaurantId as string;
 
     try {
-        if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
+        if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
 
-        const sectors = await getSectorsFromRestaurant(new Types.ObjectId(restaurantId));
+        // Accepte un ObjectId Mongo ou un identifiant CROUS ('r135')
+        const restaurant = await findRestaurantByAnyId(restaurantId);
+        if (!restaurant) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+        }
+        const sectors = await getSectorsFromRestaurant(restaurant._id);
 
         return res.json({ sectors });
     } catch (error) {
@@ -132,12 +184,24 @@ const getSectors = async (req: Request, res: Response) => {
 
 const getRestaurants = async (req: Request, res: Response) => {
     try {
-        const restaurants = await Restaurant.find().select('name').limit(10);
+        const restaurants = await Restaurant.find()
+            .select('restaurantId name address type zone')
+            .limit(200)
+            .sort({ name: 1 });
         if (!restaurants || restaurants.length === 0) {
             return res.status(404).json({ error: 'No restaurants found' });
         }
         return res.json({
-            restaurants: restaurants.map((r) => ({ restaurantId: r._id, name: r.name })),
+            // `restaurantId` = identifiant officiel CROUS ('r135') : c'est lui
+            // qui sert aux menus et à l'affichage ; `id` = ObjectId interne.
+            restaurants: restaurants.map(r => ({
+                id: r._id,
+                restaurantId: r.restaurantId,
+                name: r.name,
+                ...(r.address ? { address: r.address } : {}),
+                ...(r.type ? { type: r.type } : {}),
+                ...(r.zone ? { zone: r.zone } : {}),
+            })),
         });
     } catch (error) {
         logger.error('Erreur lors de la récupération des restaurants:', error);
@@ -152,7 +216,7 @@ const getSectorsSessions = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
 
-        const restaurant = await findRestaurant(restaurantId, 'sectors -_id');
+        const restaurant = await findRestaurantByAnyId(restaurantId, 'sectors -_id');
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
@@ -205,7 +269,7 @@ const getAllSectorsSessions = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
 
-        const restaurant = await findRestaurant(restaurantId, 'sectors -_id');
+        const restaurant = await findRestaurantByAnyId(restaurantId, 'sectors -_id');
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
@@ -240,13 +304,27 @@ const getApiDoc = (_req: Request, res: Response) => {
     return res.json(apiDoc);
 };
 
+// Re-sync forcé du catalogue (sinon automatique, au plus souvent tous les
+// 3 mois : voir syncRestaurantsFromCrous). Protégé par auth : déclenche un
+// appel réseau vers le flux CROUS.
+const syncRestaurants = async (_req: Request, res: Response) => {
+    try {
+        const result = await syncRestaurantsFromCrous(true);
+        return res.json(result);
+    } catch (error) {
+        logger.error('Erreur lors du sync CROUS forcé:', error);
+        return res.status(502).json({ error: 'Flux CROUS injoignable' });
+    }
+};
+
 const getRestaurantInfo = async (req: Request, res: Response) => {
     const restaurantId = req.params.restaurantId as string;
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
-        const restaurant = await findRestaurant(restaurantId, 'name restaurantId address description -_id');
+        // Accepte un ObjectId Mongo ou un identifiant CROUS ('r135')
+        const restaurant = await findRestaurantByAnyId(restaurantId, 'name restaurantId address description type zone -_id');
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
@@ -259,14 +337,12 @@ const getRestaurantInfo = async (req: Request, res: Response) => {
 
 const getRestaurantByOwnId = async (req: Request, res: Response) => {
     const restaurantId = req.params.restaurantId as string;
-    if (!Types.ObjectId.isValid(restaurantId)) {
-        return res.status(400).json({ error: 'Invalid restaurant ID format' });
-    }
     try {
         if (!restaurantId) {
             return res.status(400).json({ error: 'Restaurant ID is required' });
         }
-        const restaurant = await findRestaurantById(new Types.ObjectId(restaurantId), 'name restaurantId address description -_id');
+        // Accepte un ObjectId Mongo ou un identifiant CROUS ('r135')
+        const restaurant = await findRestaurantByAnyId(restaurantId, 'name restaurantId address description type zone -_id');
         if (!restaurant) {
             return res.status(404).json({ error: 'Restaurant not found' });
         }
@@ -277,4 +353,4 @@ const getRestaurantByOwnId = async (req: Request, res: Response) => {
     }
 };
 
-export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions, getAllSectorsSessions, getRestaurantInfo, getRestaurantByOwnId };
+export { getMenus, getApiDoc, getSectors, getRestaurants, getSectorsSessions, getAllSectorsSessions, getRestaurantInfo, getRestaurantByOwnId, syncRestaurants };

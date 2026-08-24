@@ -3,6 +3,7 @@ import { connect } from 'mongoose';
 import logger from './utils/logger.js';
 import { setupSocketApplicationEvents } from './routes/socket/socket.service.js';
 import { socketHandler } from './utils/socket.js';
+import { syncRestaurantsFromCrous } from './routes/ru/ru.service.js';
 import swaggerSetup from './modules/swagger.js';
 import { isProduction, mongoUri, rootDir } from './config.js';
 import { createWriteStream, readFileSync } from 'fs';
@@ -28,7 +29,16 @@ await setupUploadDirectories();
 setupRoutes(app);
 
 connect(mongoUri)
-    .then(() => logger.info('MongoDB Connected'))
+    .then(async () => {
+        logger.info('MongoDB Connected');
+        // Synchronise le catalogue des restaurants depuis le flux CROUS
+        // (upsert par id officiel, non bloquant si le flux est injoignable).
+        try {
+            await syncRestaurantsFromCrous();
+        } catch (err) {
+            logger.warn(`Sync CROUS impossible au démarrage : ${err instanceof Error ? err.message : err}`);
+        }
+    })
     .catch(err => logger.error('MongoDB connection error:', err));
 
 swaggerSetup(app);

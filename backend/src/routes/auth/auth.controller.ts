@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
 import User from '../../models/user.js';
-import Restaurant from '../../models/restaurant.js';
 import logger from '../../utils/logger.js';
 import { validateCredentials, validateLoginFields, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
+import { findRestaurantByAnyId } from '../ru/ru.service.js';
 import jwt from 'jsonwebtoken';
 import RefreshToken from '../../models/refreshToken.js';
 import { join } from 'path';
@@ -30,13 +29,11 @@ const registerUser = async (req: Request, res: Response) => {
         // Create new user
         const user = new User({ username, password });
 
-        // Restaurant optionnel (onboarding)
+        // Restaurant optionnel (onboarding) — accepte l'id CROUS ('r135')
+        // ou un ObjectId Mongo interne
         const { restaurantId } = req.body;
         if (restaurantId) {
-            if (!Types.ObjectId.isValid(restaurantId)) {
-                return res.status(400).json({ error: { message: 'Invalid restaurant ID', field: 'restaurantId' } });
-            }
-            const restaurant = await Restaurant.findById(restaurantId);
+            const restaurant = await findRestaurantByAnyId(String(restaurantId));
             if (!restaurant) {
                 return res.status(400).json({ error: { message: 'Restaurant not found', field: 'restaurantId' } });
             }
