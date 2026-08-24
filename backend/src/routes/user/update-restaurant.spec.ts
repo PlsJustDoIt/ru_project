@@ -37,11 +37,11 @@ describe('PUT /api/users/update-restaurant', () => {
         expect(res.statusCode).toBe(401);
     });
 
-    it('id invalide -> 400', async () => {
+    it('id inconnu -> 404', async () => {
         const res = await request(app).put('/api/users/update-restaurant')
             .set('authorization', `Bearer ${accessToken}`)
             .send({ restaurantId: 'pas-un-objectid' });
-        expect(res.statusCode).toBe(400);
+        expect(res.statusCode).toBe(404);
     });
 
     it('restaurant inexistant -> 404', async () => {
@@ -52,14 +52,22 @@ describe('PUT /api/users/update-restaurant', () => {
         expect(res.statusCode).toBe(404);
     });
 
-    it('succès -> 200 et /me reflète le nouveau restaurant', async () => {
+    it('succès (ObjectId) -> 200 et /me reflète l\'id CROUS', async () => {
         const res = await request(app).put('/api/users/update-restaurant')
             .set('authorization', `Bearer ${accessToken}`)
             .send({ restaurantId: restaurantObjectId });
         expect(res.statusCode).toBe(200);
-        expect(res.body.restaurantId).toBe(restaurantObjectId);
+        expect(res.body.restaurantId).toBe('r135');
         const me = await request(app).get('/api/users/me')
             .set('authorization', `Bearer ${accessToken}`);
-        expect(me.body.user.restaurantId).toBe(restaurantObjectId);
+        expect(me.body.user.restaurantId).toBe('r135');
+    });
+
+    it('succès (id CROUS "r135") -> accepté aussi', async () => {
+        const res = await request(app).put('/api/users/update-restaurant')
+            .set('authorization', `Bearer ${accessToken}`)
+            .send({ restaurantId: 'r135' });
+        expect(res.statusCode).toBe(200);
+        expect(res.body.restaurantId).toBe('r135');
     });
 });

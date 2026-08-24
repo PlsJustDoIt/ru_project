@@ -1,15 +1,33 @@
 import { Parser } from 'xml2js';
+import axios from 'axios';
 import { MenuResponse, MenuXml } from '../../interfaces/menu.js';
 import { readFileSync } from 'fs';
 import Restaurant from '../../models/restaurant.js';
 import logger from '../../utils/logger.js';
-import { restaurant } from '../../interfaces/restaurant.js';
+import { restaurant, crousResto } from '../../interfaces/restaurant.js';
 import Sector from '../../models/sector.js';
 import { Types } from 'mongoose';
-const ru_lumiere_id = 'r135';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars
-const api_url = 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/menu.xml';
+export const ru_lumiere_id = 'r135';
+
+// Base du flux public CROUS Bourgogne-Franche-Comté :
+// - resto.xml : tous les restos (id, nom, adresse, type, zone...)
+// - menu.xml  : les menus par resto (groupés par <resto id="rXXX">)
+const crous_base_url = 'http://webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/';
+const crous_resto_url = `${crous_base_url}resto.xml`;
+const crous_menu_url = `${crous_base_url}menu.xml`;
+
+// Le catalogue de restos ne bouge quasiment jamais : on ne re-requête le flux
+// que si le dernier sync date de plus de 3 mois.
+const RESTAURANT_SYNC_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
+async function fetchCrousXml(url: string): Promise<string> {
+    const response = await axios.get(url, { timeout: 15000 });
+    if (response.status !== 200) {
+        throw new Error(`Erreur lors de la récupération du flux CROUS (${url})`);
+    }
+    return response.data;
+}
 
 function decodeHtmlEntities(text: string) {
     return text.replace(/&lt;/g, '<')
@@ -86,37 +104,153 @@ function transformToMenu(menu: MenuXml): MenuResponse {
     };
 }
 
-// Fonction pour récupérer les menus de l'API externe
-async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise<MenuResponse[]> {
-    try {
-        // // L'URL de l'API qui retourne le document XML des menus
-        // const response: AxiosResponse = await axios.get(api_url);
-        // if (response.status !== 200) {
-        //     throw new Error('Erreur lors de la récupération des menus');
-        // }
-        // const xmlData = response.data;
-        // // ecrire le contenu du fichier xml dans un fichier menus.xml
-        // fs.writeFileSync('menus.xml', xmlData, 'utf-8');
+// Menus de tous les restos du flux, indexés par identifiant CROUS.
+// Le flux est récupéré et parsé une seule fois puis partagé entre restos.
+async function parseCrousMenus(xmlData: string): Promise<Map<string, MenuResponse[]>> {
+    // Conversion du XML en objet JS
+    const parser = new Parser({
+        explicitArray: false,
+        preserveChildrenOrder: true, // Conserve l'ordre des enfants XML
+    });
+    const result = await parser.parseStringPromise(xmlData);
+    const restaurants = result.root.resto;
+    if (!restaurants) {
+        throw new Error('Flux CROUS invalide : aucun resto trouvé');
+    }
+    const restoList: Array<{ $: { id: string }; menu?: MenuXml | MenuXml[] }>
+        = Array.isArray(restaurants) ? restaurants : [restaurants];
 
-        const xmlData = readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
-
-        // Conversion du XML en objet JS
-        const parser = new Parser({
-            explicitArray: false,
-            preserveChildrenOrder: true, // Conserve l'ordre des enfants XML
-        });
-        const result = await parser.parseStringPromise(xmlData);
-        const restaurants = result.root.resto;
-        const resto = restaurants.find((resto: { $: { id: string } }) => resto.$.id === ru_id);
-        const menus = decodeJsonValues(resto.menu);
+    const menusByResto = new Map<string, MenuResponse[]>();
+    for (const resto of restoList) {
+        if (!resto.menu) {
+            continue; // resto sans aucun menu publié
+        }
+        const rawMenus = Array.isArray(resto.menu) ? resto.menu : [resto.menu];
+        const decoded = decodeJsonValues(rawMenus);
         // On renvoie tous les jours du flux ; le filtrage par date et le comblement
         // des jours fermés sont faits par requête dans le controller (dépendent de `today`).
-        const transformedMenus: MenuResponse[] = menus.map((menu: MenuXml) => transformToMenu(menu));
-        return transformedMenus;
-    } catch (error) {
-        console.error('Erreur lors de la récupération des menus:', error);
-        throw error;
+        menusByResto.set(
+            resto.$.id,
+            decoded.map((menu: MenuXml) => transformToMenu(menu)),
+        );
     }
+    return menusByResto;
+}
+
+/**
+ * Récupère le flux complet des menus CROUS (en direct), avec repli sur le
+ * fixture local `menus.xml` si le service est injoignable (dev hors-ligne,
+ * panne réseau...). Un seul appel réseau sert ensuite tous les restaurants.
+ */
+async function fetchAllCrousMenus(): Promise<Map<string, MenuResponse[]>> {
+    let xmlData: string;
+    try {
+        xmlData = await fetchCrousXml(crous_menu_url);
+    } catch (error) {
+        logger.warn(`Flux CROUS injoignable (${error instanceof Error ? error.message : error}) — repli sur le fixture local menus.xml`);
+        xmlData = readFileSync('menus.xml', 'utf-8'); // solution temporaire pour éviter de faire des appels à l'API
+    }
+    return parseCrousMenus(xmlData);
+}
+
+/**
+ * Menus d'un seul restaurant. Lève une erreur si le resto est absent du flux.
+ */
+async function fetchMenusFromExternalAPI(ru_id: string = ru_lumiere_id): Promise<MenuResponse[]> {
+    const menusByResto = await fetchAllCrousMenus();
+    const menus = menusByResto.get(ru_id);
+    if (!menus) {
+        throw new Error(`Aucun menu trouvé pour le resto ${ru_id}`);
+    }
+    return menus;
+}
+
+// Extrait l'adresse du bloc <contact> CDATA : "<h2>Nom</h2><p>adresse</p>"
+function extractAddress(contactHtml: string): string {
+    let html = contactHtml.replace(/<h2>[\s\S]*?<\/h2>/i, '');
+    const pMatch = html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    if (pMatch) {
+        html = pMatch[1];
+    }
+    html = html.split(/<br\s*\/?>/i)[0];
+    return decodeHtmlEntities(html.replace(/<[^>]*>/g, '')).trim();
+}
+
+interface RestoXmlAttrs {
+    id: string;
+    title?: string;
+    short_desc?: string;
+    zone?: string;
+    type?: string;
+}
+interface RestoXmlElement {
+    $: RestoXmlAttrs;
+    contact?: string | { _: string };
+}
+
+// Parse resto.xml : la liste complète des restos du CROUS BFC
+async function fetchRestaurantsFromExternalAPI(): Promise<crousResto[]> {
+    const xmlData = await fetchCrousXml(crous_resto_url);
+    const parser = new Parser({ explicitArray: false, preserveChildrenOrder: true });
+    const result = await parser.parseStringPromise(xmlData);
+    const restos: RestoXmlElement[] = [].concat(result.root.resto ?? []);
+
+    return restos
+        .filter(resto => resto.$ && typeof resto.$.id === 'string')
+        .map((resto) => {
+            const contactHtml = typeof resto.contact === 'object' && resto.contact !== null
+                ? resto.contact._
+                : (resto.contact as string | undefined) ?? '';
+            return {
+                restaurantId: resto.$.id,
+                name: decodeHtmlEntities(resto.$.title ?? resto.$.id),
+                address: extractAddress(contactHtml),
+                description: decodeHtmlEntities(resto.$.short_desc ?? ''),
+                type: resto.$.type,
+                zone: resto.$.zone,
+            };
+        })
+        .filter(resto => resto.name.length > 0);
+}
+
+/**
+ * Synchronise les restaurants depuis le flux CROUS : upsert par identifiant
+ * officiel (`restaurantId`). Le catalogue est la source persistante : tant que
+ * le dernier sync date de moins de 3 mois, le flux n'est PAS requêté (les
+ * restos ne changent quasiment jamais). `force` court-circuite ce contrôle
+ * (endpoint admin / première installation).
+ * Idempotent — ne touche pas aux secteurs existants.
+ */
+async function syncRestaurantsFromCrous(force = false): Promise<{ synced: number; skipped: boolean }> {
+    if (!force) {
+        // `timestamps: true` : updatedAt = date du dernier sync (upsert $set)
+        const latest = await Restaurant.findOne().sort({ updatedAt: -1 }).select('updatedAt');
+        const ageMs = latest?.updatedAt ? Date.now() - latest.updatedAt.getTime() : Infinity;
+        if (ageMs < RESTAURANT_SYNC_MAX_AGE_MS) {
+            logger.info('Sync CROUS : catalogue datant de moins de 3 mois, flux non requêté');
+            return { synced: 0, skipped: true };
+        }
+    }
+
+    const restos = await fetchRestaurantsFromExternalAPI();
+    for (const resto of restos) {
+        await Restaurant.updateOne(
+            { restaurantId: resto.restaurantId },
+            {
+                $set: {
+                    name: resto.name,
+                    address: resto.address,
+                    description: resto.description,
+                    ...(resto.type ? { type: resto.type } : {}),
+                    ...(resto.zone ? { zone: resto.zone } : {}),
+                },
+                $setOnInsert: { sectors: [] },
+            },
+            { upsert: true },
+        );
+    }
+    logger.info(`Sync CROUS : ${restos.length} restaurants synchronisés`);
+    return { synced: restos.length, skipped: false };
 }
 
 const findRestaurant = async (restaurantId: string, select: string | null = null) => {
@@ -131,6 +265,21 @@ const findRestaurantById = async (id: Types.ObjectId | undefined, select?: strin
         return await Restaurant.findById(id).select(select);
     }
     return await Restaurant.findById(id);
+};
+
+/**
+ * Résout un restaurant quel que soit l'identifiant fourni : ObjectId Mongo
+ * ou identifiant officiel CROUS ('r135'). Les deux espaces d'ids coexistent
+ * (refs utilisateurs historiques = ObjectId, flux CROUS = 'rXXX').
+ */
+const findRestaurantByAnyId = async (id: string, select: string | null = null) => {
+    if (Types.ObjectId.isValid(id)) {
+        const byMongoId = await findRestaurantById(new Types.ObjectId(id), select ?? undefined);
+        if (byMongoId) {
+            return byMongoId;
+        }
+    }
+    return await findRestaurant(id, select);
 };
 
 const createRestaurant = async (restaurant: restaurant) => {
@@ -152,14 +301,11 @@ const setupRestaurant = async () => {
     }
     // Check if the restaurant has valid data
     if (resto_lumiere && resto_lumiere.sectors.length > 0) {
-        const hasInvalidData = resto_lumiere.sectors.some((sectorId) => {
+        const hasInvalidData = (await Promise.all(resto_lumiere.sectors.map(async (sectorId) => {
             // get sector by id
-            const sector = Sector.findById(sectorId);
-            if (!sector) {
-                logger.warn(`Sector with ID ${sectorId} not found. Data will be cleared and recreated.`);
-                return true;
-            }
-        });
+            const sector = await Sector.findById(sectorId);
+            return sector === null;
+        }))).some(isMissing => isMissing);
         if (hasInvalidData) {
             logger.warn('Restaurant RU Lumière has invalid data. Data will be cleared and recreated.');
             shouldClearData = true;
@@ -217,9 +363,8 @@ const getSectorsFromRestaurant = async (restaurantId: Types.ObjectId) => {
         throw new Error('Restaurant not found');
     }
     const sectors = await Sector.find({ _id: { $in: restaurant.sectors } });
-    if (!sectors || sectors.length === 0) {
-        throw new Error('No sectors found for this restaurant');
-    }
+    // Un resto sans secteur est un état VALIDE depuis que tout le catalogue
+    // CROUS est sélectionnable : seul le RU principal en possède.
     return sectors.map(sector => ({
         id: sector._id.toString(),
         position: sector.position,
@@ -253,7 +398,7 @@ function fillClosedDays(menus: MenuResponse[], today: string): MenuResponse[] {
     const sorted = [...menus].sort((a, b) => a.date.localeCompare(b.date));
     const lastDate = sorted.length > 0 ? sorted[sorted.length - 1].date : today;
     const end = today > lastDate ? today : lastDate;
-    const byDate = new Map(sorted.map((m) => [m.date, m]));
+    const byDate = new Map(sorted.map(m => [m.date, m]));
 
     const result: MenuResponse[] = [];
     for (let d = today; d <= end; d = nextDay(d)) {
@@ -267,4 +412,4 @@ function fillClosedDays(menus: MenuResponse[], today: string): MenuResponse[] {
     return result;
 }
 
-export { fetchMenusFromExternalAPI, findRestaurant, findRestaurantById, createRestaurant, setupRestaurant, getSectorsFromRestaurant, fillClosedDays };
+export { fetchMenusFromExternalAPI, fetchAllCrousMenus, fetchRestaurantsFromExternalAPI, syncRestaurantsFromCrous, findRestaurant, findRestaurantById, findRestaurantByAnyId, createRestaurant, setupRestaurant, getSectorsFromRestaurant, fillClosedDays };

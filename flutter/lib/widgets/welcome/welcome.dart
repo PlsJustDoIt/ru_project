@@ -145,15 +145,15 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
         builder: (_) => RestaurantPicker(
           title: 'Bienvenue',
           confirmLabel: 'Continuer',
-          onSelected: (pickerContext, restaurantId) async {
+          onSelected: (pickerContext, restaurant) async {
             final secureStorage =
                 Provider.of<SecureStorage>(pickerContext, listen: false);
             final userProvider =
                 Provider.of<UserProvider>(pickerContext, listen: false);
             final restaurantProvider =
                 Provider.of<RestaurantProvider>(pickerContext, listen: false);
-            await secureStorage.storeGuestRestaurantId(restaurantId);
-            await restaurantProvider.tryLoadRestaurant(restaurantId);
+            await secureStorage.storeGuestRestaurantId(restaurant.restaurantId);
+            await restaurantProvider.tryLoadRestaurant(restaurant.restaurantId);
             userProvider.enterGuestMode();
             if (!pickerContext.mounted) return;
             Navigator.pushReplacement(

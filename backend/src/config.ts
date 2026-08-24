@@ -2,6 +2,12 @@ import { config } from 'dotenv';
 import { join, resolve } from 'path';
 
 config();
+// En production, le cwd pm2 est dist/ : le .env vit au-dessus. dotenv ne
+// écrase jamais les variables déjà présentes, ce second appel ne fait que
+// compléter celles qui manquent (dev : cwd = backend/, déjà bon).
+if (!process.env.JWT_ACCESS_SECRET) {
+    config({ path: resolve(process.cwd(), '..', '.env') });
+}
 
 const isProduction = process.env.NODE_ENV === 'production';
 

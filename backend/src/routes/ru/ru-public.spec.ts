@@ -30,20 +30,21 @@ describe('RU public endpoints', () => {
         await mongoServer.stop();
     });
 
-    it('GET /api/ru/restaurants sans token -> 200 et expose _id comme restaurantId', async () => {
+    it('GET /api/ru/restaurants sans token -> 200 et expose l\'id CROUS + l\'ObjectId interne', async () => {
         const res = await request(app).get('/api/ru/restaurants');
         expect(res.statusCode).toBe(200);
         expect(Array.isArray(res.body.restaurants)).toBe(true);
-        expect(res.body.restaurants[0].restaurantId).toBe(restaurantObjectId);
+        expect(res.body.restaurants[0].restaurantId).toBe('r135');
+        expect(res.body.restaurants[0].id).toBe(restaurantObjectId);
         expect(res.body.restaurants[0].name).toBe('RU Test');
     });
 
     it('GET /api/ru/:id/sectors sans token -> route publique (pas 401/403)', async () => {
         // La route atteint le contrôleur sans token : preuve que `auth` est retiré.
-        // (Un resto sans secteur renvoie 500 — comportement pré-existant, hors périmètre.)
+        // Un resto sans secteur est valide : 200 + liste vide.
         const res = await request(app).get(`/api/ru/${restaurantObjectId}/sectors`);
-        expect(res.statusCode).not.toBe(401);
-        expect(res.statusCode).not.toBe(403);
+        expect(res.statusCode).toBe(200);
+        expect(res.body.sectors).toEqual([]);
     });
 
     it('GET /api/ru/:id/sectors-sessions sans token -> 401 (reste protégé)', async () => {

@@ -8,7 +8,7 @@
     "test:coverage": "jest --coverage",
     "dev": "tsx watch src/server.ts",
     "dev:admin": "tsx watch src/adminServer.ts",
-    "build": "npx tsc",
+    "build": "npx tsc -p tsconfig.build.json",
     "test:unit": "jest --config jest.unit.config.js",
     "test:e2e": "jest --config jest.e2e.config.js"
   },

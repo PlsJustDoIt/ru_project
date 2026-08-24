@@ -11,9 +11,16 @@ class RestaurantService {
 
   RestaurantService({required Dio dio}) : _dio = dio;
 
-  Future<List<Menu>> getMenus() async {
+  /// Menus d'un restaurant. [restaurantId] = id officiel CROUS ('r135') ;
+  /// si absent, le backend renvoie ceux du RU par défaut.
+  ///
+  /// - liste       : menus publiés (éventuellement vides -> jours fermés)
+  /// - null        : ce restaurant ne publie PAS de menu (404 du backend),
+  ///                 à distinguer d'une fermeture ponctuelle
+  Future<List<Menu>?> getMenus({String? restaurantId}) async {
     try {
-      final Response response = await _dio.get('/ru/menus');
+      final Response response = await _dio.get('/ru/menus',
+          queryParameters: {if (restaurantId != null) 'restaurantId': restaurantId});
 
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> menus = response.data['menus'] as List;
@@ -21,6 +28,13 @@ class RestaurantService {
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return [];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // Resto absent du flux CROUS : il ne publie pas de menu du tout
+        return null;
+      }
+      logger.e('Failed to get menus: $e');
       return [];
     } catch (e) {
       logger.e('Failed to get menus: $e');
@@ -92,31 +106,6 @@ class RestaurantService {
 
         List<User> users = [
           for (Map<String, dynamic> user in response.data['friendsInSector'])
-            User.fromJson(user)
-        ];
-        return users;
-      }
-      logger.e(
-          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return [];
-    } catch (e) {
-      logger.e('Failed to get users in sector: $e');
-      return [];
-    }
-  }
-
-  Future<List<User>> getUsersInSector(String restaurantId) async {
-    try {
-      final Response response =
-          await _dio.get('/ru/$restaurantId/sectors-sessions');
-      if (response.statusCode == 200 && response.data != null) {
-        logger.i('Response from server: ${response.data}');
-        if (response.data['usersInSector'] == null) {
-          return [];
-        }
-
-        List<User> users = [
-          for (Map<String, dynamic> user in response.data['friendsInSectors'])
             User.fromJson(user)
         ];
         return users;

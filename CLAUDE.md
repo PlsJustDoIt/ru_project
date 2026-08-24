@@ -55,7 +55,8 @@ Backend requires `.env` in `backend/` with: `MONGO_URI`, `JWT_ACCESS_SECRET`, `J
 Each feature maps to a Flutter tab/screen and a backend route domain.
 
 - **Auth & account** (`welcome/`, `auth/`): register / login / logout, JWT access (1h) + refresh (7d) tokens, token refresh, account deletion (also deletes the avatar file). Passwords bcrypt-hashed (salt 10) via a Mongoose `pre('save')` hook; credentials validated 3–32 chars.
-- **Restaurant menus** (Menu tab, `ru/`): pulls the CROUS menu XML feed, parses it (`xml2js`), caches results 1 week in `node-cache`, and serves only today-and-later menus. `GET /api/ru/menus`.
+- **Restaurant menus** (Menu tab, `ru/`): pulls the live CROUS BFC feed (`webservices-v2.crous-mobile.fr:8080/feed/bfc/externe/`) — `resto.xml` for the catalog, `menu.xml` for the meals — parses it (`xml2js`) and serves only today-and-later menus. Menus are **per restaurant**: `GET /api/ru/menus?restaurantId=rXXX` (CROUS id, default `r135`). Caching: each restaurant's menus live **1 day** in `node-cache`; the shared raw feed is re-fetched at most hourly. If the feed is unreachable, falls back to the local `menus.xml` fixture.
+- **Restaurant catalog & selection**: the catalog lives in Mongo and is refreshed from `resto.xml` only when stale (**≥ 3 months**, based on `updatedAt`; forced sync: `POST /api/ru/restaurants/sync`, auth). Startup calls `syncRestaurantsFromCrous()` (skips if fresh). All ~46 CROUS restaurants are upserted keyed by their official `restaurantId` (unique index; extra fields `type`/`zone`). `GET /api/ru/restaurants` exposes them (public). Users pick a RU in a searchable list at registration / guest onboarding / settings; register and `PUT /users/update-restaurant` accept **both** the CROUS id (`r135`) and a Mongo ObjectId. `/me` returns the CROUS id as `restaurantId`. The Menu tab follows the selected RU (listener on `RestaurantProvider`).
 - **Interactive floor map & sector "check-in"** (Map tab, `sector/` + `ru/`): a restaurant has numbered **sectors** (auto-incremented `sectorId` per restaurant via `mongoose-sequence`). A user "sits" in a sector for a chosen duration (`SectorSession` with `expiresAt` TTL) and can see which **friends** are currently in each sector. Sessions auto-expire. Backend exposes friends-only and all-users variants of sector occupancy.
 - **Friend system** (Friends tab, `user/`): user search (relevance-scored: exact > prefix > substring > Levenshtein distance), send / accept / decline friend requests, remove friend. Sending a request when a reverse request already exists auto-accepts (mutual). Friendship is stored as a symmetric `friends[]` array on both users.
 - **Real-time chat** (Chat tab, `socket/`): Socket.IO with JWT auth at handshake. A persistent **Global** room (all users) plus 1-to-1 **private rooms** (deterministic name = sorted `userId_userId`). Messages persisted in Mongo (last 50 fetched). Supports send, delete-one, delete-all. Online/offline presence tracked in-memory (`SocketHandler.connectedUsers`).
@@ -65,9 +66,9 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 - **Debug tab**: only shown in development (`Config.env == "development"`).
 
 ### API reference (all under `/api`, JWT-protected unless noted)
-- `auth/`: `POST /register` (public), `POST /login` (public), `POST /token` (refresh), `POST /logout`, `DELETE /delete-account`
-- `users/`: `GET /me`, `PUT /update-username|update-password|update-status`, `PUT /update-profile-picture` (multipart), `GET /friends`, `GET /search?query=`, `DELETE /remove-friend`, `GET /friend-requests`, `POST /send-friend-request|accept-friend-request|decline-friend-request`, `POST /send-bug-report` (multipart)
-- `ru/`: `GET /` (api doc, public), `GET /menus`, `GET /restaurants`, `GET /:restaurantId`, `GET /:restaurantId/info`, `GET /:restaurantId/sectors`, `GET /:restaurantId/sectors-sessions` (friends), `GET /:restaurantId/sectors-sessions/all`
+- `auth/`: `POST /register` (public ; `restaurantId` optionnel : id CROUS `rXXX` ou ObjectId), `POST /login` (public), `POST /token` (refresh), `POST /logout`, `DELETE /delete-account`
+- `users/`: `GET /me` (`restaurantId` = id CROUS), `PUT /update-username|update-password|update-status|update-restaurant`, `PUT /update-profile-picture` (multipart), `GET /friends`, `GET /search?query=`, `DELETE /remove-friend`, `GET /friend-requests`, `POST /send-friend-request|accept-friend-request|decline-friend-request`, `POST /send-bug-report` (multipart)
+- `ru/`: `GET /` (api doc, public), `GET /menus?restaurantId=rXXX`, `GET /restaurants` (catalogue CROUS complet, id officiel exposé), `POST /restaurants/sync` (auth, re-sync forcé), `GET /:restaurantId` (accepte ObjectId ou id CROUS), `GET /:restaurantId/info`, `GET /:restaurantId/sectors`, `GET /:restaurantId/sectors-sessions` (friends), `GET /:restaurantId/sectors-sessions/all`
 - `sectors/`: `POST /join/:sectorId` (body: `duration`), `POST /leave/:sectorId`, `GET /:sectorId/friends`
 - `socket/` (chat REST side): `POST /send-message`, `GET /messages?roomName=`, `DELETE /delete-message`, `DELETE /delete-all-messages`
 - `ginko/`: `GET /info`
@@ -86,7 +87,7 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 ## Testing
 - Backend tests: Jest + ts-jest, 15 `.spec.ts` files (colocated with routes + `src/tests/`). ESM module support configured in `jest.config.js`. As of 2026-05-29: **158 tests pass across 15 suites**, and `tsc --noEmit` is clean. Tests use `mongodb-memory-server` + `supertest`.
 - No Flutter tests currently configured.
-- No CI/CD pipeline — manual deployment.
+- CI/CD : `.github/workflows/ci-cd.yml` — à chaque push `main` : tests Jest + build backend, analyse Flutter + builds APK/web, puis déploiement par **artefacts** (rsync du JS compilé + bundle web vers le serveur ; aucun build ni git sur le serveur, `npm ci --omit=dev` + `pm2 restart` seulement). Web servi sur `ru.leomaugeri.fr`, API derrière `api.ru.leomaugeri.fr`. Secret unique requis : `SSH_PRIVATE_KEY` (constant serveur en dur dans le workflow).
 - Lint: backend `eslint` (flat config, TS + stylistic), Flutter `flutter analyze` (flutter_lints). Coverage and lint debt are tracked in `AUDIT.md`.
 
 ## Key Conventions

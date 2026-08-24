@@ -28,7 +28,11 @@ class SecureStorage {
   }
 
   Future<String?> getAccessToken() async {
-    return await _secureStorage.read(key: 'accessToken');
+    try {
+      return await _secureStorage.read(key: 'accessToken');
+    } catch (_) {
+      return null; // DIAG: keyring indispo sous Linux/WSLg
+    }
   }
 
   Future<String?> getRefreshToken() async {
@@ -40,7 +44,11 @@ class SecureStorage {
   }
 
   Future<String?> getGuestRestaurantId() async {
-    return await _secureStorage.read(key: 'guestRestaurantId');
+    try {
+      return await _secureStorage.read(key: 'guestRestaurantId');
+    } catch (_) {
+      return null; // DIAG
+    }
   }
 
   Future<void> clearGuestRestaurantId() async {

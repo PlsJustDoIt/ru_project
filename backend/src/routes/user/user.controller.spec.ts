@@ -13,6 +13,9 @@ jest.mock('../../models/friendsRequest');
 jest.mock('../../models/bugReport');
 jest.mock('bcrypt');
 jest.mock('./user.service');
+jest.mock('../ru/ru.service');
+
+import { findRestaurantById } from '../ru/ru.service.js';
 
 describe('User Controller tests', () => {
     let mockRequest: Partial<Request>;
@@ -49,6 +52,8 @@ describe('User Controller tests', () => {
         });
         it('should return user information on successful retrieval', async () => {
             (User.findById as jest.Mock).mockResolvedValue(mockUser);
+            // La ref interne est résolue en id CROUS exposé au client
+            (findRestaurantById as jest.Mock).mockResolvedValue({ restaurantId: 'resto1' });
             mockRequest.user = { id: '1' };
 
             await userController.getUserInformation(mockRequest as Request, mockResponse as Response);

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/color.dart';
 import 'package:ru_project/models/menu.dart';
 import 'package:intl/intl.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/socket_service.dart';
@@ -48,13 +49,19 @@ String _formatChip(String dateString) {
 class _MenuWidgetState extends State<MenuWidget>
     with AutomaticKeepAliveClientMixin {
   List<Menu> _menus = [];
+  /// Vrai si le backend a répondu 404 : le restaurant ne publie pas de menu
+  /// (cafétés, foodtrucks...) — distinct d'une fermeture ponctuelle.
+  bool _restoSansMenu = false;
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _joining = false;
   bool _loading = true;
+  /// Id CROUS du restaurant pour lequel les menus affichés ont été chargés
+  String? _loadedForRestaurantId;
   late final RestaurantService restaurantService;
   late final UserService userService;
   late final SocketService socketService;
+  late final RestaurantProvider restaurantProvider;
 
   @override
   void initState() {
@@ -62,20 +69,36 @@ class _MenuWidgetState extends State<MenuWidget>
     restaurantService = Provider.of<RestaurantService>(context, listen: false);
     userService = Provider.of<UserService>(context, listen: false);
     socketService = Provider.of<SocketService>(context, listen: false);
+    restaurantProvider = Provider.of<RestaurantProvider>(context, listen: false);
+    // Recharge les menus si l'utilisateur change de RU (réglages, invité...)
+    restaurantProvider.addListener(_onRestaurantChanged);
     _loadMenus();
+  }
+
+  void _onRestaurantChanged() {
+    final currentId = restaurantProvider.restaurant?.restaurantId;
+    if (currentId != _loadedForRestaurantId) {
+      _loadMenus();
+    }
   }
 
   @override
   void dispose() {
+    restaurantProvider.removeListener(_onRestaurantChanged);
     _pageController.dispose();
     super.dispose();
   }
 
   Future<void> _loadMenus() async {
-    final menus = await restaurantService.getMenus();
+    // Le provider porte l'id officiel CROUS du RU sélectionné
+    final crousId = restaurantProvider.restaurant?.restaurantId;
+    _loadedForRestaurantId = crousId;
+    final menus =
+        await restaurantService.getMenus(restaurantId: crousId);
     if (!mounted) return;
     setState(() {
-      _menus = menus;
+      _menus = menus ?? [];
+      _restoSansMenu = menus == null;
       _loading = false;
     });
   }
@@ -94,11 +117,16 @@ class _MenuWidgetState extends State<MenuWidget>
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
+    if (_restoSansMenu) {
+      return _noMenuPublishedView();
+    }
     if (_menus.isEmpty) {
       return _noMenuView();
     }
     return Column(
       children: [
+        if (restaurantProvider.restaurant?.name != null)
+          _restaurantHeader(restaurantProvider.restaurant!.name),
         _dayStrip(),
         Expanded(
           child: PageView.builder(
@@ -110,6 +138,29 @@ class _MenuWidgetState extends State<MenuWidget>
         ),
         _eatHereBar(),
       ],
+    );
+  }
+
+  /// Rappel du RU sélectionné : les menus suivent le choix fait dans
+  /// les réglages / à l'inscription.
+  Widget _restaurantHeader(String name) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.location_on_outlined,
+              size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(name,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -149,8 +200,12 @@ class _MenuWidgetState extends State<MenuWidget>
       if (result['success'] == true) {
         user.status = 'au ru';
         userProvider.setUser(user);
+        // On précise LEQUEL RU : les amis peuvent être répartis sur
+        // plusieurs restaurants du flux CROUS.
+        final restoName = restaurantProvider.restaurant?.name;
         await socketService.sendMessageToRoom(
-            'Global', '${user.username} mange au RU aujourd\'hui 🍽️');
+            'Global',
+            '${user.username} mange ${restoName != null ? 'à $restoName' : 'au RU'} aujourd\'hui 🍽️');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Statut « au ru » — Global prévenu')),
@@ -183,6 +238,37 @@ class _MenuWidgetState extends State<MenuWidget>
             const SizedBox(height: 8),
             Text(
               'Le RU est probablement fermé. Reviens un autre jour !',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Ce restaurant n'expose aucun menu dans le flux CROUS (cafétéria,
+  /// foodtruck...) : ce n'est pas une fermeture temporaire.
+  Widget _noMenuPublishedView() {
+    final theme = Theme.of(context);
+    final name = restaurantProvider.restaurant?.name;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.menu_book_outlined,
+                size: 64, color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text('Aucun menu publié',
+                style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              name != null
+                  ? '$name ne publie pas de menu sur le flux CROUS.'
+                  : 'Ce restaurant ne publie pas de menu sur le flux CROUS.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: AppColors.textSecondary),
