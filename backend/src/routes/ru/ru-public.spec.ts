@@ -41,10 +41,10 @@ describe('RU public endpoints', () => {
 
     it('GET /api/ru/:id/sectors sans token -> route publique (pas 401/403)', async () => {
         // La route atteint le contrôleur sans token : preuve que `auth` est retiré.
-        // (Un resto sans secteur renvoie 500 — comportement pré-existant, hors périmètre.)
+        // Un resto sans secteur est valide : 200 + liste vide.
         const res = await request(app).get(`/api/ru/${restaurantObjectId}/sectors`);
-        expect(res.statusCode).not.toBe(401);
-        expect(res.statusCode).not.toBe(403);
+        expect(res.statusCode).toBe(200);
+        expect(res.body.sectors).toEqual([]);
     });
 
     it('GET /api/ru/:id/sectors-sessions sans token -> 401 (reste protégé)', async () => {

@@ -13,7 +13,11 @@ class RestaurantService {
 
   /// Menus d'un restaurant. [restaurantId] = id officiel CROUS ('r135') ;
   /// si absent, le backend renvoie ceux du RU par défaut.
-  Future<List<Menu>> getMenus({String? restaurantId}) async {
+  ///
+  /// - liste       : menus publiés (éventuellement vides -> jours fermés)
+  /// - null        : ce restaurant ne publie PAS de menu (404 du backend),
+  ///                 à distinguer d'une fermeture ponctuelle
+  Future<List<Menu>?> getMenus({String? restaurantId}) async {
     try {
       final Response response = await _dio.get('/ru/menus',
           queryParameters: {if (restaurantId != null) 'restaurantId': restaurantId});
@@ -24,6 +28,13 @@ class RestaurantService {
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
+      return [];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // Resto absent du flux CROUS : il ne publie pas de menu du tout
+        return null;
+      }
+      logger.e('Failed to get menus: $e');
       return [];
     } catch (e) {
       logger.e('Failed to get menus: $e');

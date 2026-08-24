@@ -363,9 +363,8 @@ const getSectorsFromRestaurant = async (restaurantId: Types.ObjectId) => {
         throw new Error('Restaurant not found');
     }
     const sectors = await Sector.find({ _id: { $in: restaurant.sectors } });
-    if (!sectors || sectors.length === 0) {
-        throw new Error('No sectors found for this restaurant');
-    }
+    // Un resto sans secteur est un état VALIDE depuis que tout le catalogue
+    // CROUS est sélectionnable : seul le RU principal en possède.
     return sectors.map(sector => ({
         id: sector._id.toString(),
         position: sector.position,

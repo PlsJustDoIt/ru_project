@@ -19,8 +19,10 @@ class RestaurantPicker extends StatefulWidget {
   final String confirmLabel;
   final String? initialRestaurantId;
 
-  /// Appelé avec l'id CROUS officiel du restaurant choisi ('r135').
-  final Future<void> Function(BuildContext context, String restaurantId) onSelected;
+  /// Appelé avec le restaurant choisi (l'id CROUS officiel est dans
+  /// [RestaurantPartial.restaurantId]).
+  final Future<void> Function(BuildContext context, RestaurantPartial restaurant)
+      onSelected;
 
   @override
   State<RestaurantPicker> createState() => _RestaurantPickerState();
@@ -50,7 +52,12 @@ class _RestaurantPickerState extends State<RestaurantPicker> {
         if (restaurants.isNotEmpty) {
           _selected = restaurants.firstWhere(
             (r) => r.restaurantId == widget.initialRestaurantId,
-            orElse: () => restaurants.first,
+            // Pas de pré-sélection : on évite le 1er de la liste (tri
+            // alphabétique = souvent une cafétéria) au profit du RU principal.
+            orElse: () => restaurants.firstWhere(
+              (r) => r.restaurantId == 'r135',
+              orElse: () => restaurants.first,
+            ),
           );
         }
       });
@@ -67,7 +74,7 @@ class _RestaurantPickerState extends State<RestaurantPicker> {
     final selected = _selected;
     if (selected == null) return;
     setState(() => _submitting = true);
-    await widget.onSelected(context, selected.restaurantId);
+    await widget.onSelected(context, selected);
     if (mounted) setState(() => _submitting = false);
   }
 

@@ -57,9 +57,9 @@ class _MainScaffoldState extends State<MainScaffold> {
           title: 'Changer de RU',
           confirmLabel: 'Valider',
           initialRestaurantId: restaurantProvider.restaurant?.restaurantId,
-          onSelected: (pickerContext, restaurantId) async {
-            await secureStorage.storeGuestRestaurantId(restaurantId);
-            await restaurantProvider.tryLoadRestaurant(restaurantId);
+          onSelected: (pickerContext, restaurant) async {
+            await secureStorage.storeGuestRestaurantId(restaurant.restaurantId);
+            await restaurantProvider.tryLoadRestaurant(restaurant.restaurantId);
             if (!pickerContext.mounted) return;
             Navigator.pop(pickerContext);
             setState(() {}); // rebuild de l'onglet courant
