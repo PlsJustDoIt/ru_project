@@ -1,5 +1,8 @@
 class Menu {
-  Map<String, dynamic>? plats; // Optional car peut être null si fermé
+  /// Catégories libres selon le format du resto dans le flux CROUS
+  /// (Entrées, Plats du jour, Sandwichs, "Soir — ...", ARSENAL...).
+  /// Valeurs : liste de plats, ou texte brut ('menu non communiqué').
+  Map<String, dynamic>? plats;
   String date;
   String? fermeture; // String pour le message de fermeture
 
@@ -19,17 +22,11 @@ class Menu {
       );
     }
 
-    // Sinon on crée un menu normal avec les plats
+    // Sinon on garde les catégories telles que renvoyées par le backend
     return Menu(
-      plats: {
-        "Entrées": json["Entrées"] ?? "menu non communiqué",
-        "Cuisine traditionnelle":
-            json["Cuisine traditionnelle"] ?? "menu non communiqué",
-        "Menu végétalien": json["Menu végétalien"] ?? "menu non communiqué",
-        "Pizza": json["Pizza"] ?? "menu non communiqué",
-        "Cuisine italienne": json["Cuisine italienne"] ?? "menu non communiqué",
-        "Grill": json["Grill"] ?? "menu non communiqué",
-      },
+      plats: json["plats"] != null
+          ? Map<String, dynamic>.from(json["plats"] as Map)
+          : null,
       date: json["date"],
     );
   }

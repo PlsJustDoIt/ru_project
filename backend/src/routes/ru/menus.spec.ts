@@ -21,7 +21,8 @@ ${restos}
 const dateOffset = (days: number) => new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
 
 // Le controller comble les jours ouverts manquants : on retrouve une date précise
-const menuOf = (menus: Array<{ date: string } & Record<string, unknown>>, date: string) =>
+type DayMenu = { date: string; fermeture?: string; plats?: Record<string, string[]> };
+const menuOf = (menus: DayMenu[], date: string): DayMenu | undefined =>
     menus.find(m => m.date === date);
 
 const restoWithMenus = (id: string, plat: string, date1: string, date2: string) => {
@@ -71,7 +72,7 @@ describe('GET /api/ru/menus par restaurant', () => {
         const res = await request(app).get('/api/ru/menus?restaurantId=r501');
         expect(res.statusCode).toBe(200);
         const jour1 = menuOf(res.body.menus, d1);
-        expect(jour1?.['Entrées']).toEqual(['Salade de tomates']);
+        expect(jour1?.plats?.['Entrées']).toEqual(['Salade de tomates']);
         // 2e jour : un seul <h4> -> interprété comme une fermeture
         const jour2 = menuOf(res.body.menus, d2);
         expect(jour2?.fermeture).toBe('fermeture exceptionnelle');
@@ -88,12 +89,12 @@ describe('GET /api/ru/menus par restaurant', () => {
         });
         const resA = await request(app).get('/api/ru/menus?restaurantId=r601');
         expect(resA.statusCode).toBe(200);
-        expect(menuOf(resA.body.menus, d1)?.['Entrées']).toEqual(['Pizza royale']);
+        expect(menuOf(resA.body.menus, d1)?.plats?.['Entrées']).toEqual(['Pizza royale']);
 
         const callsAfterFirst = mockedAxios.get.mock.calls.length;
         const resB = await request(app).get('/api/ru/menus?restaurantId=r602');
         expect(resB.statusCode).toBe(200);
-        expect(menuOf(resB.body.menus, d1)?.['Entrées']).toEqual(['Quiche lorraine']);
+        expect(menuOf(resB.body.menus, d1)?.plats?.['Entrées']).toEqual(['Quiche lorraine']);
         // Le flux complet est partagé : pas de 2e appel pour l'autre resto
         expect(mockedAxios.get.mock.calls.length).toBe(callsAfterFirst);
     });
@@ -152,5 +153,72 @@ describe('GET /api/ru/menus par restaurant', () => {
 
     it('l\'id par défaut reste RU Lumière (' + ru_lumiere_id + ')', async () => {
         expect(ru_lumiere_id).toBe('r135');
+    });
+
+    describe('formats réels du flux CROUS', () => {
+        const fetchFormat = async (restoXmlBody: string, restoId: string) => {
+            mockedAxios.get.mockResolvedValue({ status: 200, data: menuXml(restoXmlBody) });
+            const res = await request(app).get(`/api/ru/menus?restaurantId=${restoId}`);
+            expect(res.statusCode).toBe(200);
+            return res.body.menus;
+        };
+
+        it('menu à UNE catégorie avec liste : ce n\'est PAS une fermeture (cafétéria "Chauds du jour")', async () => {
+            const d = dateOffset(11);
+            const menus = await fetchFormat(
+                `<resto id="r101"><menu date="${d}"><![CDATA[<h2>midi</h2><h4>Chauds du jour</h4><ul class="liste-plats"><li>Quiche lorraine</li><li>Petits pois</li></ul>]]></menu></resto>`,
+                'r101',
+            );
+            const jour = menuOf(menus, d);
+            expect(jour?.fermeture).toBeUndefined();
+            expect(jour?.plats?.['Chauds du jour']).toEqual(['Quiche lorraine', 'Petits pois']);
+        });
+
+        it('catégories libres quel que soit le resto (étages, salles, cafétéria...)', async () => {
+            const d = dateOffset(12);
+            const cdata = `<![CDATA[<h2>midi</h2><h4>1er étage</h4><ul class="liste-plats"><li>Blanquette de veau</li></ul><h4>ARSENAL</h4><ul class="liste-plats"><li>Pizzas</li></ul><h4>CAF Sandwichs</h4><ul class="liste-plats"><li>Sandwich jambon-beurre</li></ul><h4>fromage et desserts</h4><ul class="liste-plats"><li>Yaourt</li></ul>]]>`;
+            const menus = await fetchFormat(
+                `<resto id="r102"><menu date="${d}">${cdata}</menu></resto>`,
+                'r102',
+            );
+            const plats = menuOf(menus, d)?.plats;
+            expect(plats?.['1er étage']).toEqual(['Blanquette de veau']);
+            expect(plats?.['ARSENAL']).toEqual(['Pizzas']);
+            expect(plats?.['CAF Sandwichs']).toEqual(['Sandwich jambon-beurre']);
+            expect(plats?.['fromage et desserts']).toEqual(['Yaourt']);
+        });
+
+        it('services midi ET soir : catégories préfixées par service', async () => {
+            const d = dateOffset(13);
+            const menus = await fetchFormat(
+                `<resto id="r103"><menu date="${d}"><![CDATA[<h2>midi</h2><h4>Entrées</h4><ul><li>Salade</li></ul><h2>soir</h2><h4>Plats du soir</h4><ul><li>Omelette</li></ul>]]></menu></resto>`,
+                'r103',
+            );
+            const plats = menuOf(menus, d)?.plats;
+            expect(plats?.['Midi — Entrées']).toEqual(['Salade']);
+            expect(plats?.['Soir — Plats du soir']).toEqual(['Omelette']);
+        });
+
+        it('message de fermeture "Structure fermée du ..." -> fermeture', async () => {
+            const d = dateOffset(14);
+            const menus = await fetchFormat(
+                `<resto id="r104"><menu date="${d}"><![CDATA[<h2>midi</h2><h4>Structure fermée du Dimanche 26 Juillet 2026 au Lundi 31 Août 2026</h4>]]></menu></resto>`,
+                'r104',
+            );
+            const jour = menuOf(menus, d);
+            expect(jour?.fermeture).toContain('Structure fermée');
+            expect(jour?.plats).toBeUndefined();
+        });
+
+        it('entités HTML et entités numériques décodées dans titres et plats', async () => {
+            const d = dateOffset(15);
+            const menus = await fetchFormat(
+                `<resto id="r105"><menu date="${d}"><![CDATA[<h2>midi</h2><h4>Plats du jour &amp; garnitures</h4><ul><li>Filet mignon &#224; la moutarde</li></ul>]]></menu></resto>`,
+                'r105',
+            );
+            const plats = menuOf(menus, d)?.plats;
+            expect(Object.keys(plats ?? [])).toEqual(['Plats du jour & garnitures']);
+            expect(plats?.['Plats du jour & garnitures']).toEqual(['Filet mignon à la moutarde']);
+        });
     });
 });

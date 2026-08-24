@@ -4,13 +4,11 @@ import { MenuResponse } from '../../interfaces/menu.js';
 // Construit un jour OUVERT minimal pour une date donnée.
 function openDay(date: string): MenuResponse {
     return {
-        'Entrées': ['Salade'],
-        'Cuisine traditionnelle': ['Steak'],
-        'Menu végétalien': 'menu non communiqué',
-        'Pizza': 'menu non communiqué',
-        'Cuisine italienne': 'menu non communiqué',
-        'Grill': 'menu non communiqué',
         date,
+        plats: {
+            'Entrées': ['Salade'],
+            'Cuisine traditionnelle': ['Steak'],
+        },
     };
 }
 
