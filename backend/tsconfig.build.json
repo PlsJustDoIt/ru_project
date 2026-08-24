@@ -1,0 +1,8 @@
+{
+  // Config de build production : hérite de tsconfig.json mais exclut les tests.
+  // Les *.spec.ts et src/tests/ importent des devDependencies (mongodb-memory-server,
+  // supertest, jest...) absentes en prod (npm ci --omit=dev), donc ils ne doivent
+  // jamais être compilés dans dist/.
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "src/tests"]
+}
