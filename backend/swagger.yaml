@@ -102,6 +102,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/errorResponse"
+        "401":
+          description: "Identifiants incorrects (`{ error: { message: 'Invalid credentials', field: 'password' } }`)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
 
         "500":
           description: Erreur interne du serveur
@@ -1436,8 +1442,13 @@ paths:
   /socket/messages:
     get:
       tags: [socket]
-      summary: Récupérer les messages
-      description: "Récupérer les messages envoyés à l'utilisateur connecté via le token d'authentification"
+      summary: Historique d'une room
+      description: >-
+        Renvoie les 50 messages les plus récents de la room, en ordre
+        chronologique. `before` (date ISO) permet de remonter l'historique.
+        Global est lisible par tous ; une room privée (`idA_idB`) seulement
+        par ses deux participants. Une room privée inexistante est créée à la
+        volée si les deux utilisateurs sont amis.
       security:
         - bearerAuth: []
       parameters:
@@ -1448,25 +1459,66 @@ paths:
             type: string
           description: Nom de la room
           example: "Global"
+        - in: query
+          name: before
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Ne renvoyer que les messages antérieurs à cette date
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    senderId:
-                      type: string
-                    message:
-                      type: string
-                    timestamp:
-                      type: string
-                      format: date-time
+                type: object
+                properties:
+                  hasMore:
+                    type: boolean
+                    description: Des messages plus anciens existent
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        content:
+                          type: string
+                        username:
+                          type: string
+                        userId:
+                          type: string
+                        avatarUrl:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        audioUrl:
+                          type: string
+                        duration:
+                          type: number
+        "400":
+          description: roomName manquant ou before invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
         "401":
           description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "403":
+          description: L'utilisateur n'a pas accès à cette room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errorResponse"
+        "404":
+          description: Room introuvable
           content:
             application/json:
               schema:

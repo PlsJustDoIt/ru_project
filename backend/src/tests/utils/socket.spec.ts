@@ -91,18 +91,44 @@ describe('socket service', () => {
     });
 
     it('should check if user is online', () => {
-        socketHandler.connectedUsers.set(user1._id.toString(), socket.id!);
+        socketHandler.connectedUsers.set(user1._id.toString(), new Set([socket.id!]));
         const isOnline = socketHandler.isUserOnline(user1._id.toString());
         expect(isOnline).toBe(true);
     });
 
     it('should emit to a specific user', (done) => {
-        socketHandler.connectedUsers.set(user2._id.toString(), socket.id!);
+        // La socket de test est authentifiée en tant que user1 : elle a rejoint
+        // sa room personnelle à la connexion.
         socket.on('testEvent', (data) => {
             expect(data).toBe('testData');
             done();
         });
-        socketHandler.emitToUser('testEvent', user2._id.toString(), 'testData');
+        socketHandler.emitToUser('testEvent', user1._id.toString(), 'testData');
+    });
+
+    it('should not emit to another user', (done) => {
+        const received = jest.fn();
+        socket.on('otherEvent', received);
+        socketHandler.emitToUser('otherEvent', user2._id.toString(), 'testData');
+        setTimeout(() => {
+            expect(received).not.toHaveBeenCalled();
+            done();
+        }, 100);
+    });
+
+    it('should track several sockets for the same user', (done) => {
+        const socket2 = io(`http://localhost:${port}`, { auth: { token } });
+        socket2.on('connect', () => {
+            expect(socketHandler.connectedUsers.get(user1._id.toString())?.size).toBe(2);
+            socket2.on('disconnect', () => {
+                // Laisse au serveur le temps de traiter la déconnexion.
+                setTimeout(() => {
+                    expect(socketHandler.isUserOnline(user1._id.toString())).toBe(true);
+                    done();
+                }, 100);
+            });
+            socket2.disconnect();
+        });
     });
 
     it('should broadcast to everyone', (done) => {
@@ -122,7 +148,7 @@ describe('socket service', () => {
     });
 
     it('should get socket from user id', () => {
-        socketHandler.connectedUsers.set(user1._id.toString(), socket.id!);
+        socketHandler.connectedUsers.set(user1._id.toString(), new Set([socket.id!]));
         const retrievedSocket = socketHandler.getSocketFromUserId(user1._id.toString());
         expect(retrievedSocket).toBeDefined();
     });
@@ -133,7 +159,7 @@ describe('socket service', () => {
     });
 
     it('should remove user from connected users', () => {
-        socketHandler.connectedUsers.set(user1._id.toString(), socket.id!);
+        socketHandler.connectedUsers.set(user1._id.toString(), new Set([socket.id!]));
         expect(socketHandler.isUserOnline(user1._id.toString())).toBe(true);
         socketHandler.removeUserFromConnectedUsers(user1._id.toString());
         const isOnline = socketHandler.isUserOnline(user1._id.toString());

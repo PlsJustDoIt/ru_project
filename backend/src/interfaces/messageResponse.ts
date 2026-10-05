@@ -1,10 +1,5 @@
-interface MessageResponse {
-    content: string;
-    createdAt: Date;
-    username: string;
-    id: string;
-    audioUrl?: string;
-    duration?: number;
-}
+import { messageChat } from './messageChat.js';
+
+type MessageResponse = messageChat;
 
 export default MessageResponse;
