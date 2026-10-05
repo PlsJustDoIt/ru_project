@@ -8,7 +8,7 @@ interface IBugReport extends Document {
     platform?: string;
     status: 'open' | 'resolved' | 'closed';
     severity?: 'low' | 'medium' | 'high' | 'critical';
-    user: Schema.Types.ObjectId;
+    user?: Schema.Types.ObjectId;
 }
 
 const BugReportSchema = new Schema({
@@ -32,7 +32,8 @@ const BugReportSchema = new Schema({
     user: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        // Absent pour un signalement envoyé en mode invité.
+        required: false,
     },
 
 }, { timestamps: true });

@@ -1,8 +1,19 @@
 import { Router } from 'express';
 import auth from '../../middleware/auth.js';
+import optionalAuth from '../../middleware/optionalAuth.js';
+import rateLimit from 'express-rate-limit';
 import { acceptFriendRequest, declineFriendRequest, getFriendRequests, getUserFriends, getUserInformation, removeFriend, searchUsers, sendBugReport, sendFriendRequest, updatePassword, updateProfilePicture, updateRestaurant, updateStatus, updateUsername } from './user.controller.js';
 import { convertAndCompress, uploadAvatar, uploadBugReport } from '../../utils/multer.js';
 const router = Router();
+
+// Les signalements de bug sont ouverts aux invités (sans compte) : limite
+// dédiée pour éviter le spam anonyme.
+const bugReportLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+});
 
 router.get('/me', auth, getUserInformation);
 
@@ -32,6 +43,6 @@ router.get('/friend-requests', auth, getFriendRequests);
 router.post('/send-friend-request', auth, sendFriendRequest);
 router.post('/accept-friend-request', auth, acceptFriendRequest);
 router.post('/decline-friend-request', auth, declineFriendRequest);
-router.post('/send-bug-report', auth, uploadBugReport.single('screenshot'), convertAndCompress, sendBugReport);
+router.post('/send-bug-report', bugReportLimiter, optionalAuth, uploadBugReport.single('screenshot'), convertAndCompress, sendBugReport);
 
 export default router;

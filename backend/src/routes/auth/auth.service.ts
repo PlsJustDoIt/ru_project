@@ -69,12 +69,21 @@ const validateLoginFields = (username: string, password: string): { valid: boole
 /**
  * Authentifie un utilisateur
  */
+/** Identifiants refusés (utilisateur inconnu OU mauvais mot de passe). */
+class InvalidCredentialsError extends Error {
+    constructor() {
+        super('Invalid credentials');
+        this.name = 'InvalidCredentialsError';
+    }
+}
+
 const authenticate = async (username: string, password: string) => {
     const user = await User.findOne({ username });
-    if (!user) throw new Error('User not found');
+    // Même erreur dans les deux cas : on ne révèle pas si le pseudo existe.
+    if (!user) throw new InvalidCredentialsError();
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new Error('Invalid credentials');
+    if (!isMatch) throw new InvalidCredentialsError();
 
     logger.info(`User ${username} authenticated successfully`);
 
@@ -116,4 +125,4 @@ const generateTokens = async (userId: Types.ObjectId) => {
     return { accessToken, refreshToken };
 };
 
-export { validateCredentials, validateLoginFields, authenticate, generateTokens, generateAccessToken, generateAndSaveRefreshToken };
+export { InvalidCredentialsError, validateCredentials, validateLoginFields, authenticate, generateTokens, generateAccessToken, generateAndSaveRefreshToken };

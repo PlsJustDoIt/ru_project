@@ -10,6 +10,19 @@ import routes from './routes/routes.js';
 
 const app = express();
 
+// Derrière nginx, req.ip vaut l'IP du proxy : sans `trust proxy`, TOUS les
+// utilisateurs partagent le même compteur de rate limiting (50 req/min et 10
+// tentatives de login / 15 min pour toute l'appli). On fait confiance au
+// premier saut (nginx) en production ; surcharge possible via TRUST_PROXY.
+const parseTrustProxy = (value: string | undefined): boolean | number | string => {
+    if (value === undefined || value === '') return isProduction ? 1 : false;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    const asNumber = Number(value);
+    return Number.isInteger(asNumber) ? asNumber : value;
+};
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
+
 // CORS : en production, restreindre aux origines explicitement autorisées
 // (CORS_ORIGINS, séparées par des virgules). L'app mobile n'envoie pas d'en-tête
 // Origin et n'est donc pas impactée ; CORS ne concerne ici que le navigateur.
@@ -62,4 +75,4 @@ const setupRoutes = (app: Express) => {
 };
 
 export default app;
-export { setupRoutes };
+export { setupRoutes, parseTrustProxy };
