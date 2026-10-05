@@ -10,6 +10,7 @@ import 'package:ru_project/services/logger.dart';
 import 'package:ru_project/models/sector.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/widgets/sectors_sessions_widget.dart';
+import 'package:ru_project/widgets/settings_widget.dart';
 
 class FloorPlan extends StatefulWidget {
   final double width;
@@ -45,7 +46,9 @@ class _FloorPlanState extends State<FloorPlan> {
     restaurantProvider =
         Provider.of<RestaurantProvider>(context, listen: false);
 
-    restaurant = restaurantProvider.restaurant!; // ca bouge pas
+    // Figé pour la durée de vie du widget : SimpleMapWidget recrée FloorPlan
+    // (clé = id du RU) quand le restaurant sélectionné change.
+    restaurant = restaurantProvider.restaurant!;
     logger.d('Restaurant: $restaurant');
 
     // Les secteurs sont déjà chargés : on dessine la carte immédiatement.
@@ -199,23 +202,36 @@ class SimpleMapWidget extends StatelessWidget {
     // Pas de RU rattaché : on dégrade proprement au lieu de planter (la Carte
     // lisait restaurant! → écran blanc si restaurantId vide/non chargé).
     if (restaurant == null) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.storefront_outlined, size: 64),
-              SizedBox(height: 16),
-              Text(
+              const Icon(Icons.storefront_outlined, size: 64),
+              const SizedBox(height: 16),
+              const Text(
                 'Aucun restaurant sélectionné',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Choisis ton RU dans « Plus › Paramètres ».',
+                isGuest
+                    ? 'Choisis ton RU via l\'icône de compte, en haut à droite.'
+                    : 'Choisis ton RU dans « Plus › Réglages ».',
                 textAlign: TextAlign.center,
               ),
+              if (!isGuest) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsWidget()),
+                  ),
+                  icon: const Icon(Icons.restaurant_outlined),
+                  label: const Text('Choisir mon RU'),
+                ),
+              ],
             ],
           ),
         ),
@@ -232,6 +248,9 @@ class SimpleMapWidget extends StatelessWidget {
             child: AspectRatio(
               aspectRatio: 1, // Maintain a square aspect ratio
               child: FloorPlan(
+                // Nouvelle instance quand le RU change (réglages, invité) :
+                // FloorPlan mémorise le restaurant à l'initialisation.
+                key: ValueKey(restaurant.restaurantId),
                 width: screenSize.width * 0.8, // 80% of screen width
                 height: screenSize.height * 0.8, // 80% of screen height
               ),
@@ -449,7 +468,17 @@ class _SectorInfoWidgetState extends State<SectorInfoWidget> {
 
             // Friends in Area Section
             if (widget.userProvider.isGuest)
-              const SizedBox.shrink()
+              Row(
+                children: [
+                  Icon(Icons.lock_outline,
+                      size: 18, color: Theme.of(context).hintColor),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                        'Crée un compte pour voir où sont tes amis et t\'asseoir ici.'),
+                  ),
+                ],
+              )
             else if (isLoading)
               const Center(child: CircularProgressIndicator())
             else if (widget.sessionsForSector != null &&
