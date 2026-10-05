@@ -466,7 +466,8 @@ const sendBugReport = async (req: Request, res: Response) => {
             screenshot_url: screenshot_url,
             app_version,
             platform,
-            user: req.user.id,
+            // Invité : signalement anonyme.
+            user: req.user?.id,
             status: 'open', // Par défaut, le bug est ouvert
         });
 

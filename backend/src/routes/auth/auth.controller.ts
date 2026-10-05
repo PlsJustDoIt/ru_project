@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
-import { validateCredentials, validateLoginFields, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
+import { InvalidCredentialsError, validateCredentials, validateLoginFields, generateTokens, authenticate, generateAccessToken } from './auth.service.js';
 import { findRestaurantByAnyId } from '../ru/ru.service.js';
 import jwt from 'jsonwebtoken';
 import RefreshToken from '../../models/refreshToken.js';
@@ -77,6 +77,11 @@ const loginUser = async (req: Request, res: Response) => {
 
         return res.json(tokens);
     } catch (err) {
+        if (err instanceof InvalidCredentialsError) {
+            // 401 + champ fautif : l'appli affiche « identifiants incorrects »
+            // au lieu d'une erreur serveur générique.
+            return res.status(401).json({ error: { message: 'Invalid credentials', field: 'password' } });
+        }
         logger.error(err);
         return res.status(500).json({ error: 'An error has occurred' });
     }

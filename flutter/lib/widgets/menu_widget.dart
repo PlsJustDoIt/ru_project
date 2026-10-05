@@ -8,6 +8,7 @@ import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/socket_service.dart';
 import 'package:ru_project/services/user_service.dart';
+import 'package:ru_project/widgets/welcome/register.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -92,15 +93,26 @@ class _MenuWidgetState extends State<MenuWidget>
   Future<void> _loadMenus() async {
     // Le provider porte l'id officiel CROUS du RU sélectionné
     final crousId = restaurantProvider.restaurant?.restaurantId;
+    final restaurantChanged = crousId != _loadedForRestaurantId;
     _loadedForRestaurantId = crousId;
+    if (restaurantChanged && !_loading && mounted) {
+      // Changement de RU : on n'affiche pas les menus de l'ancien pendant
+      // le chargement, et on revient au premier jour.
+      setState(() => _loading = true);
+    }
     final menus =
         await restaurantService.getMenus(restaurantId: crousId);
-    if (!mounted) return;
+    // Un autre changement de RU a eu lieu entre-temps : réponse obsolète.
+    if (!mounted || crousId != _loadedForRestaurantId) return;
     setState(() {
       _menus = menus ?? [];
       _restoSansMenu = menus == null;
       _loading = false;
+      if (restaurantChanged) _currentPage = 0;
     });
+    if (restaurantChanged && _pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
   }
 
   void _selectDay(int index) {
@@ -136,7 +148,9 @@ class _MenuWidgetState extends State<MenuWidget>
             itemBuilder: (context, index) => _dayView(_menus[index]),
           ),
         ),
-        _eatHereBar(),
+        context.watch<UserProvider>().isGuest
+            ? _guestSignupBar()
+            : _eatHereBar(),
       ],
     );
   }
@@ -183,6 +197,33 @@ class _MenuWidgetState extends State<MenuWidget>
                 : const Icon(Icons.restaurant),
             label: const Text('On y mange ?'),
             onPressed: _joining ? null : _onEatHere,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Invité : à la place de « On y mange ? » (qui nécessite un compte), on
+  /// propose de créer un compte en gardant le RU déjà choisi.
+  Widget _guestSignupBar() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            label: const Text('Crée un compte pour prévenir tes amis'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RegisterWidget(
+                  initialRestaurantId:
+                      restaurantProvider.restaurant?.restaurantId,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -241,6 +282,17 @@ class _MenuWidgetState extends State<MenuWidget>
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            // Une coupure réseau donne aussi une liste vide : on laisse
+            // l'utilisateur réessayer sans redémarrer l'appli.
+            TextButton.icon(
+              onPressed: () {
+                setState(() => _loading = true);
+                _loadMenus();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Actualiser'),
             ),
           ],
         ),

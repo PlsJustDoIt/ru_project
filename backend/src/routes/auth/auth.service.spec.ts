@@ -98,7 +98,8 @@ describe('auth service tests', () => {
     test('should throw an error if user not found', async () => {
         (User.findOne as jest.Mock).mockResolvedValue(null); // Simule aucun utilisateur trouvé
         (bcrypt.compare as jest.Mock).mockResolvedValue(false); // Simule un mot de passe incorrect
-        await expect(authenticate('nonexistentuser', 'password123')).rejects.toThrow('User not found');
+        // Même erreur qu'un mauvais mot de passe : on ne révèle pas si le pseudo existe.
+        await expect(authenticate('nonexistentuser', 'password123')).rejects.toThrow('Invalid credentials');
     });
 
     test('should throw an error if password is incorrect', async () => {

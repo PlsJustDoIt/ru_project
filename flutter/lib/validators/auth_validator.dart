@@ -1,5 +1,8 @@
 
-String? validateUsername(String? value) {
+String? validateUsername(String? value, {String? apiError}) {
+  if (apiError != null && apiError.isNotEmpty) {
+    return apiError;
+  }
   if (value == null || value.isEmpty) {
     return 'Veuillez entrer un nom d\'utilisateur (3-32 caractères)';
   }
@@ -20,10 +23,10 @@ String? validatePassword(String? value, {String? apiError}) {
     return apiError;
   }
   if (value == null || value.isEmpty) {
-    return 'Veillez entrer un mot de passe (3-32 caractères)';
+    return 'Veuillez entrer un mot de passe (3-32 caractères)';
   }
   if (value.trim().isEmpty) {
-    return 'Veillez entrer un mot de passe valide';
+    return 'Veuillez entrer un mot de passe valide';
   }
   if (value.length < 3) {
     return 'Le mot de passe doit comporter au moins 3 caractères';

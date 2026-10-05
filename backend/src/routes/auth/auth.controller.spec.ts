@@ -170,6 +170,18 @@ describe('auth controller tests', () => {
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid credentials' });
         });
 
+        it('should return 401 with the faulty field if credentials are wrong', async () => {
+            const { req, res, statusMock, jsonMock } = testContext;
+            req.body.username = 'testuser';
+            req.body.password = 'wrongpassword';
+            jest.spyOn(authService, 'validateLoginFields').mockReturnValue({ valid: true });
+            (authService.authenticate as jest.Mock).mockRejectedValue(new authService.InvalidCredentialsError());
+
+            await loginUser(req as Request, res as Response);
+            expect(statusMock).toHaveBeenCalledWith(401);
+            expect(jsonMock).toHaveBeenCalledWith({ error: { message: 'Invalid credentials', field: 'password' } });
+        });
+
         it('should return 500 if an error occurs', async () => {
             const { req, res, statusMock, jsonMock } = testContext;
             req.body.username = 'testuser';

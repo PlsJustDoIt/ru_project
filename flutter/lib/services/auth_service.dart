@@ -17,75 +17,79 @@ class AuthService {
         _secureStorage = secureStorage,
         _userService = userService;
 
-  Future<Map<String, dynamic>> login(String username, String password) async {
-    try {
-      final Response response = await _dio.post('/auth/login', data: {
-        'username': username,
-        'password': password,
-      });
-      if (response.statusCode == 200) {
-        final String accessToken = response.data['accessToken'];
-        final String refreshToken = response.data['refreshToken'];
+  /// Traduit les erreurs connues du backend pour l'utilisateur.
+  static const Map<String, String> _frenchErrors = {
+    'Invalid credentials': 'Identifiant ou mot de passe incorrect',
+    'User already exists': 'Ce nom d\'utilisateur est déjà pris',
+    'Restaurant not found': 'Restaurant introuvable',
+    'Username or password field is missing': 'Remplis les deux champs',
+    'Too many attempts, please try again later.':
+        'Trop de tentatives, réessaie dans quelques minutes',
+  };
 
-        await _secureStorage.storeAccessToken(accessToken);
-        await _secureStorage.storeRefreshToken(refreshToken);
-        final User? user = await _userService.getUser();
-        if (user != null) {
-          return {'user': user, 'success': true};
-        }
-        return {
-          'error': 'Failed to get user',
-          'success': false,
-          'errorField': 'username'
-        };
+  /// Erreur de formulaire ({error, errorField}) à partir d'une réponse
+  /// d'erreur du backend : `{error: "msg"}` ou `{error: {message, field}}`.
+  /// Renvoie null si la réponse n'est pas exploitable (réseau, 5xx...).
+  static Map<String, dynamic>? formErrorFrom(Response? response) {
+    final data = response?.data;
+    final status = response?.statusCode ?? 0;
+    if (data is! Map || status < 400 || status >= 500) return null;
+    final error = data['error'];
+    String? message;
+    String? field;
+    if (error is Map) {
+      message = error['message']?.toString();
+      field = error['field']?.toString();
+    } else if (error != null) {
+      message = error.toString();
+    }
+    if (message == null) return null;
+    if (message.startsWith('Invalid length for username')) {
+      field = 'username';
+    } else if (message.startsWith('Invalid length for password')) {
+      field = 'password';
+    }
+    return {
+      'error': _frenchErrors[message] ?? message,
+      'success': false,
+      'errorField': field ?? 'username',
+    };
+  }
+
+  Future<Map<String, dynamic>> _authenticate(
+      String path, Map<String, dynamic> body) async {
+    try {
+      final Response response = await _dio.post(path, data: body);
+      final String accessToken = response.data['accessToken'];
+      final String refreshToken = response.data['refreshToken'];
+      await _secureStorage.storeTokens(accessToken, refreshToken);
+      final User? user = await _userService.getUser();
+      if (user != null) {
+        return {'user': user, 'success': true};
       }
-      if (response.data['error']['field'] != null) {
-        return {
-          'error': response.data['error']['message'],
-          'success': false,
-          'errorField': response.data['error']['field']
-        };
-      }
-      throw Exception('Failed to login: ${response.data['error']['message']}');
-    } catch (e) {
-      logger.e('Failed to login: $e');
-      throw Exception('Failed to login: $e');
+      throw Exception('Failed to get user');
+    } on DioException catch (e) {
+      final formError = formErrorFrom(e.response);
+      if (formError != null) return formError;
+      logger.e('Auth request $path failed: $e');
+      throw Exception('Auth request failed: $e');
     }
   }
 
-  Future<Map<String, dynamic>> register(
-      String username, String password, {String? restaurantId}) async {
-    try {
-      final Response response = await _dio.post('/auth/register', data: {
-        'username': username,
-        'password': password,
-        if (restaurantId != null) 'restaurantId': restaurantId,
-      });
+  Future<Map<String, dynamic>> login(String username, String password) {
+    return _authenticate('/auth/login', {
+      'username': username,
+      'password': password,
+    });
+  }
 
-      if (response.statusCode == 201 && response.data != null) {
-        final String accessToken = response.data['accessToken'];
-        final String refreshToken = response.data['refreshToken'];
-        await _secureStorage.storeAccessToken(accessToken);
-        await _secureStorage.storeRefreshToken(refreshToken);
-        final User? user = await _userService.getUser();
-        if (user != null) {
-          return {'user': user, 'success': true};
-        }
-        throw Exception('Failed to get user');
-      }
-      if (response.data['error']['field'] == null) {
-        throw Exception(
-            'Failed to register: ${response.data['error']['message']}');
-      }
-      return {
-        'error': response.data['error']['message'],
-        'success': false,
-        'errorField': response.data['error']['field']
-      };
-    } catch (e) {
-      logger.e('Failed to register: $e');
-      throw Exception('Failed to register: $e');
-    }
+  Future<Map<String, dynamic>> register(String username, String password,
+      {String? restaurantId}) {
+    return _authenticate('/auth/register', {
+      'username': username,
+      'password': password,
+      if (restaurantId != null) 'restaurantId': restaurantId,
+    });
   }
 
   Future<bool> logout() async {

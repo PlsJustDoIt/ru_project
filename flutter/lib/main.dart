@@ -2,6 +2,7 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
+import 'package:ru_project/navigation/app_navigation.dart';
 import 'package:ru_project/providers/notification_provider.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
@@ -13,6 +14,7 @@ import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/services/ginko_service.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/secure_storage.dart';
+import 'package:ru_project/services/session_manager.dart';
 import 'package:ru_project/services/socket_service.dart';
 import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/theme/app_theme.dart';
@@ -20,8 +22,6 @@ import 'package:ru_project/widgets/main_scaffold.dart';
 import 'package:ru_project/widgets/navigation/main_destinations.dart';
 import 'package:ru_project/widgets/welcome/welcome.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,10 +31,7 @@ void main() async {
   final secureStorage = SecureStorage();
   final userProvider = UserProvider(secureStorage: secureStorage);
 
-  final apiClient = ApiClient(
-    userProvider: userProvider,
-    secureStorage: secureStorage,
-  );
+  final apiClient = ApiClient(secureStorage: secureStorage);
 
   final userService = UserService(dio: apiClient.dio);
   final friendService = FriendService(dio: apiClient.dio);
@@ -44,13 +41,47 @@ void main() async {
       userService: userService);
   final restaurantService = RestaurantService(dio: apiClient.dio);
   final socketService = SocketService(dio: apiClient.dio);
-  final chatConnection =
-      ChatConnection(tokenProvider: secureStorage.getAccessToken);
-  final notificationProvider = NotificationProvider(chatConnection);
+  final chatConnection = ChatConnection(
+    tokenProvider: secureStorage.getAccessToken,
+    // Token expiré à la (re)connexion de la socket : on le rafraîchit.
+    tokenRefresher: apiClient.refreshToken,
+  );
+  final notificationProvider = NotificationProvider(
+    chatConnection,
+    currentUserId: () => userProvider.user?.id,
+    currentUsername: () => userProvider.user?.username,
+  );
   final ginkoService = GinkoService(dio: apiClient.dio);
   final feedbackService = FeedbackService(dio: apiClient.dio);
 
   final restaurantProvider = RestaurantProvider(restaurantService);
+
+  final sessionManager = SessionManager(
+    authService: authService,
+    secureStorage: secureStorage,
+    userProvider: userProvider,
+    chatConnection: chatConnection,
+    notificationProvider: notificationProvider,
+    friendService: friendService,
+    restaurantProvider: restaurantProvider,
+  );
+
+  // Refresh token refusé par le serveur : on ferme la session proprement
+  // (tokens, socket, non-lus) et on revient à l'accueil.
+  apiClient.onSessionExpired = () async {
+    final wasConnected = userProvider.isConnected;
+    await sessionManager.clearLocalSession();
+    // Au démarrage (restauration de session), l'accueil s'affiche de lui-même.
+    if (!wasConnected) return;
+    goToWelcome();
+    final messengerContext = navigatorKey.currentContext;
+    if (messengerContext != null && messengerContext.mounted) {
+      ScaffoldMessenger.of(messengerContext).showSnackBar(
+        const SnackBar(
+            content: Text('Ta session a expiré, reconnecte-toi.')),
+      );
+    }
+  };
 
   // Initialisation de l'état utilisateur
   await userProvider.init(userService, friendService, restaurantProvider);
@@ -75,6 +106,7 @@ void main() async {
         Provider<FeedbackService>.value(value: feedbackService),
         Provider<SecureStorage>.value(value: secureStorage),
         Provider<ApiClient>.value(value: apiClient),
+        Provider<SessionManager>.value(value: sessionManager),
         ChangeNotifierProvider<RestaurantProvider>.value(
             value: restaurantProvider),
       ],

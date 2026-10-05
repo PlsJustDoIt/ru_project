@@ -4,61 +4,40 @@ import 'package:http/http.dart' as http;
 import 'package:ru_project/models/message.dart';
 import 'package:ru_project/services/logger.dart';
 
+/// Une page d'historique de conversation.
+class MessagePage {
+  const MessagePage({required this.messages, required this.hasMore});
+
+  final List<Message> messages;
+
+  /// Des messages plus anciens existent côté serveur.
+  final bool hasMore;
+}
+
 class SocketService {
   final Dio _dio;
 
   SocketService({required Dio dio}) : _dio = dio;
 
-  Future<List<Message>?> getMessagesChatRoom() async {
-    try {
-      final Response response = await _dio.get('/socket/chat-room');
-      if (response.statusCode == 200 && response.data != null) {
-        List<Message> messages = [
-          for (Map<String, dynamic> message in response.data['messages'])
-            Message.fromJson(message)
-        ];
-        return messages;
-      }
-      logger.e(
-          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return null;
-    } catch (e) {
-      logger.e('Failed to get messages: $e');
-      return null;
-    }
-  }
-
-  Future<Message?> sendMessageChatRoom(String content) async {
-    try {
-      final Response response =
-          await _dio.post('/socket/send-chat-room', data: {
-        'content': content,
-      });
-      if (response.statusCode == 201) {
-        Message message = Message.fromJson(response.data['message']);
-        return message;
-      }
-      logger.e(
-          'Invalid response from server: ${response.statusCode} ${response.data['error']}');
-      return null;
-    } catch (e) {
-      logger.e('Failed to send message: $e');
-      return null;
-    }
-  }
-
-  Future<List<Message>?> getMessagesFromRoom(String roomName) async {
+  /// Historique d'une room : les messages les plus récents (ou ceux
+  /// antérieurs à [before]), en ordre chronologique. Null en cas d'erreur.
+  Future<MessagePage?> getMessagesFromRoom(String roomName,
+      {DateTime? before}) async {
     try {
       final Response response =
           await _dio.get('/socket/messages', queryParameters: {
         'roomName': roomName,
+        if (before != null) 'before': before.toUtc().toIso8601String(),
       });
       if (response.statusCode == 200 && response.data != null) {
-        List<Message> messages = [
-          for (Map<String, dynamic> message in response.data['messages'])
-            Message.fromJson(message)
+        final messages = [
+          for (final message in response.data['messages'])
+            Message.fromJson(Map<String, dynamic>.from(message))
         ];
-        return messages;
+        return MessagePage(
+          messages: messages,
+          hasMore: response.data['hasMore'] == true,
+        );
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');
@@ -97,8 +76,8 @@ class SocketService {
         'content': content,
       });
       if (response.statusCode == 201) {
-        Message message = Message.fromJson(response.data['message']);
-        return message;
+        return Message.fromJson(
+            Map<String, dynamic>.from(response.data['message']));
       }
       logger.e(
           'Invalid response from server: ${response.statusCode} ${response.data['error']}');

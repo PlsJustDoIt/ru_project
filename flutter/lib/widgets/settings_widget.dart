@@ -61,6 +61,14 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     try {
       ok = await _userService.updateRestaurant(value);
       if (ok && mounted) {
+        // Garde le profil local à jour : sinon les Réglages rouverts
+        // réaffichaient l'ancien RU.
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final user = userProvider.user;
+        if (user != null) {
+          user.restaurantId = value;
+          userProvider.setUser(user);
+        }
         await Provider.of<RestaurantProvider>(context, listen: false)
             .tryLoadRestaurant(value);
       }

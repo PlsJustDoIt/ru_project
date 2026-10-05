@@ -1,4 +1,5 @@
 import multer from 'multer';
+import { randomBytes } from 'crypto';
 import { dirname, join, extname, basename } from 'path';
 import logger from './logger.js';
 import sharp from 'sharp';
@@ -37,7 +38,9 @@ const storageScreenshotBugReport = multer.diskStorage({
         // Ne jamais utiliser file.originalname tel quel (traversée de chemin).
         // On génère un nom sûr à partir de l'id utilisateur + timestamp.
         // Seul le PNG est accepté (cf. fileFilter) ; convertAndCompress le passera en .jpg.
-        cb(null, `${req.user.id}-${Date.now()}.png`);
+        // Invité (pas de req.user) : préfixe « guest » + suffixe aléatoire.
+        const owner = req.user?.id ?? `guest-${randomBytes(4).toString('hex')}`;
+        cb(null, `${owner}-${Date.now()}.png`);
     },
 });
 

@@ -2,7 +2,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { io, Socket } from 'socket.io-client';
 import { createServer, Server as HTTPServer } from 'http';
 import { Server } from 'socket.io';
-import { IUser, generateUser, createUser } from '../../models/user.js';
+import User, { IUser, generateUser, createUser } from '../../models/user.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { socketHandler } from '../../utils/socket.js';
@@ -53,6 +53,9 @@ describe('socketApplicationService', () => {
 
         user1 = await createUser(generateUser('tata', 'toto'));
         user2 = await createUser(generateUser('toto', 'tata'));
+        // Une conversation privée ne peut être ouverte qu'entre amis.
+        await User.updateOne({ _id: user1._id }, { $push: { friends: user2._id } });
+        await User.updateOne({ _id: user2._id }, { $push: { friends: user1._id } });
 
         token = jwt.sign({ id: user1._id }, process.env.JWT_ACCESS_SECRET as string, { expiresIn: '1h' });
     });
@@ -109,7 +112,7 @@ describe('socketApplicationService', () => {
     });
 
     it('server socket should handle join_room event when the room exists', (done) => {
-        const mockRoom = { name: [user1._id, user2._id].sort().join('_') };
+        const mockRoom = { name: [user1._id, user2._id].sort().join('_'), participants: [user1._id, user2._id] };
         socket.on('room_joined', (data) => {
             expect(data.roomName).toBeDefined();
             expect(data.roomName).toBe(mockRoom.name);
@@ -122,7 +125,7 @@ describe('socketApplicationService', () => {
     });
 
     it('server socket should handle join_room event when the room doesnt exists', (done) => {
-        const mockRoom = { name: [user1._id, user2._id].sort().join('_') };
+        const mockRoom = { name: [user1._id, user2._id].sort().join('_'), participants: [user1._id, user2._id] };
         socket.on('room_joined', (data) => {
             expect(data.roomName).toBeDefined();
             expect(data.roomName).toBe(mockRoom.name);
@@ -135,7 +138,7 @@ describe('socketApplicationService', () => {
     });
 
     it('server socket should handle leave_room event', (done) => {
-        const mockRoom = { name: [user1._id, user2._id].sort().join('_') };
+        const mockRoom = { name: [user1._id, user2._id].sort().join('_'), participants: [user1._id, user2._id] };
         (Room.findOne as jest.Mock).mockResolvedValue(mockRoom);
         socket.emit('join_room', { participants: [user1._id, user2._id] });
 
@@ -166,6 +169,17 @@ describe('socketApplicationService', () => {
         socket.emit('join_room', { participants: [user1._id] });
     });
 
+    it('should refuse to join a private room the user is not part of', (done) => {
+        const outsider = new mongoose.Types.ObjectId();
+        const mockRoom = { name: [outsider, user2._id].sort().join('_'), participants: [outsider, user2._id] };
+        socket.on('error', (error) => {
+            expect(error).toBe('Failed to join room');
+            done();
+        });
+        (Room.findOne as jest.Mock).mockResolvedValue(mockRoom);
+        socket.emit('join_room', { participants: [outsider, user2._id] });
+    });
+
     it('should throw an error if the room is null', (done) => {
         socket.on('error', (error) => {
             expect(error).toBe('Failed to join room');
@@ -189,7 +203,7 @@ describe('socketApplicationService', () => {
             expect.anything(),
             'receive_message',
             mockRoom.name,
-            { message },
+            { roomName: mockRoom.name, message },
         );
     });
 
@@ -215,28 +229,58 @@ describe('socketApplicationService', () => {
 
         expect(messages).toBeDefined();
         expect(messages.length).toBeGreaterThan(0);
+        // Les plus récents d'abord (puis remis en ordre chronologique).
+        expect(findMock.sort).toHaveBeenCalledWith({ createdAt: -1 });
     });
 
     it('should delete a message from a room', async () => {
         const mockRoom = { name: 'testRoom', _id: 'some id' };
-        (Room.create as jest.Mock).mockResolvedValue(mockRoom);
-        const mockMessage = {
-            content: 'test message',
-            user: { username: user1.username },
-            createdAt: new Date(),
-            _id: '123',
-        };
-        (Message.find as jest.Mock).mockResolvedValue([mockMessage]);
+        const messageId = new mongoose.Types.ObjectId().toString();
+        (Message.findById as jest.Mock).mockResolvedValue({ room: mockRoom._id, user: user1._id });
         const deleteMessageSpy = jest.spyOn(socketHandler, 'emitToRoom');
 
-        await socketApplicationService.deleteMessageFromRoom(user1._id.toString(), mockRoom.name, mockMessage._id.toString());
+        const status = await socketApplicationService.deleteMessageFromRoom(
+            user1._id.toString(), mockRoom.name, messageId, { roomId: mockRoom._id });
 
+        expect(status).toBe(200);
+        expect(Message.deleteOne).toHaveBeenCalledWith({ _id: messageId });
         expect(deleteMessageSpy).toHaveBeenCalledWith(
             expect.anything(),
             'receive_delete_message',
             mockRoom.name,
-            { messageId: mockMessage._id.toString() },
+            { roomName: mockRoom.name, messageId },
         );
+    });
+
+    it('should refuse to delete the message of another user', async () => {
+        const messageId = new mongoose.Types.ObjectId().toString();
+        (Message.findById as jest.Mock).mockResolvedValue({ room: 'some id', user: user2._id });
+
+        const status = await socketApplicationService.deleteMessageFromRoom(
+            user1._id.toString(), 'testRoom', messageId, { roomId: 'some id' });
+
+        expect(status).toBe(403);
+        expect(Message.deleteOne).not.toHaveBeenCalled();
+    });
+
+    it('should let staff delete the message of another user', async () => {
+        const messageId = new mongoose.Types.ObjectId().toString();
+        (Message.findById as jest.Mock).mockResolvedValue({ room: 'some id', user: user2._id });
+
+        const status = await socketApplicationService.deleteMessageFromRoom(
+            user1._id.toString(), 'testRoom', messageId, { roomId: 'some id', isStaff: true });
+
+        expect(status).toBe(200);
+    });
+
+    it('should not delete a message belonging to another room', async () => {
+        const messageId = new mongoose.Types.ObjectId().toString();
+        (Message.findById as jest.Mock).mockResolvedValue({ room: 'other room', user: user1._id });
+
+        const status = await socketApplicationService.deleteMessageFromRoom(
+            user1._id.toString(), 'testRoom', messageId, { roomId: 'some id' });
+
+        expect(status).toBe(404);
     });
 
     it('should delete all messages from a room', async () => {
@@ -257,7 +301,7 @@ describe('socketApplicationService', () => {
             expect.anything(),
             'receive_delete_all_messages',
             mockRoom.name,
-            {},
+            { roomName: mockRoom.name },
         );
     });
 });

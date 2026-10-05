@@ -6,9 +6,17 @@ import jwt from 'jsonwebtoken';
 import { instrument } from '@socket.io/admin-ui';
 import { jwtAccessSecret } from '../config.js';
 
+/**
+ * Room Socket.IO personnelle d'un utilisateur : toutes ses sockets (téléphone,
+ * web, plusieurs onglets...) la rejoignent à la connexion. Permet de cibler un
+ * utilisateur sans dépendre d'un unique socket.id.
+ */
+export const userRoom = (userId: string) => `user:${userId}`;
+
 export class SocketHandler {
     private io: SocketIOServer | null = null;
-    connectedUsers = new Map<string, string>();
+    /** userId -> ensemble des socket.id connectés pour cet utilisateur. */
+    connectedUsers = new Map<string, Set<string>>();
 
     initialize(server: HTTPServer, isProduction: boolean): void {
         try {
@@ -24,10 +32,14 @@ export class SocketHandler {
                     credentials: true,
                 },
             });
-            instrument(this.io, {
-                auth: false,
-                mode: isProduction ? 'production' : 'development',
-            });
+            // Admin UI Socket.IO (liste des sockets, rooms, événements) : sans
+            // authentification, donc réservée au développement.
+            if (!isProduction) {
+                instrument(this.io, {
+                    auth: false,
+                    mode: 'development',
+                });
+            }
 
             this.setupEventHandlers();
         } catch (error) {
@@ -55,11 +67,19 @@ export class SocketHandler {
         });
 
         this.io.on('connection', (socket: Socket) => {
-            logger.info('A user connected with socket : %s', socket.id);
-            const userId = socket.data.userId;
-            this.connectedUsers.set(userId, socket.id);
-            logger.info('User %s connected', userId);
-            this.setupSocketEventHandlers(socket);
+            const userId: string = socket.data.userId;
+            logger.info('User %s connected with socket %s', userId, socket.id);
+            this.addConnection(userId, socket.id);
+            void socket.join(userRoom(userId));
+
+            socket.on('disconnect', () => {
+                logger.info(`User ${userId} disconnected (socket ${socket.id})`);
+                const stillOnline = this.removeConnection(userId, socket.id);
+                // Hors ligne seulement quand sa dernière socket se ferme.
+                if (!stillOnline) {
+                    this.io?.emit('userOffline', userId);
+                }
+            });
         });
 
         this.io.on('error', (error: Error) => {
@@ -67,55 +87,53 @@ export class SocketHandler {
         });
     }
 
-    private setupSocketEventHandlers(socket: Socket): void {
-        socket.on('disconnect', () => {
-            const userId = socket.data.userId;
-            logger.info(`User ${userId} disconnected`);
+    private addConnection(userId: string, socketId: string): void {
+        const sockets = this.connectedUsers.get(userId) ?? new Set<string>();
+        sockets.add(socketId);
+        this.connectedUsers.set(userId, sockets);
+    }
+
+    /** Retire une socket ; renvoie true si l'utilisateur a encore d'autres sockets. */
+    private removeConnection(userId: string, socketId: string): boolean {
+        const sockets = this.connectedUsers.get(userId);
+        if (!sockets) return false;
+        sockets.delete(socketId);
+        if (sockets.size === 0) {
             this.connectedUsers.delete(userId);
-            this.io?.emit('userOffline', userId);
-        });
+            return false;
+        }
+        return true;
     }
 
     public isUserOnline(userId: string): boolean {
-        return this.connectedUsers.has(userId);
+        return (this.connectedUsers.get(userId)?.size ?? 0) > 0;
     }
 
+    /** Émet vers toutes les sockets d'un utilisateur. */
     public emitToUser(event: string, userId: string, data: unknown) {
-        const socketId = this.connectedUsers.get(userId);
-        if (socketId) {
-            this.io?.to(socketId).emit(event, data, (response: { status: string }) => {
-                logger.info('callback response :', response);
-                if (response && response.status) {
-                    return response.status;
-                }
-            });
-        }
+        this.io?.to(userRoom(userId)).emit(event, data);
     }
 
     public removeUserFromConnectedUsers(userId: string): void {
-        if (this.connectedUsers.has(userId)) {
-            this.connectedUsers.delete(userId);
-        }
+        this.connectedUsers.delete(userId);
     }
 
+    /**
+     * Émet vers une room de chat, sauf vers l'expéditeur [userId] (il a déjà
+     * le message via la réponse HTTP). Ne dépend pas de la socket de
+     * l'expéditeur : fonctionne même s'il n'est pas connecté en temps réel.
+     */
     public emitToRoom(userId: string, event: string, roomName: string, data: unknown) {
         try {
             if (!roomName) {
                 throw new Error('Room name is required');
             }
-            const socket = socketHandler.getSocketFromUserId(userId);
-            if (!socket) {
-                throw Error('Socket not found for user : ' + userId);
+            if (!this.io) {
+                throw new Error('Socket.IO server not initialized');
             }
-            logger.info('trying to %s to room %s with socket %s: %o', event, roomName, socket.id, data);
-
-            socket.to(roomName).emit(event, data, (response: { status: string }) => {
-                if (response && response.status) {
-                    return response.status;
-                }
-            });
+            this.io.to(roomName).except(userRoom(userId)).emit(event, data);
         } catch (error) {
-            logger.error('Error in emitToRoomWithSocket:', error);
+            logger.error('Error in emitToRoom:', error);
         }
     }
 
@@ -131,10 +149,13 @@ export class SocketHandler {
     }
 
     public getSocketFromUserId(userId: string): Socket | undefined {
-        const socketId = this.connectedUsers.get(userId);
-        if (!socketId || !this.io) return undefined;
-        logger.info('Getting socket for user %s: %s', userId, socketId);
-        return this.io.sockets.sockets.get(socketId);
+        const sockets = this.connectedUsers.get(userId);
+        if (!sockets || !this.io) return undefined;
+        for (const socketId of sockets) {
+            const socket = this.io.sockets.sockets.get(socketId);
+            if (socket) return socket;
+        }
+        return undefined;
     }
 
     getIO(): SocketIOServer {

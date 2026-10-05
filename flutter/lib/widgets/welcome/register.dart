@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
-import 'package:ru_project/models/user.dart';import 'package:ru_project/providers/restaurant_provider.dart';
-import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/models/user.dart';
+import 'package:ru_project/navigation/app_navigation.dart';
+import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/services/auth_service.dart';
-import 'package:ru_project/services/chat_connection.dart';
-import 'package:ru_project/services/secure_storage.dart';
-import 'package:ru_project/widgets/main_scaffold.dart';
+import 'package:ru_project/services/session_manager.dart';
 import 'package:ru_project/widgets/welcome/auth_form.dart';
 import 'package:ru_project/widgets/welcome/restaurant_picker.dart';
 
@@ -14,7 +13,7 @@ import 'package:ru_project/widgets/welcome/restaurant_picker.dart';
 class RegisterWidget extends StatefulWidget {
   const RegisterWidget({super.key, this.initialRestaurantId});
 
-  /// Pré-sélection (ex: depuis le mode invité).
+  /// Pré-sélection (ex: depuis le mode invité) : on saute alors l'étape 1.
   final String? initialRestaurantId;
 
   @override
@@ -28,15 +27,13 @@ class _RegisterWidgetState extends State<RegisterWidget> {
   void initState() {
     super.initState();
     final initialId = widget.initialRestaurantId;
-    if (initialId != null) {
+    if (initialId != null && initialId.isNotEmpty) {
       // Mode invité : on ne connaît que l'id ; si le RU est déjà chargé dans
       // le provider on réutilise son nom, sinon l'id sert de placeholder.
-      final loaded =
-          context.read<RestaurantProvider>().restaurant;
+      final loaded = context.read<RestaurantProvider>().restaurant;
       _restaurant = RestaurantPartial(
         restaurantId: initialId,
-        name:
-            loaded?.restaurantId == initialId ? loaded!.name : initialId,
+        name: loaded?.restaurantId == initialId ? loaded!.name : initialId,
       );
     }
   }
@@ -58,43 +55,35 @@ class _RegisterWidgetState extends State<RegisterWidget> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.location_on_outlined,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary),
+                      size: 18, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(restaurant.name,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall),
                   ),
-                  TextButton(onPressed: () => setState(() => _restaurant = null), child: const Text('Modifier')),
+                  TextButton(
+                      onPressed: () => setState(() => _restaurant = null),
+                      child: const Text('Modifier')),
                 ],
               ),
             ),
             Expanded(
               child: AuthFormWidget(
                 title: 'S\'inscrire',
-                buttonText: 'S\'inscrire',
+                subtitle:
+                    'Ton compte te permet de discuter, d\'ajouter des amis et de les retrouver au RU.',
+                buttonText: 'Créer mon compte',
                 apiCall: (username, password) => authService.register(
                     username, password,
                     restaurantId: restaurant.restaurantId),
                 onSuccess: (response, context) async {
-                  final userProvider =
-                      Provider.of<UserProvider>(context, listen: false);
-                  final restaurantProvider =
-                      Provider.of<RestaurantProvider>(context, listen: false);
-                  final secureStorage =
-                      Provider.of<SecureStorage>(context, listen: false);
+                  final sessionManager =
+                      Provider.of<SessionManager>(context, listen: false);
                   final User user = response['user'];
-                  userProvider.setUser(user);
-                  await secureStorage.clearGuestRestaurantId();
-                  await restaurantProvider.tryLoadRestaurant(user.restaurantId);
+                  await sessionManager.openSession(user);
                   if (!context.mounted) return;
-                  Provider.of<ChatConnection>(context, listen: false).connect();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const MainScaffold()),
-                  );
+                  goToHome(context: context);
                 },
               ),
             ),
@@ -107,6 +96,7 @@ class _RegisterWidgetState extends State<RegisterWidget> {
     return RestaurantPicker(
       title: 'S\'inscrire',
       confirmLabel: 'Suivant',
+      initialRestaurantId: widget.initialRestaurantId,
       onSelected: (pickerContext, selected) async {
         setState(() => _restaurant = selected);
       },

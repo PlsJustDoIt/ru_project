@@ -1,68 +1,85 @@
 # Audit — ru_project
 
-Audit complet (backend Node/Express/TS + app Flutter), réalisé le **2026-05-29**.
+Audit du **2026-10-05** (backend Node/Express/TS + app Flutter), centré sur les
+parcours utilisateur, le mode invité et le chat. Il remplace l'audit du
+2026-05-29, dont les points de sécurité prioritaires ont été traités depuis
+(voir « Suivi de l'audit précédent » en bas).
 
-**État global au moment de l'audit :** sain.
-- Backend : `tsc --noEmit` propre, **153 tests** Jest passent (15 suites).
-- Flutter : `flutter analyze` = **55 problèmes, 0 erreur** (warnings/info).
+**État global après cette passe :**
+- Backend : `tsc --noEmit` et `eslint` propres, **198 tests** Jest passent (24 suites).
+- Flutter : `flutter analyze` = **0 problème**, **36 tests** passent, `flutter build web` OK.
 
-Les points ci-dessous sont de la **dette préexistante**, pas des régressions. Priorité indiquée par section. Chaque entrée référence le fichier concerné pour faciliter la correction.
-
----
-
-## 🔴 Sécurité — backend (priorité haute)
-
-1. **Secrets loggés en clair.** `server.ts` logge `MONGO_URI` (avec identifiants) et `GINKO_API_KEY` en niveau info ; `auth.controller.ts` logge les refresh/access tokens bruts. Ces données atterrissent dans `logs/` et `access.log`.
-   → Retirer tout log de secret/token.
-2. **Production en HTTP simple.** Le bloc HTTPS est commenté dans `server.ts` ; côté Flutter, `config.dart` pointe vers `http://86.219.194.18:5000` (IP en dur). Mots de passe et JWT transitent en clair.
-   → Mettre du TLS (reverse proxy, ou réactiver le serveur https commenté).
-3. **Injection regex / ReDoS.** `user.controller.ts` `searchUsers` construit `new RegExp(query, 'i')` à partir de l'entrée utilisateur brute.
-   → Échapper l'entrée (ou `$text` / regex ancrée échappée).
-4. **Traversée de chemin à l'upload de bug report.** `utils/multer.ts` (`storageScreenshotBugReport`) écrit `file.originalname` tel quel comme nom de fichier.
-   → Générer/assainir le nom. (L'upload d'avatar est sûr : il utilise `userId`.)
-5. **Bypass d'auth par sous-chaîne.** `middleware/auth.ts` saute l'auth quand `req.url.includes('/token')` — match de sous-chaîne, pas la route de refresh exacte.
-   → Comparer le chemin exact.
-6. **Erreur brute renvoyée au client.** `middleware/auth.ts` renvoie `{ error: err }` (l'objet d'erreur capturé) sur un 403.
-7. **CORS grand ouvert.** `app.ts` utilise `cors()` sans config (toutes origines) ; Socket.IO retombe sur `origin: '*'` si `CLIENT_URL` n'est pas défini. CSP Helmet désactivé (`contentSecurityPolicy: false`).
-8. **Secret de repli en dur.** `modules/admin.ts` : le secret cookie/session retombe sur le littéral `'truc'` si `JWT_ACCESS_SECRET` est absent. Les secrets JWT ne sont pas validés au démarrage (seul `GINKO_API_KEY` l'est).
-   → Valider tous les secrets requis dans `config.ts`.
-9. **Admin exclu du rate limiting.** `app.ts` : `skip: req.path.startsWith('/admin')` retire toute protection anti-brute-force sur le login admin.
-10. **Politique de mot de passe faible.** `auth.service.ts` impose 3–32 caractères ; le max à 32 est inhabituellement restrictif et il n'y a aucune règle de complexité.
+Légende : ✅ corrigé dans cette passe · 🔶 ouvert (à planifier).
 
 ---
 
-## 🟠 Correction / vie privée
+## 🔴 Chat — sécurité (backend)
 
-- **Fuite de présence.** `getAllSectorsSessions` (`ru.controller.ts`) expose la présence de **tous** les utilisateurs dans les secteurs à n'importe quel utilisateur authentifié — `getSectorsSessions` est la variante filtrée aux amis. À confirmer : est-ce voulu que ce soit public à tous ?
-- **Requête DB gâchée.** `ru.controller.ts` calcule `tmp_sectorsSessions` (un `SectorSession.find().populate()` complet) puis ne l'utilise jamais, à chaque appel de `getSectorsSessions`.
-- **Filtre de taille mort.** `multer.ts` `fileFilter` teste `file.size`, qui est `undefined` à ce stade — la branche est morte (c'est l'option `limits` qui applique réellement la limite).
-- **Duplication.** `getSectorsSessions` et `getAllSectorsSessions` sont des pipelines d'agrégation quasi identiques — à factoriser.
+| # | Constat | Statut |
+|---|---|---|
+| 1 | **Aucun contrôle d'accès aux rooms.** `GET /socket/messages`, `POST /send-message`, `/send-audio`, `DELETE /delete-message`, `/delete-all-messages` ne vérifiaient pas que l'utilisateur fait partie de la room : n'importe quel compte pouvait lire/écrire dans une conversation privée en devinant son nom (`idA_idB`, ids visibles via la recherche d'amis). | ✅ `resolveRoomForUser` (`socket.service.ts`) : Global ouvert à tous, room privée réservée à ses 2 participants (403 sinon). |
+| 2 | **Suppression de n'importe quel message.** `delete-message` supprimait par id sans vérifier l'auteur ni la room. | ✅ Auteur uniquement (ou admin/modérateur), et le message doit appartenir à la room. |
+| 3 | **Vider le Global** était possible pour tout utilisateur. | ✅ Réservé au staff ; une conversation privée peut être vidée par ses participants. |
+| 4 | **`join_room` sans vérification** : on pouvait rejoindre (et donc écouter en temps réel) la room de deux autres utilisateurs. | ✅ L'émetteur doit être l'un des participants ; création d'une room privée seulement entre amis. |
+| 5 | **Admin UI Socket.IO exposée sans auth** (`instrument(io, { auth: false })`), y compris en production : liste des sockets, rooms et événements. | ✅ Activée uniquement hors production. |
+| 6 | Pas de limite de taille des messages. | ✅ Texte « trimé », 1–2000 caractères (400 sinon). |
+
+## 🟠 Chat — fiabilité
+
+| # | Constat | Statut |
+|---|---|---|
+| 7 | **Historique figé** : `getMessagesByRoomId` triait par date croissante puis `limit(50)` → renvoyait les 50 **premiers** messages. Au-delà de 50 messages, les nouveaux n'apparaissaient plus au rechargement. | ✅ 50 plus récents (tri décroissant puis remis en ordre) + pagination `?before=` / `hasMore`. |
+| 8 | **Conversation vide = spinner infini** (`if (_messages.isEmpty) CircularProgressIndicator`) : impossible d'envoyer le premier message à un ami. | ✅ État de chargement distinct, écran vide « Dis bonjour 👋 », écran d'erreur avec « Réessayer ». |
+| 9 | **Un simple tap supprimait le message** (y compris celui des autres, côté UI). | ✅ Appui long → feuille « Copier / Supprimer » (suppression seulement de ses messages, avec confirmation et restauration si échec). |
+| 10 | Suppression temps réel : index de `_messages` (ordre inversé) utilisé sur `chatController.messages` → mauvais message retiré. « Tout supprimer » ne vidait pas le contrôleur. | ✅ Suppression par id ; liste unique (le contrôleur). |
+| 11 | Envoi optimiste sans retour d'échec : un message non envoyé restait affiché comme envoyé. | ✅ Statuts *envoi / envoyé / échec* ; un message en échec se touche pour « Réessayer » ou « Annuler l'envoi ». |
+| 12 | **Diffusion dépendante de la socket de l'expéditeur** : `emitToRoom` passait par `socket.to(room)` de l'expéditeur ; s'il n'était pas connecté en temps réel (web, socket tombée), personne ne recevait le message. | ✅ `io.to(room).except(user:<id>)`. |
+| 13 | **Une seule socket par utilisateur** (`Map<userId, socketId>`) : un 2ᵉ appareil/onglet écrasait le 1ᵉʳ (notifications perdues), et la déconnexion de l'un marquait l'utilisateur hors ligne. | ✅ Room personnelle `user:<id>` + `Map<userId, Set<socketId>>` ; `userOffline` émis à la dernière socket fermée. Doublon de handler `disconnect` supprimé. |
+| 14 | **Reconnexion sans re-join** : après une coupure, le serveur oubliait la room → plus aucun message temps réel. | ✅ `ChatConnection` rejoue le dernier `join_*` à chaque connexion et émet `ChatResynced` → l'écran recharge l'historique manqué. |
+| 15 | **Token expiré (1 h) au handshake** : socket refusée définitivement. Token passé dans l'URL (`query`). | ✅ `connect_error` d'auth → refresh du token puis réouverture (une fois) ; token dans `auth`. Une socket refusée est recréée au prochain `connect()`. |
+| 16 | « Mes » messages identifiés par **pseudo** : après un changement de pseudo, ses anciens messages passaient « à gauche » et comptaient comme non-lus. | ✅ Payload enrichi (`userId`, `avatarUrl`, `roomName`) ; identification par id. |
+| 17 | Global : impossible de savoir qui parle (ni pseudo ni avatar). | ✅ Pseudo + avatar des autres participants dans le Global. |
+| 18 | Inbox : aperçus figés jusqu'au retour sur l'onglet, ordre fixe, « alice : … » même pour ses propres messages, `timeAgo` erroné (« un l'instant », « 1 jours »). | ✅ Aperçus en direct, tri par dernière activité, « Toi : … », pull-to-refresh qui recharge aussi les amis, `timeAgo` corrigé. |
+| 19 | Textes d'erreur en anglais (« Failed to fetch messages »), composer « Type a message ». | ✅ Français. |
+
+## 🟠 Mode invité
+
+| # | Constat | Statut |
+|---|---|---|
+| 20 | **Signaler un bug échouait toujours en invité** (route protégée) ; le nom de fichier de capture utilisait `req.user.id` → crash serveur sans compte. | ✅ `POST /users/send-bug-report` accepte l'anonyme (`optionalAuth`, limiteur dédié 10/15 min) ; `BugReport.user` optionnel. |
+| 21 | « On y mange ? » affiché aux invités mais **sans effet**. | ✅ Remplacé par « Crée un compte pour prévenir tes amis » (RU déjà choisi repris). |
+| 22 | **Carte figée sur l'ancien RU** après « Changer de RU » (FloorPlan mémorisait le restaurant). | ✅ `FloorPlan` reconstruit à chaque changement de RU. |
+| 23 | Menu : en changeant de RU, l'ancien menu restait affiché pendant le chargement et la page du jour pouvait dépasser la nouvelle liste. | ✅ Spinner + retour au 1ᵉʳ jour ; réponses obsolètes ignorées ; bouton « Actualiser » sur l'écran vide. |
+| 24 | Invité → « Se connecter » remplaçait l'appli invitée par l'accueil (retour impossible) ; `RegisterWidget(initialRestaurantId)` existait mais **n'était jamais utilisé** : il fallait re-choisir son RU. | ✅ Menu de compte : *Se connecter*, *Créer un compte* (RU pré-rempli), *Changer de RU*, *Quitter le mode invité* ; pages empilées au-dessus de l'appli invitée. |
+| 25 | Messages d'aide inadaptés (« Choisis ton RU dans Plus › Paramètres » alors que l'invité n'a pas d'onglet Plus) ; aucune explication de ce qui nécessite un compte. | ✅ Textes adaptés, bandeau invité masquable, indication dans la fiche secteur et sur l'accueil. |
+
+## 🟠 Parcours & session
+
+| # | Constat | Statut |
+|---|---|---|
+| 26 | **La déconnexion ne supprimait pas les tokens** : au redémarrage, l'utilisateur était reconnecté automatiquement. La socket de chat restait ouverte et les non-lus survivaient (suppression de compte idem). | ✅ `SessionManager` : un seul point pour ouvrir/fermer une session (tokens, RU invité, socket, non-lus, état utilisateur). Confirmation avant déconnexion. |
+| 27 | **Pile de navigation incohérente** : `pushReplacement` depuis une page empilée laissait l'accueil sous l'appli (bouton retour → écran d'accueil, ou appli connectée sous l'accueil après déconnexion). | ✅ `navigation/app_navigation.dart` : `goToHome` / `goToGuestHome` / `goToWelcome` vident la pile. |
+| 28 | **Mauvais mot de passe = erreur 500** côté serveur, et l'appli n'affichait que « Erreur de connexion » (Dio lève une exception sur 4xx, les branches d'erreur d'`AuthService` étaient mortes). « Pseudo déjà pris » n'était jamais affiché non plus. | ✅ Login → 401 `{ message, field }` (même message que le pseudo existe ou non) ; erreurs serveur traduites et affichées sous le bon champ. |
+| 29 | Login : un échec du chargement des amis (non bloquant) faisait **afficher une erreur alors que la connexion avait réussi**. | ✅ Chargements annexes best-effort dans `SessionManager.openSession`. |
+| 30 | Formulaire : double soumission possible, pas d'indicateur de chargement, erreur serveur collée au champ même après correction, pas d'affichage du mot de passe. | ✅ Bouton désactivé + spinner, erreurs effacées à la saisie, œil afficher/masquer, autofill, « Entrée » pour valider. |
+| 31 | Intercepteur HTTP : refresh tenté sur les erreurs du login, refresh concurrents multiples, boucle potentielle, session expirée = `clearUserData` seul (tokens et socket conservés). | ✅ Pas de refresh sur `/auth/*`, refresh partagé, une seule ré-tentative, session expirée → nettoyage complet + retour à l'accueil avec message. |
+| 32 | **Rate limiting partagé par tous derrière nginx** : sans `trust proxy`, `req.ip` = IP du proxy → 50 req/min et 10 tentatives de login / 15 min **pour toute l'appli**. | ✅ `trust proxy` = 1 en production (surcharge : `TRUST_PROXY`). |
+| 33 | Réglages : après un changement de RU, les Réglages rouverts réaffichaient l'ancien. | ✅ `user.restaurantId` mis à jour localement. |
 
 ---
 
-## 🟡 Code mort / dette technique
+## 🔶 Points ouverts
 
-### Flutter
-- **Fichiers non référencés** (suppression possible après confirmation) : `services/web_socket_service.dart`, `services/cache_service.dart`, `widgets/old_map_widget_2.dart`, `widgets/chatgpt_map_widget.dart`, `widgets/example_search_widget.dart`.
-- **Atteints seulement via imports inutilisés / l'onglet Debug** : `widgets/old_map_widget.dart`, `widgets/video_widget.dart`, `widgets/test_statefull.dart`.
-- **`providers/menu_provider.dart`** : défini mais jamais enregistré dans `main.dart` ni utilisé.
-- **Deux implémentations socket** : `socket_service.dart` est la vivante ; `web_socket_service.dart` est orpheline.
-- `flutter analyze` (55 issues, 0 erreur) :
-  - `use_build_context_synchronously` à travers des `await` (risque de crash réel) : `welcome/auth_form.dart`, `friends_request_widget.dart`, `friends_widget.dart`.
-  - Dépréciations : `withOpacity` (→ `withValues`), FormField `value` (→ `initialValue`), `dart:html` dans `audio_player_widget.dart`.
-  - `chat_ui.dart` : import dupliqué, champ `_recordPath` inutilisé, imports d'implémentation `lib/src`.
-  - Nombreux imports inutilisés (`tab_bar_widget.dart`, `auth_form.dart`, `debug_widget.dart`, …) → `dart fix --apply`.
+- **Démarrage hors ligne** : `UserProvider.init` traite un échec réseau sur `/users/me` comme une session invalide → l'accueil s'affiche (les tokens restent, l'appli se reconnecte au lancement suivant). Distinguer « réseau » de « session refusée ».
+- **Bandeaux in-app du Global** : chaque message du Global déclenche un bandeau et un non-lu ; à grande échelle ce sera bruyant (prévoir une sourdine du Global).
+- **`getConversationsSummary`** fait une requête par room (N+1) ; à agréger quand le nombre d'amis grandira.
+- **Pagination par date** : deux messages à la même milliseconde à la frontière d'une page peuvent être sautés (pagination par `_id` plus robuste).
+- **Swagger** : documente encore `/socket/chat-room` et `/socket/send-chat-room`, qui n'existent pas.
+- **Carte** : l'image de fond `map_r135.jpg` est utilisée pour tous les RU.
+- **Politique de mot de passe** : 3–32 caractères, sans règle de complexité.
+- **Tests Flutter** : couverture unitaire (connexion chat, notifications, modèles, navigation) mais aucun test d'intégration des écrans de chat / connexion.
+- **Présence globale** : `getAllSectorsSessions` expose la présence de tous les utilisateurs à tout compte authentifié (à confirmer côté produit).
 
-### Backend
-- **ESLint : 12 erreurs / 3 warnings** (non bloquant) — surtout `preserve-caught-error` (re-throw sans `cause`) dans `models/user.ts`, `ginko/ginko.service.ts`, `socket/socket.service.ts`, `utils/fileSystem.ts` ; variables inutilisées (`tmp_sectorsSessions`, `isProduction` dans `ginko.controller.ts`) ; un souci de style dans `multer.ts`.
-- **Blocs commentés morts** laissés dans `utils/socket.ts` (doublon `emitToUser`), `server.ts` (bloc https), `config.ts`.
-- **Couverture de tests inégale** : `routes/sector` ~31 %, `utils/fileSystem.ts` 0 %, `utils/multer.ts` ~63 % ; bien couverts : `routes/socket` et `routes/user` (~85 %+).
+## Suivi de l'audit précédent (2026-05-29)
 
----
-
-## Suggestions de séquencement
-
-1. **Rapide & fort impact** : retirer les secrets/tokens des logs (#1), assainir le nom de fichier d'upload (#4), corriger le bypass d'auth par sous-chaîne (#5).
-2. **Config/infra** : TLS en prod (#2), valider les secrets au démarrage + supprimer le repli `'truc'` (#8), restreindre CORS (#7).
-3. **Robustesse** : échapper la regex de recherche (#3), confirmer/protéger l'endpoint de présence globale, supprimer la requête `tmp_sectorsSessions` gâchée.
-4. **Nettoyage** : supprimer le code mort Flutter, lancer `dart fix --apply`, corriger les `use_build_context_synchronously`, résoudre les erreurs ESLint.
+Vérifiés corrigés : secrets/tokens retirés des logs, échappement de la regex de recherche, nom de fichier d'upload assaini, bypass d'auth par sous-chaîne, erreur brute renvoyée au client, CORS restreint en production, secret de repli `'truc'`, rate limiting de l'admin, requête `tmp_sectorsSessions` gâchée, fichiers Flutter morts (`web_socket_service.dart`, `old_map_widget_2.dart`, …), `flutter analyze` à 0.

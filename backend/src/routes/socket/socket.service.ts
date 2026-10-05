@@ -1,26 +1,86 @@
 // services/socket.service.ts
 import { Socket } from 'socket.io';
 import logger from '../../utils/logger.js';
-import Room from '../../models/room.js';
+import Room, { IRoom } from '../../models/room.js';
 import { messageChat } from '../../interfaces/messageChat.js';
 import MessageResponse from '../../interfaces/messageResponse.js';
 import Message from '../../models/message.js';
+import User from '../../models/user.js';
 import { Types } from 'mongoose';
 import { socketHandler } from '../../utils/socket.js';
+
+export const GLOBAL_ROOM = 'Global';
+/** Nombre de messages renvoyés par page d'historique. */
+export const MESSAGES_PAGE_SIZE = 50;
+/** Longueur max d'un message texte. */
+export const MAX_MESSAGE_LENGTH = 2000;
+
+type PopulatedSender = { _id: Types.ObjectId; username: string; avatarUrl?: string } | null;
 
 // La room globale sert à connecter tous les utilisateurs, et pouvoir faire le lien avec le modèle message
 const initGlobalRoom = async () => {
     try {
-        const globalRoom = await Room.findOne({ name: 'Global' });
+        const globalRoom = await Room.findOne({ name: GLOBAL_ROOM });
         if (!globalRoom) {
             await Room.create({
-                name: 'Global',
+                name: GLOBAL_ROOM,
             });
         }
     } catch (error) {
         logger.error('Failed to initialize global room:', error);
         throw new Error('Failed to initialize global room', { cause: error });
     }
+};
+
+/** `idA_idB` (ids triés) -> [idA, idB] ; null si ce n'est pas un nom de room privée. */
+const parsePrivateRoomName = (roomName: string): [string, string] | null => {
+    const parts = roomName.split('_');
+    if (parts.length !== 2 || !parts.every(p => Types.ObjectId.isValid(p) && /^[a-f0-9]{24}$/i.test(p))) {
+        return null;
+    }
+    return [parts[0], parts[1]];
+};
+
+/** Un utilisateur peut-il lire / écrire dans cette room ? */
+const canAccessRoom = (userId: string, room: Pick<IRoom, 'name' | 'participants'>): boolean => {
+    if (room.name === GLOBAL_ROOM) return true;
+    return (room.participants ?? []).some(p => p.toString() === userId);
+};
+
+/** Les deux utilisateurs sont-ils amis ? (condition pour ouvrir une conversation privée) */
+const areFriends = async (userId: string, otherId: string): Promise<boolean> => {
+    const user = await User.findById(userId).select('friends');
+    return !!user?.friends?.some(f => f.toString() === otherId);
+};
+
+type RoomResolution = { room: IRoom; status: 200 } | { room: null; status: 403 | 404 };
+
+/**
+ * Retrouve la room [roomName] pour [userId] en vérifiant l'accès.
+ * Une room privée inexistante est créée à la volée si l'utilisateur en fait
+ * partie et que les deux participants sont amis (évite la course avec
+ * `join_room` quand on écrit le premier message).
+ */
+const resolveRoomForUser = async (userId: string, roomName: string): Promise<RoomResolution> => {
+    let room = await Room.findOne({ name: roomName });
+    if (!room) {
+        const participants = parsePrivateRoomName(roomName);
+        if (!participants || !participants.includes(userId)) {
+            return { room: null, status: 404 };
+        }
+        const otherId = participants[0] === userId ? participants[1] : participants[0];
+        if (!(await areFriends(userId, otherId))) {
+            return { room: null, status: 403 };
+        }
+        room = await getOrCreatePrivateRoom(participants[0], participants[1]);
+        if (!room) {
+            return { room: null, status: 404 };
+        }
+    }
+    if (!canAccessRoom(userId, room)) {
+        return { room: null, status: 403 };
+    }
+    return { room, status: 200 };
 };
 
 function setupSocketApplicationEvents(): void {
@@ -32,7 +92,7 @@ function setupSocketApplicationEvents(): void {
 const setupSocketEventHandlers = (socket: Socket) => {
     socket.on('join_global_room', async () => {
         try {
-            const globalRoom = await Room.findOne({ name: 'Global' });
+            const globalRoom = await Room.findOne({ name: GLOBAL_ROOM });
             if (!globalRoom) {
                 throw new Error('Global room not found');
             }
@@ -54,13 +114,20 @@ const setupSocketEventHandlers = (socket: Socket) => {
                 throw new Error('data is required');
             }
 
-            const participants = data.participants;
+            const participants = data.participants?.map(p => String(p));
 
             if (!Array.isArray(participants) || participants.length !== 2) {
                 throw new Error('Exactly 2 participants are required, other cases are not supported');
             }
 
-            const room = await getOrCreatePrivateRoom(participants[0], participants[1]);
+            const userId: string = socket.data.userId;
+            // On ne peut rejoindre qu'une conversation dont on fait partie.
+            if (!participants.includes(userId)) {
+                throw new Error('User is not a participant of this room');
+            }
+
+            const resolution = await resolveRoomForUser(userId, generatePrivateRoomName(participants[0], participants[1]));
+            const room = resolution.room;
 
             if (!room) {
                 throw new Error('Room not found');
@@ -86,20 +153,12 @@ const setupSocketEventHandlers = (socket: Socket) => {
             socket.emit('error', 'Failed to leave room');
         }
     });
-
-    socket.on('disconnect', () => {
-        const userId = socket.data.userId;
-        logger.info(`User ${userId} disconnected`);
-
-        // Nettoyer la connexion
-        socketHandler.removeUserFromConnectedUsers(userId);
-        socketHandler.broadcastToEveryone('userOffline', userId);
-    });
+    // La déconnexion (présence en ligne) est gérée par SocketHandler.
 };
 
 const sendMessageToRoom = (userId: string, roomName: string, message: messageChat) => {
     try {
-        socketHandler.emitToRoom(userId, 'receive_message', roomName, { message });
+        socketHandler.emitToRoom(userId, 'receive_message', roomName, { roomName, message });
         return true;
     } catch (error) {
         logger.error('Error sending message to room:', error);
@@ -116,7 +175,7 @@ const notifyNewMessage = (
     message: messageChat,
 ) => {
     const payload = { roomName: room.name, message };
-    if (room.name === 'Global') {
+    if (room.name === GLOBAL_ROOM) {
         socketHandler.broadcastToEveryone('notify_message', payload);
         return;
     }
@@ -128,44 +187,62 @@ const notifyNewMessage = (
     }
 };
 
-const getMessagesByRoomId = async (roomId: string): Promise<MessageResponse[]> => {
-    const messages = await Message.find({ room: roomId })
-        .populate<{ user: { username: string } | null }>('user', 'username')
-        .sort({ createdAt: 1 })
-        .limit(50);
+const toMessageResponse = (message: {
+    _id: Types.ObjectId;
+    content: string;
+    createdAt: Date;
+    audioUrl?: string;
+    duration?: number;
+    user: PopulatedSender;
+}): MessageResponse => ({
+    content: message.content,
+    createdAt: message.createdAt,
+    // L'expéditeur peut avoir été supprimé : populate renvoie alors null.
+    username: message.user?.username ?? 'Utilisateur supprimé',
+    userId: message.user?._id?.toString(),
+    avatarUrl: message.user?.avatarUrl,
+    id: message._id.toString(),
+    audioUrl: message.audioUrl,
+    duration: message.duration,
+});
 
-    return messages.map((message) => {
-        return {
-            content: message.content,
-            createdAt: message.createdAt,
-            // L'expéditeur peut avoir été supprimé : populate renvoie alors null.
-            username: message.user?.username ?? 'Utilisateur supprimé',
-            id: message._id.toString(),
-            audioUrl: message.audioUrl,
-            duration: message.duration,
-        };
-    });
+/**
+ * Renvoie les [MESSAGES_PAGE_SIZE] messages les plus récents de la room (ou
+ * ceux antérieurs à [before] pour paginer), en ordre chronologique.
+ */
+const getMessagesByRoomId = async (roomId: string, before?: Date): Promise<MessageResponse[]> => {
+    const filter: Record<string, unknown> = { room: roomId };
+    if (before) {
+        filter.createdAt = { $lt: before };
+    }
+    const messages = await Message.find(filter)
+        .populate<{ user: PopulatedSender }>('user', 'username avatarUrl')
+        .sort({ createdAt: -1 })
+        .limit(MESSAGES_PAGE_SIZE);
+
+    // Tri décroissant pour prendre les plus récents, puis remis dans l'ordre.
+    return messages.reverse().map(toMessageResponse);
 };
 
 // Résumé des conversations de l'utilisateur : Global + ses rooms privées,
 // chacune avec son dernier message (ou null si vide).
 const getConversationsSummary = async (userId: string) => {
-    const rooms = await Room.find({ $or: [{ name: 'Global' }, { participants: userId }] });
+    const rooms = await Room.find({ $or: [{ name: GLOBAL_ROOM }, { participants: userId }] });
 
     return Promise.all(
         rooms.map(async (room) => {
             const last = await Message.findOne({ room: room._id })
-                .populate<{ user: { username: string } | null }>('user', 'username')
+                .populate<{ user: PopulatedSender }>('user', 'username avatarUrl')
                 .sort({ createdAt: -1 });
 
             return {
                 roomName: room.name,
                 lastMessage: last
                     ? {
+                            ...toMessageResponse(last),
                             content: last.audioUrl ? '🎤 Message vocal' : last.content,
-                            createdAt: last.createdAt,
-                            username: last.user?.username ?? 'Utilisateur supprimé',
-                            id: last._id.toString(),
+                            audioUrl: undefined,
+                            duration: undefined,
                         }
                     : null,
             };
@@ -173,12 +250,28 @@ const getConversationsSummary = async (userId: string) => {
     );
 };
 
-const deleteMessageFromRoom = async (userId: string, roomName: string, messageId: string) => {
+/**
+ * Supprime un message de la room. Seul son auteur (ou un admin / modérateur)
+ * peut le supprimer. Renvoie le code HTTP à renvoyer.
+ */
+const deleteMessageFromRoom = async (
+    userId: string,
+    roomName: string,
+    messageId: string,
+    options: { roomId?: string; isStaff?: boolean } = {},
+): Promise<200 | 403 | 404> => {
     try {
+        const message = await Message.findById(messageId);
+        if (!message || (options.roomId && message.room.toString() !== options.roomId)) {
+            return 404;
+        }
+        if (!options.isStaff && message.user.toString() !== userId) {
+            return 403;
+        }
         await Message.deleteOne({ _id: messageId });
 
-        socketHandler.emitToRoom(userId, 'receive_delete_message', roomName, { messageId });
-        return true;
+        socketHandler.emitToRoom(userId, 'receive_delete_message', roomName, { roomName, messageId });
+        return 200;
     } catch (error) {
         logger.error('Error deleting message:', error);
         throw new Error('Failed to delete message', { cause: error });
@@ -188,11 +281,7 @@ const deleteMessageFromRoom = async (userId: string, roomName: string, messageId
 const deleteAllMessagesFromRoom = async (userId: string, roomId: string, roomName: string) => {
     try {
         await Message.deleteMany({ room: roomId });
-        const socket: Socket | undefined = socketHandler.getSocketFromUserId(userId);
-        if (!socket) {
-            throw Error('Socket not found for user : ' + userId);
-        }
-        socketHandler.emitToRoom(userId, 'receive_delete_all_messages', roomName, {});
+        socketHandler.emitToRoom(userId, 'receive_delete_all_messages', roomName, { roomName });
         return true;
     } catch (error) {
         logger.error('Error deleting all messages:', error);
@@ -238,8 +327,8 @@ async function getUserRooms(userId: Types.ObjectId) {
     }).populate('participants', 'username avatarUrl status');
 }
 
-// isUserOnline
-// emitToUser
-// initGlobalRoom
-
-export { deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, getConversationsSummary, notifyNewMessage, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom, getUserRooms };
+export {
+    deleteAllMessagesFromRoom, deleteMessageFromRoom, getMessagesByRoomId, getConversationsSummary,
+    notifyNewMessage, sendMessageToRoom, setupSocketApplicationEvents, initGlobalRoom, createRoom,
+    getUserRooms, canAccessRoom, resolveRoomForUser, parsePrivateRoomName, generatePrivateRoomName,
+};

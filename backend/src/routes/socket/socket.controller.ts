@@ -1,34 +1,44 @@
 import { messageChat } from '../../interfaces/messageChat.js';
 import Message from '../../models/message.js';
-import Room from '../../models/room.js';
 import User from '../../models/user.js';
 import logger from '../../utils/logger.js';
 import { Request, Response } from 'express';
 import * as socketService from './socket.service.js';
 import { Types } from 'mongoose';
 
+const ROOM_ERRORS = {
+    403: 'Access to this room is forbidden',
+    404: 'Room not found',
+} as const;
+
+const isStaff = (role?: string) => role === 'admin' || role === 'moderator';
+
 const sendMessage = async (req: Request, res: Response) => {
     try {
-        const { roomName, content } = req.body as { roomName: string; content: string };
+        const { roomName, content } = req.body as { roomName?: unknown; content?: unknown };
         const userId = req.user.id;
 
-        if (!content || !roomName) {
+        const text = typeof content === 'string' ? content.trim() : '';
+        if (!text || typeof roomName !== 'string' || !roomName) {
             return res.status(400).json({ error: 'Message content is required' });
         }
+        if (text.length > socketService.MAX_MESSAGE_LENGTH) {
+            return res.status(400).json({ error: `Message too long (max ${socketService.MAX_MESSAGE_LENGTH} characters)` });
+        }
 
-        const user = await User.findById(userId).select('username');
+        const user = await User.findById(userId).select('username avatarUrl');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const room = await Room.findOne({ name: roomName });
+        const { room, status } = await socketService.resolveRoomForUser(userId, roomName);
         if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'Room not found' });
+            logger.error(`Room ${roomName} inaccessible for user ${userId} (${status})`);
+            return res.status(status).json({ error: ROOM_ERRORS[status] });
         }
 
         const message = new Message({
-            content: content,
+            content: text,
             user: user,
             room: room,
         });
@@ -36,9 +46,11 @@ const sendMessage = async (req: Request, res: Response) => {
         await message.save();
 
         const response: messageChat = {
-            content: content,
+            content: text,
             createdAt: message.createdAt,
             username: user.username,
+            userId: user._id.toString(),
+            avatarUrl: user.avatarUrl,
             id: message._id.toString(),
         };
 
@@ -66,15 +78,15 @@ const sendAudioMessage = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Room name is required' });
         }
 
-        const user = await User.findById(userId).select('username');
+        const user = await User.findById(userId).select('username avatarUrl');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const room = await Room.findOne({ name: roomName });
+        const { room, status } = await socketService.resolveRoomForUser(userId, roomName);
         if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'Room not found' });
+            logger.error(`Room ${roomName} inaccessible for user ${userId} (${status})`);
+            return res.status(status).json({ error: ROOM_ERRORS[status] });
         }
 
         const audioUrl = `uploads/audio/${req.file.filename}`;
@@ -95,6 +107,8 @@ const sendAudioMessage = async (req: Request, res: Response) => {
             content: '',
             createdAt: message.createdAt,
             username: user.username,
+            userId: user._id.toString(),
+            avatarUrl: user.avatarUrl,
             id: message._id.toString(),
             audioUrl,
             duration: message.duration,
@@ -112,6 +126,10 @@ const sendAudioMessage = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Historique d'une room : les 50 messages les plus récents, en ordre
+ * chronologique. `before` (date ISO) permet de remonter l'historique.
+ */
 const getMessages = async (req: Request, res: Response) => {
     try {
         const roomName = req.query.roomName as string;
@@ -119,14 +137,25 @@ const getMessages = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Room name is required' });
         }
 
-        const room = await Room.findOne({ name: roomName });
-        if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'An error has occured' });
+        let before: Date | undefined;
+        if (req.query.before !== undefined) {
+            before = new Date(String(req.query.before));
+            if (Number.isNaN(before.getTime())) {
+                return res.status(400).json({ error: 'Invalid before date' });
+            }
         }
 
-        const messages = await socketService.getMessagesByRoomId(room._id.toString());
-        return res.json({ messages: messages });
+        const { room, status } = await socketService.resolveRoomForUser(req.user.id, roomName);
+        if (!room) {
+            logger.error(`Room ${roomName} inaccessible for user ${req.user.id} (${status})`);
+            return res.status(status).json({ error: ROOM_ERRORS[status] });
+        }
+
+        const messages = await socketService.getMessagesByRoomId(room._id.toString(), before);
+        return res.json({
+            messages: messages,
+            hasMore: messages.length === socketService.MESSAGES_PAGE_SIZE,
+        });
     } catch (err) {
         logger.error('Error in /messages:', err);
         return res.status(500).json({
@@ -155,14 +184,21 @@ const deleteMessageFromRoom = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'An error has occured' });
         }
 
-        const room = await Room.findOne({ name: roomName });
-
+        const { room, status } = await socketService.resolveRoomForUser(user._id.toString(), roomName);
         if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'Room not found' });
+            return res.status(status).json({ error: ROOM_ERRORS[status] });
         }
 
-        await socketService.deleteMessageFromRoom(user._id.toString(), room.name, messageId);
+        const result = await socketService.deleteMessageFromRoom(user._id.toString(), room.name, messageId, {
+            roomId: room._id.toString(),
+            isStaff: isStaff(user.role),
+        });
+        if (result === 404) {
+            return res.status(404).json({ error: 'Message not found' });
+        }
+        if (result === 403) {
+            return res.status(403).json({ error: 'You can only delete your own messages' });
+        }
         return res.json({ message: 'Message deleted' });
     } catch (err) {
         logger.error('Error in /delete-message:', err);
@@ -186,11 +222,14 @@ const deleteAllMessagesFromRoom = async (req: Request, res: Response) => {
             return res.status(404).json({ error: 'An error has occured' });
         }
 
-        const room = await Room.findOne({ name: roomName });
-
+        const { room, status } = await socketService.resolveRoomForUser(user._id.toString(), roomName);
         if (!room) {
-            logger.error('Room not found : ' + roomName);
-            return res.status(404).json({ error: 'An error has occured' });
+            return res.status(status).json({ error: ROOM_ERRORS[status] });
+        }
+
+        // Vider le Global efface les messages de tout le monde : réservé au staff.
+        if (room.name === socketService.GLOBAL_ROOM && !isStaff(user.role)) {
+            return res.status(403).json({ error: 'Only moderators can clear the global room' });
         }
 
         await socketService.deleteAllMessagesFromRoom(user._id.toString(), room._id.toString(), room.name);

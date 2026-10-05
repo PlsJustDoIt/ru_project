@@ -8,7 +8,8 @@ import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/services/logger.dart';
-import 'package:ru_project/widgets/welcome/welcome.dart';
+import 'package:ru_project/navigation/app_navigation.dart';
+import 'package:ru_project/services/session_manager.dart';
 import 'package:ru_project/widgets/custom_snack_bar.dart';
 
 class ProfileWidget extends StatefulWidget {
@@ -210,24 +211,21 @@ class _ProfileWidgetState extends State<ProfileWidget> {
 
   void deleteAccount(BuildContext context) async {
     try {
+      final sessionManager =
+          Provider.of<SessionManager>(context, listen: false);
+      final messenger = ScaffoldMessenger.of(context);
       bool isSuccess = await authService.deleteAccount();
       if (isSuccess) {
-        await authService.logout();
-
-        if (context.mounted == false) {
-          return;
-        }
-        _userProvider.clearUserData();
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        // Le refresh token est déjà supprimé côté serveur : nettoyage local
+        // seulement (tokens, socket de chat, non-lus).
+        await sessionManager.clearLocalSession();
+        if (!context.mounted) return;
+        goToWelcome(context: context);
+        messenger.showSnackBar(
           SnackBar(
             content: const Text('Compte supprimé avec succès'),
             duration: _snackBarDuration,
           ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const WelcomeWidget()),
         );
         return;
       }
