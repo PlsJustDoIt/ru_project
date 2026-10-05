@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/config.dart';
 import 'package:ru_project/models/color.dart';
-import 'package:ru_project/providers/user_provider.dart';
-import 'package:ru_project/services/auth_service.dart';
-import 'package:ru_project/services/chat_connection.dart';
+import 'package:ru_project/navigation/app_navigation.dart';
+import 'package:ru_project/services/session_manager.dart';
 import 'package:ru_project/widgets/bug_report_action.dart';
 import 'package:ru_project/widgets/bus_widget.dart';
 import 'package:ru_project/widgets/debug_widget.dart';
 import 'package:ru_project/widgets/profile.dart';
 import 'package:ru_project/widgets/settings_widget.dart';
-import 'package:ru_project/widgets/welcome/welcome.dart';
 
 class MoreWidget extends StatelessWidget {
   const MoreWidget({super.key});
@@ -75,20 +73,30 @@ class MoreWidget extends StatelessWidget {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final chatConnection =
-        Provider.of<ChatConnection>(context, listen: false);
-    await authService.logout();
-    userProvider.clearUserData();
-    chatConnection.disconnect();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Se déconnecter ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Déconnexion'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await Provider.of<SessionManager>(context, listen: false).logout();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    goToWelcome(context: context);
+    messenger.showSnackBar(
       const SnackBar(content: Text('Déconnexion réussie')),
     );
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const WelcomeWidget()),
-    );
   }
+
 }

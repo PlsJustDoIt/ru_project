@@ -1,15 +1,47 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ru_project/models/user.dart';
-import 'package:ru_project/providers/restaurant_provider.dart';
-import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/navigation/app_navigation.dart';
 import 'package:ru_project/services/auth_service.dart';
-import 'package:ru_project/services/chat_connection.dart';
-import 'package:ru_project/services/friend_service.dart';
-import 'package:ru_project/services/secure_storage.dart';
-import 'package:ru_project/widgets/main_scaffold.dart';
+import 'package:ru_project/services/session_manager.dart';
 import 'package:ru_project/widgets/welcome/auth_form.dart';
+import 'package:ru_project/widgets/welcome/register.dart';
+
+/// Page de connexion complète (AppBar + formulaire + lien vers l'inscription).
+class LoginPage extends StatelessWidget {
+  const LoginPage({super.key, this.guestRestaurantId});
+
+  /// RU choisi en mode invité : proposé par défaut si l'utilisateur bascule
+  /// vers l'inscription.
+  final String? guestRestaurantId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Connexion')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Expanded(child: LoginWidget()),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: TextButton(
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RegisterWidget(
+                        initialRestaurantId: guestRestaurantId),
+                  ),
+                ),
+                child: const Text('Pas encore de compte ? S\'inscrire'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class LoginWidget extends StatelessWidget {
   const LoginWidget({super.key});
@@ -22,25 +54,12 @@ class LoginWidget extends StatelessWidget {
       buttonText: 'Se connecter',
       apiCall: authService.login,
       onSuccess: (response, context) async {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final friendService = Provider.of<FriendService>(context, listen: false);
-        final restaurantProvider =
-            Provider.of<RestaurantProvider>(context, listen: false);
+        final sessionManager =
+            Provider.of<SessionManager>(context, listen: false);
         final User user = response['user'];
-        userProvider.setUser(user);
-        final secureStorage = Provider.of<SecureStorage>(context, listen: false);
-        await secureStorage.clearGuestRestaurantId();
-        await restaurantProvider.tryLoadRestaurant(user.restaurantId);
-        List<Friend> fetchedFriends = await friendService.getFriends();
-        userProvider.setFriends(fetchedFriends);
+        await sessionManager.openSession(user);
         if (!context.mounted) return;
-        Provider.of<ChatConnection>(context, listen: false).connect();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const MainScaffold(),
-          ),
-        );
+        goToHome(context: context);
       },
     );
   }

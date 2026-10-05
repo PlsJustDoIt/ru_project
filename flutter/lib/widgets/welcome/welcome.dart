@@ -5,8 +5,7 @@ import 'package:ru_project/models/color.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
 import 'package:ru_project/services/secure_storage.dart';
-import 'package:ru_project/widgets/main_scaffold.dart';
-import 'package:ru_project/widgets/navigation/main_destinations.dart';
+import 'package:ru_project/navigation/app_navigation.dart';
 import 'package:ru_project/widgets/welcome/login.dart';
 import 'package:ru_project/widgets/welcome/register.dart';
 import 'package:ru_project/widgets/welcome/restaurant_picker.dart';
@@ -90,11 +89,7 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => Scaffold(
-                                    appBar:
-                                        AppBar(title: const Text('Connexion')),
-                                    body: LoginWidget(),
-                                  ),
+                                  builder: (context) => const LoginPage(),
                                 ),
                               );
                             },
@@ -128,6 +123,11 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
                       onPressed: () => _continueAsGuest(context),
                       child: const Text('Continuer sans compte'),
                     ),
+                    Text(
+                      'Sans compte : menus, carte et bus.\nAvec un compte : chat, amis et « qui est au RU ».',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -156,12 +156,8 @@ class _WelcomeWidget2State extends State<WelcomeWidget>
             await restaurantProvider.tryLoadRestaurant(restaurant.restaurantId);
             userProvider.enterGuestMode();
             if (!pickerContext.mounted) return;
-            Navigator.pushReplacement(
-              pickerContext,
-              MaterialPageRoute(
-                builder: (_) => MainScaffold(destinations: kGuestDestinations),
-              ),
-            );
+            // Vide la pile : « retour » ne doit pas ramener à l'accueil.
+            goToGuestHome(context: pickerContext);
           },
         ),
       ),
