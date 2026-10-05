@@ -9,19 +9,26 @@ import 'package:ru_project/services/chat_event.dart';
 /// Alimenté par la socket persistante via [ChatConnection] (événements
 /// [MessageNotified], indépendants de la room ouverte).
 class NotificationProvider extends ChangeNotifier {
-  NotificationProvider(this._connection) {
+  NotificationProvider(
+    this._connection, {
+    String? Function()? currentUserId,
+    String? Function()? currentUsername,
+  })  : _currentUserId = currentUserId ?? (() => null),
+        _currentUsername = currentUsername ?? (() => null) {
     _sub = _connection.events.listen(_onEvent);
   }
 
   final ChatConnection _connection;
   StreamSubscription<ChatEvent>? _sub;
 
+  /// Identité de l'utilisateur courant, lue à chaque événement (elle change
+  /// au login / logout / changement de pseudo), pour ignorer ses propres
+  /// messages : le Global est diffusé à tout le monde, expéditeur compris.
+  final String? Function() _currentUserId;
+  final String? Function() _currentUsername;
+
   final Map<String, int> _unread = {};
   String? _currentRoom;
-
-  /// Pseudo de l'utilisateur courant, pour ignorer ses propres messages
-  /// (le Global est diffusé à tout le monde, expéditeur compris).
-  String? currentUsername;
 
   final StreamController<MessageNotified> _banners =
       StreamController<MessageNotified>.broadcast();
@@ -45,11 +52,25 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Remise à zéro (déconnexion / changement de compte).
+  void reset() {
+    _currentRoom = null;
+    if (_unread.isEmpty) return;
+    _unread.clear();
+    notifyListeners();
+  }
+
+  bool _isMine(MessageNotified event) {
+    final myId = _currentUserId();
+    final senderId = event.message.senderId;
+    if (myId != null && senderId != null) return senderId == myId;
+    final myName = _currentUsername();
+    return myName != null && event.message.sender == myName;
+  }
+
   void _onEvent(ChatEvent event) {
     if (event is! MessageNotified) return;
-    if (currentUsername != null && event.message.sender == currentUsername) {
-      return;
-    }
+    if (_isMine(event)) return;
     if (event.roomName == _currentRoom) return;
 
     _unread[event.roomName] = (_unread[event.roomName] ?? 0) + 1;

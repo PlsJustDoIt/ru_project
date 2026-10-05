@@ -276,22 +276,13 @@ class _FriendsListSheetState extends State<FriendsListSheet> {
                                     icon: Icon(Icons.message_outlined),
                                     onPressed: () {
                                       logger.i('Message à ${friend.username}');
-                                      Navigator.push(
+                                      openChat(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (context) => Scaffold(
-                                            appBar: AppBar(
-                                              title: Text(friend.username),
-                                            ),
-                                            body: ChatUi(
-                                              roomName: generatePrivateRoomName(
-                                                  userProvider.user!.id,
-                                                  friend.id),
-                                              actualUser: userProvider.user!,
-                                              friends: [friend],
-                                            ),
-                                          ),
-                                        ),
+                                        roomName: generatePrivateRoomName(
+                                            userProvider.user!.id, friend.id),
+                                        title: friend.username,
+                                        actualUser: userProvider.user!,
+                                        friend: friend,
                                       );
                                     },
                                   ),

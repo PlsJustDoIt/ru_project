@@ -26,3 +26,10 @@ class MessageNotified extends ChatEvent {
   const MessageNotified(super.roomName, this.message);
   final Message message;
 }
+
+/// La socket s'est reconnectée et a rejoint à nouveau [roomName] : des
+/// messages ont pu être manqués pendant la coupure, l'écran doit recharger
+/// l'historique.
+class ChatResynced extends ChatEvent {
+  const ChatResynced(super.roomName);
+}

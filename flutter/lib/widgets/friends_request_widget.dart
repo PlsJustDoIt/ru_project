@@ -79,7 +79,7 @@ class _FriendsRequestWidgetState extends State<FriendsRequestWidget> {
                         title: Text(
                             'Demande d\'ami de ${request.sender["username"]}'),
                         subtitle: Text(
-                            'Envoyée il y a ${timeAgo(DateTime.parse(request.createdAt))}'),
+                            'Envoyée · ${timeAgo(DateTime.parse(request.createdAt))}'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
