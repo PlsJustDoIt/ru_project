@@ -10,6 +10,13 @@ import routes from './routes/routes.js';
 
 const app = express();
 
+// Derrière nginx (même machine) : faire confiance à X-Forwarded-For uniquement
+// quand la requête arrive du loopback. Sans ça, req.ip vaut 127.0.0.1 pour tout
+// le monde et les rate limiters partagent un seul compteur global (10 échecs de
+// login bloquent tous les utilisateurs). 'loopback' empêche un client qui
+// atteindrait le port directement de falsifier son IP via l'en-tête.
+app.set('trust proxy', 'loopback');
+
 // CORS : en production, restreindre aux origines explicitement autorisées
 // (CORS_ORIGINS, séparées par des virgules). L'app mobile n'envoie pas d'en-tête
 // Origin et n'est donc pas impactée ; CORS ne concerne ici que le navigateur.
