@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget d'écran d'accueil « Menu du RU » (MenuWidgetProvider.kt) -->
+<resources>
+    <color name="menu_widget_bg">#FFFFFFFF</color>
+    <color name="menu_widget_text_primary">#FF1A2B3C</color>
+    <color name="menu_widget_text_secondary">#FF5A6573</color>
+    <color name="menu_widget_accent">#FFE01020</color>
+    <color name="menu_widget_row_alt">#FFF7F8FA</color>
+    <color name="menu_widget_divider">#FFE3E6EA</color>
+
+    <string name="menu_widget_label">Menu du RU</string>
+    <string name="menu_widget_description">Le menu du jour de ton restaurant universitaire</string>
+    <string name="menu_widget_default_title">Menu du RU</string>
+    <string name="menu_widget_refreshing">Actualisation…</string>
+    <string name="menu_widget_today">Aujourd\'hui</string>
+    <string name="menu_widget_tomorrow">Demain</string>
+    <string name="menu_widget_no_restaurant">Ouvre MonCampus et choisis ton RU pour afficher son menu ici.</string>
+    <string name="menu_widget_no_menu_published">Ce restaurant ne publie pas de menu sur le flux CROUS.</string>
+    <string name="menu_widget_loading">Chargement du menu…</string>
+    <string name="menu_widget_no_upcoming">Aucun menu publié pour les prochains jours.</string>
+    <string name="menu_widget_closed">Fermé</string>
+    <string name="menu_widget_not_communicated">Menu non communiqué</string>
+    <string name="menu_widget_prev">Jour précédent</string>
+    <string name="menu_widget_next">Jour suivant</string>
+    <string name="menu_widget_refresh">Actualiser</string>
+</resources>

@@ -9,6 +9,7 @@ import 'package:ru_project/services/api_client.dart';
 import 'package:ru_project/services/auth_service.dart';
 import 'package:ru_project/services/chat_connection.dart';
 import 'package:ru_project/services/feedback_service.dart';
+import 'package:ru_project/services/menu_home_widget.dart';
 import 'package:ru_project/services/friend_service.dart';
 import 'package:ru_project/services/ginko_service.dart';
 import 'package:ru_project/services/restaurant_service.dart';
@@ -58,6 +59,9 @@ void main() async {
   if (userProvider.isConnected) {
     await chatConnection.connect();
   }
+
+  // Widget Android « Menu du RU » : suit le RU sélectionné (non bloquant)
+  MenuHomeWidget.attach(restaurantProvider, restaurantService);
 
   runApp(
     MultiProvider(

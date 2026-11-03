@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ru_project/models/restaurant.dart';
 import 'package:ru_project/providers/restaurant_provider.dart';
 import 'package:ru_project/providers/user_provider.dart';
+import 'package:ru_project/services/menu_home_widget.dart';
 import 'package:ru_project/services/restaurant_service.dart';
 import 'package:ru_project/services/user_service.dart';
 import 'package:ru_project/widgets/restaurant_selector_list.dart';
@@ -19,6 +20,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   String? _selectedRestaurantId;
   bool _saving = false;
   bool _loadingRestaurants = true;
+  /// Le lanceur Android sait épingler le widget « Menu du RU » depuis l'app.
+  bool _canPinWidget = false;
   late final RestaurantService _restaurantService;
   late final UserService _userService;
 
@@ -31,6 +34,9 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     _selectedRestaurantId =
         Provider.of<UserProvider>(context, listen: false).user?.restaurantId;
     _loadRestaurants();
+    MenuHomeWidget.canRequestPin().then((ok) {
+      if (mounted && ok) setState(() => _canPinWidget = true);
+    });
   }
 
   void _loadRestaurants() async {
@@ -147,6 +153,19 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               ),
             ),
             if (_saving) const CircularProgressIndicator(),
+            if (_canPinWidget)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.widgets_outlined),
+                    label: const Text(
+                        'Ajouter le widget « Menu du RU » à l\'écran d\'accueil'),
+                    onPressed: MenuHomeWidget.requestPin,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

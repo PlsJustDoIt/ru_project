@@ -64,6 +64,7 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 - **Profile** (Profile tab, `user/`): update username / password / status, upload avatar (Multer → Sharp JPEG compression). Statuses: "en ligne", "au ru", "absent".
 - **Bug reporting / feedback** (bug icon, `feedback` package + `user/`): in-app `BetterFeedback` overlay lets users annotate a screenshot; submitted via `POST /api/users/send-bug-report` with app version + platform. Reports are reviewed in the AdminJS dashboard.
 - **Debug tab**: only shown in development (`Config.env == "development"`).
+- **Android home-screen widget « Menu du RU »** (`lib/services/menu_home_widget.dart` + `android/app/src/main/kotlin/.../MenuWidget*.kt`, via `home_widget`): resizable 4×3 widget showing the selected RU's menu as a category | dishes table, with ◀ ▶ day arrows (after 14h it defaults to tomorrow) and a refresh button. The app pushes the API URL, CROUS id, RU name and menus into the `home_widget` SharedPreferences (all String values) on startup and on every RU change; the widget then refreshes itself from the public `GET /api/ru/menus` when its cache is > 3h old. Settings has an « Ajouter le widget » button (`requestPinWidget`).
 
 ### API reference (all under `/api`, JWT-protected unless noted)
 - `auth/`: `POST /register` (public ; `restaurantId` optionnel : id CROUS `rXXX` ou ObjectId), `POST /login` (public), `POST /token` (refresh), `POST /logout`, `DELETE /delete-account`
