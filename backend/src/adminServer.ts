@@ -13,6 +13,9 @@ import adminJsSetup from './modules/admin.js';
 
 const app = express();
 
+// Derrière nginx : cf. app.ts (rate limiting par client réel, pas global).
+app.set('trust proxy', 'loopback');
+
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 
