@@ -29,11 +29,16 @@ name: CI/CD
 on:
   push:
     branches: [main]
+  # PR : tests + builds (APK téléchargeable dans les artefacts du run),
+  # SANS déploiement (cf. condition du job deploy).
+  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: ci-cd-main
-  cancel-in-progress: false # jamais deux déploiements simultanés
+  # main : jamais deux déploiements simultanés. PR : un nouveau push annule
+  # le run précédent de la même PR.
+  group: ci-cd-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -152,6 +157,9 @@ jobs:
   deploy:
     name: Déploiement serveur
     needs: [backend, flutter]
+    # Uniquement depuis main (push ou lancement manuel) : jamais pour une PR
+    # ni pour un workflow_dispatch lancé sur une autre branche.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Récupération des artefacts
