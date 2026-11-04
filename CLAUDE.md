@@ -64,6 +64,7 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 - **Profile** (Profile tab, `user/`): update username / password / status, upload avatar (Multer → Sharp JPEG compression). Statuses: "en ligne", "au ru", "absent".
 - **Bug reporting / feedback** (bug icon, `feedback` package + `user/`): in-app `BetterFeedback` overlay lets users annotate a screenshot; submitted via `POST /api/users/send-bug-report` with app version + platform. Reports are reviewed in the AdminJS dashboard.
 - **Debug tab**: only shown in development (`Config.env == "development"`).
+- **Android home-screen widget « Menu du RU »** (`lib/services/menu_home_widget.dart` + `android/app/src/main/kotlin/.../MenuWidget*.kt`, via `home_widget`): resizable 4×3 widget showing the selected RU's menu as a category | dishes table, with ◀ ▶ day arrows (after 14h it defaults to tomorrow) and a refresh button. The app pushes the API URL, CROUS id, RU name and menus into the `home_widget` SharedPreferences (all String values) on startup and on every RU change; the widget then refreshes itself from the public `GET /api/ru/menus` when its cache is > 3h old. Settings has an « Ajouter le widget » button (`requestPinWidget`).
 
 ### API reference (all under `/api`, JWT-protected unless noted)
 - `auth/`: `POST /register` (public ; `restaurantId` optionnel : id CROUS `rXXX` ou ObjectId), `POST /login` (public), `POST /token` (refresh), `POST /logout`, `DELETE /delete-account`
@@ -87,7 +88,7 @@ Each feature maps to a Flutter tab/screen and a backend route domain.
 ## Testing
 - Backend tests: Jest + ts-jest, 15 `.spec.ts` files (colocated with routes + `src/tests/`). ESM module support configured in `jest.config.js`. As of 2026-05-29: **158 tests pass across 15 suites**, and `tsc --noEmit` is clean. Tests use `mongodb-memory-server` + `supertest`.
 - No Flutter tests currently configured.
-- CI/CD : `.github/workflows/ci-cd.yml` — à chaque push `main` : tests Jest + build backend, analyse Flutter + builds APK/web, puis déploiement par **artefacts** (rsync du JS compilé + bundle web vers le serveur ; aucun build ni git sur le serveur, `npm ci --omit=dev` + `pm2 restart` seulement). Web servi sur `ru.leomaugeri.fr`, API derrière `api.ru.leomaugeri.fr`. Secret unique requis : `SSH_PRIVATE_KEY` (constant serveur en dur dans le workflow).
+- CI/CD : `.github/workflows/ci-cd.yml` — sur chaque PR : tests + builds (APK téléchargeable dans l'artefact `app-release` du run), **sans** déploiement. À chaque push `main` : tests Jest + build backend, analyse Flutter + builds APK/web, puis déploiement par **artefacts** (rsync du JS compilé + bundle web vers le serveur ; aucun build ni git sur le serveur, `npm ci --omit=dev` + `pm2 restart` seulement). Web servi sur `ru.leomaugeri.fr`, API derrière `api.ru.leomaugeri.fr`. Secret unique requis : `SSH_PRIVATE_KEY` (constant serveur en dur dans le workflow).
 - Lint: backend `eslint` (flat config, TS + stylistic), Flutter `flutter analyze` (flutter_lints). Coverage and lint debt are tracked in `AUDIT.md`.
 
 ## Key Conventions

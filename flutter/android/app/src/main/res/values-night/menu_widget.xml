@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="menu_widget_bg">#FF1E1F22</color>
+    <color name="menu_widget_text_primary">#FFECEFF3</color>
+    <color name="menu_widget_text_secondary">#FFA3ABB5</color>
+    <color name="menu_widget_accent">#FFFF5A64</color>
+    <color name="menu_widget_row_alt">#FF26282C</color>
+    <color name="menu_widget_divider">#FF33363B</color>
+</resources>
